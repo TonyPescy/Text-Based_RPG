@@ -10,7 +10,7 @@ class CLI:
     # Initialize CLI
     def __init__(self):
         self.grid = None
-        self.entities = []
+        # self.entities = []
         self.map_created = False  # Bool that checks to see if a map was already created
 
     # Process Command Start
@@ -88,7 +88,7 @@ class CLI:
                 # Test for valid amount of command pieces
                 if len(command_pieces) == 2:
                     # Run inspect with entity ID
-                    CLI.inspect(command_pieces[1])
+                    self.inspect(command_pieces[1])
                 else:
                     print("error: inspect_failed - Invalid arguments!")
 
@@ -162,9 +162,12 @@ class CLI:
         else:
             # updates grid with new tile
             self.grid.set_tile(x, y, tile_type)
-            # success output
-            print(f"ok: tile_set {x}, {y} type: {tile_type}!")
-            pass
+            # success output -  with special case for shallowwater
+            if tile_type == "shallowwater":
+                print(f"ok: tile_set {x}, {y} type: ShallowWater!")
+            else:
+                print(f"ok: tile_set {x}, {y} type: {tile_type.capitalize()}!")
+            # update entity if present
 
     # Spawn Start
     # Spawns a unit at designated position
@@ -253,7 +256,7 @@ class CLI:
     # Inspect Start
     # Inspects entity with given ID
     # Params:   e_id - int - entity id
-    def inspect(e_id):
+    def inspect(self, e_id):
         # Ensure entities exists
         if not len(Entity.entity_list) > 0:
             print("error: inspect_failed - No entities exist yet!")
@@ -281,6 +284,8 @@ class CLI:
             print("error: inspect_failed - Entity does not exist!")
             return
 
+        # update entity stats - in case changes occurred
+        found_entity.update_stats(self.grid)
         # get stats of entity
         entity_stats = found_entity.get_stats()
         # Display stats of entity
@@ -348,3 +353,23 @@ class CLI:
             return value.capitalize()
         else:
             return value
+
+
+# Main to run the command line interface
+# While true to get user inputs
+def main():
+    # Create command line interface
+    main_cli = CLI()
+    while True:
+        command = input("Enter Command (or 'quit' to exit)> ")
+        # Exit command sent
+        if command.lower() == "quit":
+            print("Thank you for playing!")
+            break
+
+        # Process command
+        main_cli.process_command(command)
+
+
+if __name__ == "__main__":
+    main()

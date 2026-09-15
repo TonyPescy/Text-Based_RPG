@@ -1,7 +1,6 @@
 # Grid class with all methods needed for manipulating the grid
 class Grid:
-    # Constants - SOME MAY CHANGE
-    EMPTY_TILE = -1
+    # Constants
     MIN_BOUNDS = 5
     MAX_BOUNDS = 50
 
@@ -666,23 +665,6 @@ class Mage(Entity):
         self.calculate_final_stats()
 
         # Update Stats End
-
-
-# Create all Equipment Start
-# Creates an instance of each equipment item and returns the list
-# Returns: equipment_list - list - Contains instances of all equipment
-def create_all_equipment():
-    # Init list
-    equipment_list = []
-    for item in Equipment.VALID_ITEMS:
-        # Skip over None item as it does not do anything
-        if item == "None":
-            continue
-        else:
-            # create item and add to list
-            equipment_list.append(Equipment.create_equipment(item))
-    # Return completed list
-    return equipment_list
 
 
 # Create all Equipment End

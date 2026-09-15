@@ -21,15 +21,84 @@ Tony Pescatore
 ## Entities
 [Table of Contents](#table-of-contents)
 
+- Warrior
+- Mage
+- Goblin
+- Skeleton
+
 ## Equipment
 [Table of Contents](#table-of-contents)
+
+- None
+- IronSword
+- CursedDagger
+- MageStaff
+- IronChestplate
+- LeatherTunic
+- ScoutArmor
+- RingOfTheSorcerer
+- AmuletOfVitality
+- RingOfHaste
 
 ## Tiles
 [Table of Contents](#table-of-contents)
 
+- Floor
+- Wall
+- ShallowWater
+
 ## Command Line Interface Guide
 [Table of Contents](#table-of-contents)
 This is a guide to the Command Line Interface to be used to play the game. It will outline and define the commands that are currently supported within the game.
+
+### Init Map
+**Description:** Will create a map with the provided width and height.
+
+**Called as:** init map width height
+
+**Contraints:** Width and height are integers between 5 and 50 inclusive.
+
+### Set Tile
+**Description:** Will set the tile at a given grid position to be the provided tile type.
+
+**Called as:** set tile x y tile_type
+
+**Contraints:** tile_type must be within list of valid tile types, (x,y) must be integers within the current grid bounds, and map must have been created.
+
+### Spawn
+**Description:** Will create an entity of the given type and spawn it at the provided grid position.
+
+**Called as:** spawn entity_type x y
+
+**Contraints:** entity_type must be within list of valid entity types, (x,y) must be integers within current grid bounds, there must not be any other entity already present at the given grid position, and map must have been created.
+
+### Equip
+**Description:** Will equip provided item in the given, or determined, inventory slot to a "player".
+
+**Called as:** equip item slot*
+
+**Contraints:** slot is an optional argument and can be skipped. However, if slot is provided it needs to be within list of valid slots and correspond to the items slot. item must be within the list of valid items. A "player" entity must have been created.
+
+### Inventory
+**Description:** Will display the current inventory of the "player".
+
+**Called as:** inventory
+
+**Contraints:** A "player" entity must exist.
+
+### Inspect
+**Description:** Will display the stats of an entity given its id.
+
+**Called as:** inspect id
+
+**Contraints:** The id must be an integer that corresponds to a valid entity within the entity list.
+
+### Tile
+**Description:** Will display a description of the tile at the given grid position.
+
+**Called as:** tile x y
+
+**Contraints:** (x,y) must be integers within the current grid bounds and the map must have been created.
 
 ## Design Decisions
 [Table of Contents](#table-of-contents)
@@ -50,45 +119,4 @@ The equipment class represents items that will be held within an entity's invent
 The test suite only tests the public facing methods as they will call and use the other private facing methods. This means that these private facing methods will also be tested in tandem. It incldues verbose tests includings tests on the boundary values, the validity of inputs, and ensures that all public facing methods and private methods are working as intended.
 
 ### Command Line Interface
-The command line interface is where the game in played. Running the command line interface will allow the user to input commands, which will be handled accordingly by the command line interfaces process_command method. This will return descriptive error messages so that users will know what was wrong with their inputs. The command line interface also will house the current game grid of tiles, a list of the current entities, and a boolean to determine if the map was already created.
-
-## Game Commands
-[Table of Contents](#table-of-contents)
-
-#### Description
-Commands that are currently supported in-game as well as how to use them.
-
-### Init Map
-**Description:** Will create a map with the provided width and height.
-**Called as:** init map width height
-**Contraints:** Width and height are integers between 5 and 50 inclusive.
-
-### Set Tile
-**Description:** Will set the tile at a given grid position to be the provided tile type.
-**Called as:** set tile x y tile_type
-**Contraints:** tile_type must be within list of valid tile types, (x,y) must be integers within the current grid bounds, and map must have been created.
-
-### Spawn
-**Description:** Will create an entity of the given type and spawn it at the provided grid position.
-**Called as:** spawn entity_type x y
-**Contraints:** entity_type must be within list of valid entity types, (x,y) must be integers within current grid bounds, there must not be any other entity already present at the given grid position, and map must have been created.
-
-### Equip
-**Description:** Will equip provided item in the given, or determined, inventory slot to a "player".
-**Called as:** equip item slot*
-**Contraints:** slot is an optional argument and can be skipped. However, if slot is provided it needs to be within list of valid slots and correspond to the items slot. item must be within the list of valid items. A "player" entity must have been created.
-
-### Inventory
-**Description:** Will display the current inventory of the "player".
-**Called as:** inventory
-**Contraints:** A "player" entity must exist.
-
-### Inspect
-**Description:** Will display the stats of an entity given its id.
-**Called as:** inspect id
-**Contraints:** The id must be an integer that corresponds to a valid entity within the entity list.
-
-### Tile
-**Description:** Will display a description of the tile at the given grid position.
-**Called as:** tile x y
-**Contraints:** (x,y) must be integers within the current grid bounds and the map must have been created.
+The command line interface is where the game in played. Running the command line interface will allow the user to input commands, which will be handled accordingly by the command line interfaces process_command method. This will return descriptive error messages so that users will know what was wrong with their inputs. The command line interface also will house the current game grid of tiles, a list of the current entities, and a boolean to determine if the map was already created. Contains main function that will prompt for the commands in the terminal, the player can exit at any time by entering 'quit'.

@@ -460,7 +460,7 @@ class TestCML(unittest.TestCase):
         # check output
         self.assertEqual(
             output,
-            "ok: tile_set 0, 0 type: wall!\n",
+            "ok: tile_set 0, 0 type: Wall!\n",
         )
 
     # zero indexed so 25x25 = 0-24
@@ -480,7 +480,7 @@ class TestCML(unittest.TestCase):
         # check output
         self.assertEqual(
             output,
-            "ok: tile_set 24, 24 type: wall!\n",
+            "ok: tile_set 24, 24 type: Wall!\n",
         )
 
     def test_set_tile_with_invalid_tile_type(self):
@@ -518,7 +518,7 @@ class TestCML(unittest.TestCase):
         # check output
         self.assertEqual(
             output,
-            "ok: tile_set 24, 24 type: wall!\n",
+            "ok: tile_set 24, 24 type: Wall!\n",
         )
 
     # Spawn cases
