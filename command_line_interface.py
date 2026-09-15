@@ -286,10 +286,9 @@ class CLI:
         # Display stats of entity
         for stat, value in entity_stats.items():
             if stat != "Active_modifiers":
-                if isinstance(value, str):
-                    # Capitilize Type
-                    value = value.capitalize()
+                value = CLI.capitalize_if_string(value)
                 print(f"{stat}: {value}")
+            # Special case for dictionaries inside of active modifiers
             elif stat == "Active_modifiers":
                 count = 0
                 # count all modifiers
@@ -319,21 +318,33 @@ class CLI:
             print("error: tile_failed - x and y exceed current grid bounds!")
             return
 
-        # display  - MESSY NEEDS MORE FUNCTIONS
+        # display - handles special cases
         print(f"Coordinate: {x}, {y}")
-        for attribute, value in vars(self.grid.grid[int(x)][int(y)]).items():
-            if attribute == "t_type":
-                if value == "shallowwater":
-                    print("Type: ShallowWater")
-                else:
-                    print(f"Type: {value.capitalize()}")
-            elif attribute == "occupants":
-                if value == []:
-                    # convert empty list to string
-                    print(f"{attribute.capitalize()}: None")
-                else:
-                    print(f"{attribute.capitalize()}: {value[0]}")
-            elif attribute != "modifiers":  # skip unused attribute
-                print(f"{attribute.capitalize()}: {value}")
-            else:
-                return
+        # Get tile
+        current_tile = self.grid.grid[int(x)][int(y)]
+
+        # Special case with shallowwater for proper capitalization
+        if current_tile.t_type == "shallowwater":
+            print("Type: ShallowWater")
+        else:
+            print(f"Type: {current_tile.t_type.capitalize()}")
+
+        # Passable
+        print(f"Passable: {current_tile.passable}")
+
+        # occupants - special case for empty list (shoudl logic be changed to just one occupant this can be cleaner)
+        if len(current_tile.occupants) == 0:
+            print("Occupants: None")
+        else:
+            print(f"Occupants: {current_tile.occupants[0]}")
+
+    # Capitalize If String Start
+    # Will capitalize and return string if it is a string
+    # Params: value - Any - Value to be tested if a string
+    # Returns: value - Any - value will be Capitalized if a string
+    def capitalize_if_string(value):
+        # if value is a string
+        if isinstance(value, str):
+            return value.capitalize()
+        else:
+            return value
