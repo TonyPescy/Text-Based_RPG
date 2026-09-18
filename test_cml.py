@@ -1,3 +1,16 @@
+"""
+Author: Tony Pescatore
+Major:  Computer Science
+Creation Date: September 3, 2026
+Due Date: Multiple Due Dates
+Course: CPSC 520
+Professor: Dr. Schwesinger
+Assignment: Text Based RPG
+Filename: test_cml.py
+Purpose: Utilizes unittest to test all of the fron facing functions to insure there are no catastrohpic errors that make it into the game.
+"""
+
+# Imports
 import unittest
 from unittest.mock import patch
 import io

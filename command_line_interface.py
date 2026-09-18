@@ -1,3 +1,15 @@
+"""
+Author: Tony Pescatore
+Major:  Computer Science
+Creation Date: September 3, 2026
+Due Date: Multiple Due Dates
+Course: CPSC 520
+Professor: Dr. Schwesinger
+Assignment: Text Based RPG
+Filename: command_line_interface.py
+Purpose: Run all public facing functions that the player will use to interact with the game. Handles user inputted commands and parses them accordingly.
+"""
+
 # Imports
 from domain_library import Entity, Equipment, Grid, Tile
 

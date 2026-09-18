@@ -43,9 +43,9 @@ Tony Pescatore
 ## Tiles
 [Table of Contents](#table-of-contents)
 
-- Floor
-- Wall
-- ShallowWater
+- Floor: Standard tile
+- Wall: An impassable tile
+- ShallowWater: Tile that imposes a speed debuff of -2 on the player
 
 ## Command Line Interface Guide
 [Table of Contents](#table-of-contents)

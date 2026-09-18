@@ -1,3 +1,16 @@
+"""
+Author: Tony Pescatore
+Major:  Computer Science
+Creation Date: September 3, 2026
+Due Date: Multiple Due Dates
+Course: CPSC 520
+Professor: Dr. Schwesinger
+Assignment: Text Based RPG
+Filename: domain_library.py
+Purpose: Houses all private facing functions that will be used to run the game, setup, and complete all of the user inputted commands
+"""
+
+
 # Grid class with all methods needed for manipulating the grid
 class Grid:
     # Constants
@@ -167,6 +180,7 @@ class Grid:
         return new_entity
 
     # Reset Grid start
+    # resets grid to prevent any errors during testing
     def reset_grid():
         # reset grid stats
         Grid.width = 0
@@ -269,9 +283,13 @@ class Entity:
     entity_ids_issued = 0
     # Base Entity Methods
 
+    # Reset ID Issuer Tracker Start
+    # resets entity id issues number back to 0 to prevent errors with testing
     def reset_id_issuer_tracker():
         Entity.entity_ids_issued = 0
 
+    # Reset Entity List Start
+    # resets entity list back to empty to prevent errors with testing
     def reset_entity_list():
         Entity.entity_list = []
 
@@ -323,6 +341,7 @@ class Entity:
     # Update Stats Start
     # Calculates final stats and updates entities stats based on their bases and modifiers
     # Called when inventory is changed or if unit is positioned on a tile that modifies stats
+    # Params: active_grid - Grid - Current grid used by the CLI
     def update_stats(self, active_grid):
         # Clear active modifiers to avoid double counting of modifiers
         self.active_modifiers["Flat_modifiers"] = {}
@@ -363,6 +382,8 @@ class Entity:
     # Handle Modifiers Start
     # Handles the flat and percent modifier split for the update_stats method
     # Updates active modifier of current unit
+    # Params: stat - string - Stat that is to be modified
+    #           modifier - string - modifier to be parsed and applied to given stat
     def handle_modifiers(self, stat, modifier):
         # Determine if the modifier is percent based or a flat modifier and add it active modifiers accordingly
         if (
