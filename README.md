@@ -43,13 +43,17 @@ Tony Pescatore
 ## Tiles
 [Table of Contents](#table-of-contents)
 
-- Floor: Standard tile
-- Wall: An impassable tile
-- ShallowWater: Tile that imposes a speed debuff of -2 on the player
+
+| Tiles         | Desciption |
+| ------------- |:-------------:|
+| Floor         | Standard tile |
+| Wall      |  An impassable tile     |
+| ShallowWater      | Tile that imposes a speed debuff of -2 on the player |
 
 ## Command Line Interface Guide
 [Table of Contents](#table-of-contents)
-This is a guide to the Command Line Interface to be used to play the game. It will outline and define the commands that are currently supported within the game.
+
+**Description:** This is a guide to the Command Line Interface to be used to play the game. It will outline and define the commands that are currently supported within the game.
 
 ### Init Map
 **Description:** Will create a map with the provided width and height.
@@ -103,20 +107,34 @@ This is a guide to the Command Line Interface to be used to play the game. It wi
 ## Design Decisions
 [Table of Contents](#table-of-contents)
 
+**Description:** The following design decisions will provide an overview of each section of the project as well as a breif explanation of why and how some mechanics are implemented the way that they are. Each section was split  using bullet points to avoid a large convulated block of text forming when new features or designs are added to the project.
+
 ### Grid 
-The grid is used as the worlds coordinate system that will track entity positions, tile states, and occupancy across the multiple tile types within the game. The grid is represented by a 2D matrix of Tiles. This grid can range from 5x5 to a max of 50x50 Tiles. It is initialized in such a way that all tiles are passable and open floor tiles. It has a get_stats function which is used to get the stats of the tile at the designated grid position.
+- The grid is used as the worlds coordinate system that will track entity positions, tile states, and occupancy across the multiple tile types within the game. The grid is represented by a 2D matrix of Tiles. 
+- This grid can range from 5x5 to a max of 50x50 Tiles. It is initialized in such a way that all tiles are passable and open floor tiles. 
+- It has a get_stats function which is used to get the stats of the tile at the designated grid position.
 
-### Tiles
-Tiles are what make up the grid. Each Tile has its typing, a boolean whether they are passable or not for collision/movement restrictions, and a list of occupants. Each tile can have more than 1 occupant, which will be represented by a list of entity IDs, or if there are no occupants it will be instead be filled with the empty tile constant value. Currently there are only 3 valid tile types, which are: Floor, Wall, and ShallowWater. Floor tiles act as open floor tiles which are passable and will not impede movement in anyway. Wall tiles are impassable tiles that will be used to enforce spatial boundaries and colision. ShallowWater tiles are passable tiles that apply a negative modifier that will impede the movement of its occupant(s).
+### Tiles NEEDS UPDATING WITH NEW IMPLENTATION
+- Tiles are what make up the grid. Each Tile has its typing, a boolean determining whether they are passable or not for collision/movement restrictions, and a list of occupants. 
+- Each tile can have more than 1 occupant, which will be represented by a list of entity IDs, or if there are no occupants it will be instead be filled with the empty tile constant value. 
+- There are only 3 valid tile types, which are: Floor, Wall, and ShallowWater. 
+    - **Floor Tiles:** Act as open tiles which are passable and will not impede movement in anyway. 
+    - **Wall Tiles:** Impassable tiles that will be used to enforce spatial boundaries and colision. 
+    - **ShallowWater Tiles:** Passable tiles that apply a negative modifier that will impede the movement of its occupant(s).
 
-### Entities
-Entities include both player and monster classes which use base stats and conditional modifiers to get their final stat values. Entities have the following stats: id, type, position, health, attack, defence, speed, inventory, and active_modifiers. These can be added to in some cases, such as with the player Mage class which adds mana and spell power. The entity's inventory will be filled with 3 pieces of equipment with only 1 of each type being allowed to be eqipped at a time. Entities will have a dictionary of active modifiers which will contain two keys, Flat_modifiers and Percent_modifiers, which will make it significantly easier to calculate the entities final stats with these modifiers taken into account.
+### Entities NEEDS UPDATING WITH NEW IMPLENTATION
+- Entities include both player and monster classes which use base stats and conditional modifiers to get their final stat values. Entities have the following stats: id, type, position, health, attack, defence, speed, inventory, and active_modifiers. These can be added to in some cases, such as with the player Mage class which adds mana and spell power. 
+- The entity's inventory will be filled with 3 pieces of equipment with only 1 of each type being allowed to be eqipped at a time. 
+- Entities will have a dictionary of active modifiers which will contain two keys, Flat_modifiers and Percent_modifiers, which will make it significantly easier to calculate the entities final stats with these modifiers taken into account.
 
 ### Equipment
-The equipment class represents items that will be held within an entity's inventory. There are only 3 types, weapon, armor, and accessory, all of which can only have 1 equipped in a single slot at a time. These items will have modifiers that will be to calculate the final stat values for the entity that they are equipped to. 
+- The equipment class represents items that will be held within an entity's inventory. There are only 3 types, weapon, armor, and accessory, all of which can only have 1 equipped in a single slot at a time. These items will have modifiers that will be to calculate the final stat values for the entity that they are equipped to. 
+- The items themselves will inherit the equipment class then add their own stats to it so make getting the stats from each item simpler.
 
 ### Test Suite
-The test suite only tests the public facing methods as they will call and use the other private facing methods. This means that these private facing methods will also be tested in tandem. It incldues verbose tests includings tests on the boundary values, the validity of inputs, and ensures that all public facing methods and private methods are working as intended.
+- The test suite tests the public facing methods as they will call and use the other private facing methods. This means that these private facing methods will also be tested in tandem. It incldues verbose tests includings tests on the boundary values, the validity of inputs, and ensures that all public facing methods and private methods are working as intended. 
+- All other aspects of the project are tested within this suite including the Command Line Interface, Equipment, Entities, Grid, and Tiles.
 
 ### Command Line Interface
-The command line interface is where the game in played. Running the command line interface will allow the user to input commands, which will be handled accordingly by the command line interfaces process_command method. This will return descriptive error messages so that users will know what was wrong with their inputs. The command line interface also will house the current game grid of tiles, a list of the current entities, and a boolean to determine if the map was already created. Contains main function that will prompt for the commands in the terminal, the player can exit at any time by entering 'quit'.
+- The command line interface is where the game in played. Running the command line interface will allow the user to input commands, which will be handled accordingly by the command line interfaces process_command method. This will return descriptive error messages so that users will know what was wrong with their inputs. 
+- The command line interface will house the current game grid of tiles, a list of the current entities, and a boolean to determine if the map was already created. It also contains the main function that will prompt for the commands in the terminal, the player can exit at any time by entering 'quit'.
