@@ -12,17 +12,20 @@ Purpose: Houses all functions necessary for proper entity handling and logic in 
 
 # imports
 import domain_library as d_Lib
+from equipment import Equipment
 
 
 # Entity class with all methods needed for entities
 class Entity:
-
-    # Base Invetory for all Entities
-    BASE_INVENTORY = (
+    """# Base Invetory for all Entities
+    BASE_INVENTORY = [
         d_Lib.create_equipment("none_wep"),
         d_Lib.create_equipment("none_armor"),
         d_Lib.create_equipment("none_acc"),
-    )
+    ]"""
+
+    # Base Modifiers for all Entities
+    BASE_MODIFIERS = {"Flat_modifiers": {}, "Percent_modifiers": {}}
 
     # Initialize Entity Class with id, type, position, health, attack, defence, speed, inventory, active_modifiers
     def __init__(
@@ -46,29 +49,6 @@ class Entity:
         self.speed = speed
         self.inventory = inventory
         self.active_modifiers = active_modifiers
-
-    # START MOVE TO CLI?
-    # Entity List for tracking entities
-    entity_list = []
-    # Value to count what ID to give the next entity
-    entity_ids_issued = 0
-    # END MOVE TO CLI
-
-    # Base Entity Methods
-
-    # Reset ID Issuer Tracker Start
-    # resets entity id issues number back to 0 to prevent errors with testing
-    # Params: None
-    # Return: None
-    def reset_id_issuer_tracker():
-        Entity.entity_ids_issued = 0
-
-    # Reset Entity List Start
-    # resets entity list back to empty to prevent errors with testing
-    # Params: None
-    # Return: None
-    def reset_entity_list():
-        Entity.entity_list = []
 
     # Get Stats Start
     # Gets all relevant stats of the entity and returns them
@@ -106,6 +86,7 @@ class Entity:
     # Calculates final stats and updates entities stats based on their bases and modifiers
     # Called when inventory is changed or if unit is positioned on a tile that modifies stats
     # Params: active_grid - Grid - Current grid used by the CLI
+    # Return: None
     def update_stats(self, active_grid):
         # Clear active modifiers to avoid double counting of modifiers
         self.active_modifiers["Flat_modifiers"] = {}
@@ -131,9 +112,7 @@ class Entity:
         tile = active_grid.grid[x][y]
 
         # Handle modifiers for tile - split due to way tile modifiers are setup - could be cleaned up later
-        for stat, modifier in tile.modifiers["Flat_modifiers"].items():
-            self.handle_modifiers(stat, modifier)
-        for stat, modifier in tile.modifiers["Percent_modifiers"].items():
+        for stat, modifier in tile.modifiers.items():
             self.handle_modifiers(stat, modifier)
 
         # Since stats will be changed and overwritten, we need the entity stats set to their bases
@@ -152,7 +131,7 @@ class Entity:
     def handle_modifiers(self, stat, modifier):
         # Determine if the modifier is percent based or a flat modifier and add it active modifiers accordingly
         if (
-            modifier[len(modifier) - 1] != "%"
+            modifier[len((modifier)) - 1] != "%"
         ):  # All percent based modifiers will end with "%"
             # Flat modifier
             # If a stat is already being modified by a flat modifier
@@ -197,24 +176,15 @@ class Entity:
 
     # Calculate Final Stats End
 
-    # Is Valid Entity Start
-    # Checks to see input is a valid entity type
-    # Params: entity_type - string - entity name
-    # Returns: Bool
-    def is_valid_entity(entity_type):
-        if entity_type in [entity.lower() for entity in d_Lib.ENTITY_TYPES]:
-            return True
-        else:
-            print("error: Tile Type added is not a valid tile type!")
-            return False
-
-    # Create Entity Start - NEEDS FIX
+    """
+    # Create Entity Start - NEEDS FIX/REFACTOR
     # Creates entity with base stats and values based on the entity
     # Holds base stats for all of the entities
     # Params: e_type - String - Type of entity to create
     #       x,y - int - Coordinates to spawn entity at
+    #       id__to_use - int - id generated for entity based on current entity ID counter
     # Return: None
-    def create_entity(e_type, x, y):
+    def create_entity(e_type, x, y, id_to_use):
         # ensure correct typing
         x = int(x)
         y = int(y)
@@ -224,7 +194,7 @@ class Entity:
             case "warrior":
                 # Create warrior entity
                 temp_entity = Entity(
-                    Entity.entity_ids_issued,
+                    id_to_use,
                     "warrior",
                     [x, y],
                     Entity.WARRIOR_BASE_STATS["Health"],
@@ -241,7 +211,7 @@ class Entity:
             case "mage":
                 # Create mage entity
                 temp_entity = Mage(
-                    Entity.entity_ids_issued,
+                    id_to_use,
                     "mage",
                     [x, y],
                     Mage.MAGE_BASE_STATS["Health"],
@@ -260,7 +230,7 @@ class Entity:
             case "skeleton":
                 # Create skeleton entity
                 temp_entity = Entity(
-                    Entity.entity_ids_issued,
+                    id_to_use,
                     "skeleton",
                     [x, y],
                     Entity.SKELETON_BASE_STATS["Health"],
@@ -277,7 +247,7 @@ class Entity:
             case "goblin":
                 # Create goblin entity
                 temp_entity = Entity(
-                    Entity.entity_ids_issued,
+                    id_to_use,
                     "goblin",
                     [x, y],
                     Entity.GOBLIN_BASE_STATS["Health"],
@@ -296,18 +266,26 @@ class Entity:
                     f"Expected one of: {Entity.ENTITY_TYPES}."
                 )
 
+        # HANDLE INSIDE OF CLI
         # Increment entity_ids_issued to account for new entity
         Entity.entity_ids_issued += 1
         # Add new entity to entity list
         Entity.entity_list.append(temp_entity)
-
+        # HANDLE INSIDE OF CLI
+    """
     # Create Entity End
 
     # Equip Item Start
     # Equips given item at given slot
-    # Params: None
+    # Params: item - Equipment object - equipment to be equipped
+    #           slot - string - slot to equip weapon to
     # Return: None
     def equip_item(self, item, slot):
+        if not isinstance(item, Equipment):
+            return
+        # Redundant code btw
+        if slot != item.slot.lower():
+            return
         # match statement for slot
         match slot:
             # weapon case
@@ -334,23 +312,17 @@ class Warrior(Entity):
     }
 
     # Initialize warrior class with entity class attributes
-    def __init__(
-        self,
-        id,
-        e_type,
-        position,
-        active_modifiers,
-    ):
+    def __init__(self, id, position, active_modifiers=Entity.BASE_MODIFIERS):
         # Inherit init from Entity super class
         super().__init__(
             id,
-            e_type,
+            "warrior",
             position,
             self.BASE_STATS["Health"],
             self.BASE_STATS["Attack"],
             self.BASE_STATS["Defence"],
             self.BASE_STATS["Speed"],
-            self.BASE_INVENTORY,
+            d_Lib.BASE_INVENTORY,
             active_modifiers,
         )
 
@@ -368,23 +340,17 @@ class Skeleton(Entity):
     }
 
     # Initialize skeleton class with entity class attributes
-    def __init__(
-        self,
-        id,
-        e_type,
-        position,
-        active_modifiers,
-    ):
+    def __init__(self, id, position, active_modifiers=Entity.BASE_MODIFIERS):
         # Inherit init from Entity super class
         super().__init__(
             id,
-            e_type,
+            "skeleton",
             position,
             self.BASE_STATS["Health"],
             self.BASE_STATS["Attack"],
             self.BASE_STATS["Defence"],
             self.BASE_STATS["Speed"],
-            self.BASE_INVENTORY,
+            d_Lib.BASE_INVENTORY,
             active_modifiers,
         )
 
@@ -402,23 +368,17 @@ class Goblin(Entity):
     }
 
     # Initialize goblin class with entity class attributes
-    def __init__(
-        self,
-        id,
-        e_type,
-        position,
-        active_modifiers,
-    ):
+    def __init__(self, id, position, active_modifiers=Entity.BASE_MODIFIERS):
         # Inherit init from Entity super class
         super().__init__(
             id,
-            e_type,
+            "goblin",
             position,
             self.BASE_STATS["Health"],
             self.BASE_STATS["Attack"],
             self.BASE_STATS["Defence"],
             self.BASE_STATS["Speed"],
-            self.BASE_INVENTORY,
+            d_Lib.BASE_INVENTORY,
             active_modifiers,
         )
 
@@ -436,24 +396,18 @@ class Mage(Entity):
     }
 
     # Initialize mage class with entity class attributes + new ones: mana and spell power
-    def __init__(
-        self,
-        id,
-        e_type,
-        position,
-        active_modifiers,
-    ):
+    def __init__(self, id, position, active_modifiers=Entity.BASE_MODIFIERS):
 
         # Inherit init from Entity super class
         super().__init__(
             id,
-            e_type,
+            "mage",
             position,
             self.BASE_STATS["Health"],
             self.BASE_STATS["Attack"],
             self.BASE_STATS["Defence"],
             self.BASE_STATS["Speed"],
-            self.BASE_INVENTORY,
+            d_Lib.BASE_INVENTORY,
             active_modifiers,
         )
         # New attributes
@@ -544,9 +498,7 @@ class Mage(Entity):
         tile = active_grid.grid[x][y]
 
         # Handle modifiers for tile - split due to way tile modifiers are setup - FIX
-        for stat, modifier in tile.modifiers["Flat_modifiers"].items():
-            self.handle_modifiers(stat, modifier)
-        for stat, modifier in tile.modifiers["Percent_modifiers"].items():
+        for stat, modifier in tile.modifiers.items():
             self.handle_modifiers(stat, modifier)
         # Since stats will be changed and overwritten, we need the entity stats set to their bases
         self.reset_stats()

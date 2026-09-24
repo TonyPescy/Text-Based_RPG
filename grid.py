@@ -11,7 +11,8 @@ Purpose: Houses all functions necessary for proper grid/tile handling and logic 
 """
 
 # imports
-from entity import Entity
+import domain_library as dl
+import command_line_interface as cli
 
 
 # Grid class with all methods needed for manipulating the grid
@@ -26,7 +27,7 @@ class Grid:
         self.height = height
         self.grid = []  # To be filed with Tiles
 
-        if Grid.are_valid_ints(width, height) and Grid.within_bounds(width, height):
+        if dl.are_valid_ints(width, height) and Grid.within_bounds(width, height):
             # Generate grid based on height and width and fill with OPEN spaces
             for col in range(int(width)):  # for each col based on width of grid
                 temp_col = []
@@ -45,8 +46,15 @@ class Grid:
     # Returns: Bool - if grid tile is occupied T/F
     def is_occupied(self, x, y):
         # typing fix
-        x = int(x)
-        y = int(y)
+        try:
+            x = int(x)
+            y = int(y)
+        except:
+            print(
+                f"error: Grid.is_occupied_failed - x ({x}) and/or y ({y}) is/are not integer(s)!"
+            )
+            return None
+
         if len(self.grid[x][y].occupants) == 0:  # empty list of occupants
             return False
         else:
@@ -62,9 +70,14 @@ class Grid:
     # Return: None
     def occupy(self, x, y, e_ID):
         # typing fix
-        x = int(x)
-        y = int(y)
-        self.grid[x][y].occupants.append(e_ID)
+        try:
+            x = int(x)
+            y = int(y)
+            self.grid[x][y].occupants.append(e_ID)
+        except:
+            print(
+                f"error: Grid.occupy_failed - x ({x}) and/or y ({y}) is/are not integer(s)!"
+            )
 
     # Occupy End
 
@@ -111,19 +124,6 @@ class Grid:
         return stat_tuple
 
     # Get Stats End
-
-    # Are Valid Ints
-    # Checks to see if x and y are valid ints
-    # Params: x/y - ints
-    # Returns: bool
-    def are_valid_ints(x, y):
-        # Try except for width/height typing
-        try:
-            int(x)
-            int(y)
-        except:  # Return error for proper error message
-            return False
-        return True
 
     # Within Bounds start
     # checks to see if width and height are within bounds - only runs if they are valid ints
@@ -174,10 +174,8 @@ class Grid:
         # typing fix
         x = int(x)
         y = int(y)
-        # spawn entity
-        Entity.create_entity(entity_type, x, y)
-        # get entity - NEW entity is at end of the list
-        new_entity = Entity.entity_list[-1]
+        # spawn/get entity
+        new_entity = dl.create_entity(entity_type, x, y, cli.entity_ids_issued)
 
         # occupy position on map
         self.occupy(x, y, new_entity.id)
@@ -210,10 +208,7 @@ class Tile:
         self.occupants = occupants
 
         if modifiers is None:
-            modifiers = {
-                "Flat_modifiers": {},
-                "Percent_modifiers": {},
-            }
+            modifiers = {}
 
         self.modifiers = modifiers
 
@@ -250,5 +245,9 @@ class Tile:
                     t_type,
                     True,
                     [],
-                    {"Flat_modifiers": {"Speed": "-2"}, "Percent_modifiers": {}},
+                    {"Speed": "-2"},
                 )
+            # Forest Tile
+            case "forest":
+                # create and return Forest tile
+                return Tile(t_type, True, [], {"Defence": "+5", "Speed": "-1"})

@@ -904,7 +904,7 @@ class TestCML(unittest.TestCase):
         # Create Map
         test_cli.process_command("init map 25 25")
         # clear out entity list
-        Entity.reset_entity_list()
+        CLI.reset_entity_list()
         # create entity to be "player"
         test_cli.process_command("spawn warrior 10 10")
         command = "equip this command is too long"
@@ -927,7 +927,7 @@ class TestCML(unittest.TestCase):
         # Create Map
         test_cli.process_command("init map 25 25")
         # clear out entity list
-        Entity.reset_entity_list()
+        test_cli.reset_entity_list()
         # create entity to be "player"
         test_cli.process_command("spawn warrior 10 10")
         command = "equip ironsword primary"
@@ -950,7 +950,7 @@ class TestCML(unittest.TestCase):
         # Create Map
         test_cli.process_command("init map 25 25")
         # clear out entity list
-        Entity.reset_entity_list()
+        test_cli.reset_entity_list()
         # create entity to be "player"
         test_cli.process_command("spawn warrior 10 10")
         command = "equip MoonDaggerThatDoesNotExist weapon"
@@ -973,7 +973,7 @@ class TestCML(unittest.TestCase):
         # Create Map
         test_cli.process_command("init map 25 25")
         # clear out entity list
-        Entity.reset_entity_list()
+        test_cli.reset_entity_list()
         # create entity to be "player"
         test_cli.process_command("spawn warrior 10 10")
         command = "equip MoonDaggerThatDoesNotExist"
@@ -996,7 +996,7 @@ class TestCML(unittest.TestCase):
         # Create Map
         test_cli.process_command("init map 25 25")
         # clear out entity list
-        Entity.reset_entity_list()
+        test_cli.reset_entity_list()
         command = "equip IronSWORD weapon"
         # Process command
         with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
@@ -1017,7 +1017,7 @@ class TestCML(unittest.TestCase):
         # Create Map
         test_cli.process_command("init map 25 25")
         # clear out entity list
-        Entity.reset_entity_list()
+        test_cli.reset_entity_list()
         # create entity to be "player"
         test_cli.process_command("spawn warrior 10 10")
         command = "equip IronSWORD armor"
@@ -1041,7 +1041,7 @@ class TestCML(unittest.TestCase):
         # Create Map
         test_cli.process_command("init map 25 25")
         # clear out entity list
-        Entity.reset_entity_list()
+        test_cli.reset_entity_list()
         # create entity to be "player"
         test_cli.process_command("spawn warrior 10 10")
         command = "equip ironsword weapon"
@@ -1068,7 +1068,7 @@ class TestCML(unittest.TestCase):
         # Create Map
         test_cli.process_command("init map 25 25")
         # clear out entity list
-        Entity.reset_entity_list()
+        test_cli.reset_entity_list()
         # create entity to be "player"
         test_cli.process_command("spawn warrior 10 10")
         command = "equip ironsword"
@@ -1095,7 +1095,7 @@ class TestCML(unittest.TestCase):
         # Create Map
         test_cli.process_command("init map 25 25")
         # clear out entity list
-        Entity.reset_entity_list()
+        test_cli.reset_entity_list()
         # create entity to be "player"
         test_cli.process_command("spawn warrior 10 10")
         command = "inventory display"
@@ -1118,7 +1118,7 @@ class TestCML(unittest.TestCase):
         # Create Map
         test_cli.process_command("init map 25 25")
         # clear out entity list
-        Entity.reset_entity_list()
+        test_cli.reset_entity_list()
         command = "inventory"
         # Process command
         with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
@@ -1137,7 +1137,7 @@ class TestCML(unittest.TestCase):
         # Clear out grid
         test_cli.grid = Grid.reset_grid()
         # clear out entity list
-        Entity.reset_entity_list()
+        test_cli.reset_entity_list()
         # create entity to be "player"
         test_cli.process_command("spawn warrior 10 10")
         command = "inventory"
@@ -1159,7 +1159,7 @@ class TestCML(unittest.TestCase):
         # Clear out grid
         test_cli.grid = Grid.reset_grid()
         # clear out entity list
-        Entity.reset_entity_list()
+        test_cli.reset_entity_list()
         # Create Map
         test_cli.process_command("init map 25 25")
         test_cli.process_command("spawn warrior 10 10")
@@ -1183,7 +1183,7 @@ class TestCML(unittest.TestCase):
         # Clear out grid
         test_cli.grid = Grid.reset_grid()
         # clear out entity list
-        Entity.reset_entity_list()
+        test_cli.reset_entity_list()
         # Create Map
         test_cli.process_command("init map 25 25")
         # spawn warrior
@@ -1212,7 +1212,7 @@ class TestCML(unittest.TestCase):
         # Clear out grid
         test_cli.grid = Grid.reset_grid()
         # clear out entity list
-        Entity.reset_entity_list()
+        test_cli.reset_entity_list()
         command = "inspect nothing really"
         # Process command
         with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
@@ -1231,7 +1231,7 @@ class TestCML(unittest.TestCase):
         # Clear out grid
         test_cli.grid = Grid.reset_grid()
         # clear out entity list
-        Entity.reset_entity_list()
+        test_cli.reset_entity_list()
         command = "inspect"
         # Process command
         with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
@@ -1250,7 +1250,7 @@ class TestCML(unittest.TestCase):
         # Clear out grid
         test_cli.grid = Grid.reset_grid()
         # clear out entity list
-        Entity.reset_entity_list()
+        test_cli.reset_entity_list()
         # Create Map
         test_cli.process_command("init map 25 25")
         command = "inspect 0"
@@ -1271,7 +1271,7 @@ class TestCML(unittest.TestCase):
         # Clear out grid
         test_cli.grid = Grid.reset_grid()
         # clear out entity list
-        Entity.reset_entity_list()
+        test_cli.reset_entity_list()
         # spawn warrior
         test_cli.process_command("spawn warrior 10 10")
         command = "inspect 0"
@@ -1292,7 +1292,7 @@ class TestCML(unittest.TestCase):
         # Clear out grid
         test_cli.grid = Grid.reset_grid()
         # clear out entity list
-        Entity.reset_entity_list()
+        test_cli.reset_entity_list()
         # Create Map
         test_cli.process_command("init map 25 25")
         # spawn warrior
@@ -1315,7 +1315,7 @@ class TestCML(unittest.TestCase):
         # Clear out grid
         test_cli.grid = Grid.reset_grid()
         # clear out entity list
-        Entity.reset_entity_list()
+        test_cli.reset_entity_list()
         # Create Map
         test_cli.process_command("init map 25 25")
         # spawn warrior
@@ -1339,7 +1339,7 @@ class TestCML(unittest.TestCase):
         # Clear out grid
         test_cli.grid = Grid.reset_grid()
         # clear out entity list
-        Entity.reset_entity_list()
+        test_cli.reset_entity_list()
         # Create Map
         test_cli.process_command("init map 25 25")
         # spawn warrior
@@ -1370,7 +1370,7 @@ class TestCML(unittest.TestCase):
         # Clear out grid
         test_cli.grid = Grid.reset_grid()
         # clear out entity list
-        Entity.reset_entity_list()
+        test_cli.reset_entity_list()
         # Create Map
         test_cli.process_command("init map 25 25")
         # spawn warrior
@@ -1402,7 +1402,7 @@ class TestCML(unittest.TestCase):
         # Clear out grid
         test_cli.grid = Grid.reset_grid()
         # clear out entity list
-        Entity.reset_entity_list()
+        test_cli.reset_entity_list()
         # Create Map
         test_cli.process_command("init map 25 25")
         # spawn warrior
@@ -1437,7 +1437,7 @@ class TestCML(unittest.TestCase):
         # Clear out grid
         test_cli.grid = Grid.reset_grid()
         # clear out entity list
-        Entity.reset_entity_list()
+        test_cli.reset_entity_list()
         # Create Map
         test_cli.process_command("init map 25 25")
         # spawn warrior
@@ -1473,7 +1473,7 @@ class TestCML(unittest.TestCase):
         # Clear out grid
         test_cli.grid = Grid.reset_grid()
         # clear out entity list
-        Entity.reset_entity_list()
+        test_cli.reset_entity_list()
         # Create Map
         test_cli.process_command("init map 25 25")
         # spawn warrior
@@ -1510,7 +1510,7 @@ class TestCML(unittest.TestCase):
         # Clear out grid
         test_cli.grid = Grid.reset_grid()
         # clear out entity list
-        Entity.reset_entity_list()
+        test_cli.reset_entity_list()
         # Create Map
         test_cli.process_command("init map 25 25")
         # set tile at 10, 10
@@ -1549,7 +1549,7 @@ class TestCML(unittest.TestCase):
         # Clear out grid
         test_cli.grid = Grid.reset_grid()
         # clear out entity list
-        Entity.reset_entity_list()
+        test_cli.reset_entity_list()
         # Create Map
         test_cli.process_command("init map 25 25")
         # spawn warrior
@@ -1586,7 +1586,7 @@ class TestCML(unittest.TestCase):
         # Clear out grid
         test_cli.grid = Grid.reset_grid()
         # clear out entity list
-        Entity.reset_entity_list()
+        test_cli.reset_entity_list()
         command = "tile nothing really lol"
         # Process command
         with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
@@ -1605,7 +1605,7 @@ class TestCML(unittest.TestCase):
         # Clear out grid
         test_cli.grid = Grid.reset_grid()
         # clear out entity list
-        Entity.reset_entity_list()
+        test_cli.reset_entity_list()
         command = "tile"
         # Process command
         with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
@@ -1626,7 +1626,7 @@ class TestCML(unittest.TestCase):
         # Create Map
         test_cli.process_command("init map 25 25")
         # clear out entity list
-        Entity.reset_entity_list()
+        test_cli.reset_entity_list()
         command = "tile nineT 10"
         # Process command
         with patch("sys.stdout", new=io.StringIO()) as mock_stdout:

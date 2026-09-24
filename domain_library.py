@@ -12,6 +12,7 @@ Purpose: Houses all private facing functions that will be used to run the game, 
 
 # Imports
 import equipment
+from entity import Warrior, Skeleton, Goblin, Mage
 
 # from equipment import Equipment
 
@@ -54,20 +55,70 @@ def create_equipment(item_name):
     return equipment_type  # Return initialized item
 
 
-# Entities Factories
-"""     THIS IS AN EXAMPLE OF THE FACTORY
-def create_entity(e_type, x, y):
+# Base Invetory for all Entities
+BASE_INVENTORY = [
+    create_equipment("none_wep"),
+    create_equipment("none_armor"),
+    create_equipment("none_acc"),
+]
+
+
+# Entities Factory
+# Create Entity Start
+# Creates entity with base stats and values based on the entity
+# Holds base stats for all of the entities
+# Params: e_type - String - Type of entity to create
+#       x,y - int - Coordinates to spawn entity at
+#       e_id - int - id generated for entity based on current entity ID counter
+def create_entity(e_type, x, y, e_id):
+    # ensure correct typing
+    try:
+        x = int(x)
+        y = int(y)
+    except:
+        print(f"error: spawn_failed x ({x}) and/or y ({y}) are not integers!")
 
     match e_type:
         case "warrior":
-            return Warrior(x, y)
+            return Warrior(e_id, [x, y])
 
         case "mage":
-            return Mage(x, y)
+            return Mage(e_id, [x, y])
 
         case "skeleton":
-            return Skeleton(x, y)
+            return Skeleton(e_id, [x, y])
 
         case "goblin":
-            return Goblin(x, y)
-"""
+            return Goblin(e_id, [x, y])
+
+        case _:  # error no matching entity type found - May be redundant
+            print(
+                f"error: Invalid entity type '{e_type}'. "
+                f"Expected one of: {ENTITY_TYPES}."
+            )
+
+
+# Is Valid Entity Start # MOVE TO D_LIB
+# Checks to see input is a valid entity type
+# Params: entity_type - string - entity name
+# Returns: Bool
+def is_valid_entity(entity_type):
+    if entity_type in [e_type.lower() for e_type in ENTITY_TYPES]:
+        return True
+    else:
+        print("error: Tile Type added is not a valid tile type!")
+        return False
+
+
+# Are Valid Ints
+# Checks to see if x and y are valid ints
+# Params: x/y - ints
+# Returns: bool
+def are_valid_ints(x, y):
+    # Try except for width/height typing
+    try:
+        int(x)
+        int(y)
+    except:  # Return error for proper error message
+        return False
+    return True

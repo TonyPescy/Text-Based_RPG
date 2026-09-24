@@ -49,6 +49,7 @@ Tony Pescatore
 | Floor         | Standard tile |
 | Wall      |  An impassable tile     |
 | ShallowWater      | Tile that imposes a speed debuff of -2 on the player |
+| Forest        | Tile that grants the entity +5 defence and a debuff of -2 |
 
 ## Command Line Interface Guide
 [Table of Contents](#table-of-contents)
@@ -114,13 +115,14 @@ Tony Pescatore
 - This grid can range from 5x5 to a max of 50x50 Tiles. It is initialized in such a way that all tiles are passable and open floor tiles. 
 - It has a get_stats function which is used to get the stats of the tile at the designated grid position.
 
-### Tiles NEEDS UPDATING WITH NEW IMPLENTATION
+### Tiles NEEDS UPDATING WITH NEW IMPLENTATION - Reduce future cyclomatic complexity
 - Tiles are what make up the grid. Each Tile has its typing, a boolean determining whether they are passable or not for collision/movement restrictions, and a list of occupants. 
 - Each tile can have more than 1 occupant, which will be represented by a list of entity IDs, or if there are no occupants it will be instead be filled with the empty tile constant value. 
 - There are only 3 valid tile types, which are: Floor, Wall, and ShallowWater. 
     - **Floor Tiles:** Act as open tiles which are passable and will not impede movement in anyway. 
     - **Wall Tiles:** Impassable tiles that will be used to enforce spatial boundaries and colision. 
     - **ShallowWater Tiles:** Passable tiles that apply a negative modifier that will impede the movement of its occupant(s).
+    - **Forest Tiles:** Passable tiles that apply positive modifier to entity defence as well as impeding their movement slightly.
 
 ### Entities NEEDS UPDATING WITH NEW IMPLENTATION
 - Entities include both player and monster classes which use base stats and conditional modifiers to get their final stat values. Entities have the following stats: id, type, position, health, attack, defence, speed, inventory, and active_modifiers. These can be added to in some cases, such as with the player Mage class which adds mana and spell power. 

@@ -72,7 +72,7 @@ class MageStaff(Equipment):
         super().__init__(
             "MageStaff",
             "Weapon",
-            {"Spell Power": "+5"},
+            {"Spell_power": "+5"},
         )
 
 

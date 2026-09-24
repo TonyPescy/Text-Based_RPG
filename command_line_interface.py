@@ -10,8 +10,11 @@ Filename: command_line_interface.py
 Purpose: Run all public facing functions that the player will use to interact with the game. Handles user inputted commands and parses them accordingly.
 """
 
+# Always Update Stats before using or checking them in case changes have happened
+# Examples: Tiles moved, item equipped, combat, etc
+# Could also update after these movements - pick one to reduce redundancy (Probs do the latter)
+
 # Imports
-from domain_library import Entity, Equipment, Grid, Tile
 
 
 # Handles all Command Line Interface commands for the game
@@ -22,8 +25,23 @@ class CLI:
     # Initialize CLI
     def __init__(self):
         self.grid = None
-        # self.entities = []
+        self.entities_list = []
+        self.entity_ids_issued = 0
         self.map_created = False  # Bool that checks to see if a map was already created
+
+    # Reset Entity List Start
+    # resets entity list back to empty to prevent errors with testing
+    # Params: None
+    # Return: None
+    def reset_entity_list(self):
+        self.entity_list = []
+
+    # Reset ID Issuer Tracker Start
+    # resets entity id issues number back to 0 to prevent errors with testing
+    # Params: None
+    # Return: None
+    def reset_id_issuer_tracker(self):
+        self.entity_ids_issued = 0
 
     # Process Command Start
     # Handles all commands that user can write
@@ -58,7 +76,7 @@ class CLI:
             case "spawn":
                 # Test for valid amount of command pieces and correct commands/typing
                 if len(command_pieces) == 4 and command_pieces[1] in [
-                    entity.lower() for entity in Entity.ENTITY_TYPES
+                    entity.lower() for entity in ENTITY_TYPES
                 ]:
                     self.spawn(command_pieces[1], command_pieces[2], command_pieces[3])
                 else:
@@ -216,6 +234,13 @@ class CLI:
             entity = self.grid.spawn_entity(x, y, entity_type)
             # success output
             print(f"ok: Spawned {entity_type} at {x}, {y}. id: {entity.id}!")
+
+        # HANDLE INSIDE OF CLI
+        # Increment entity_ids_issued to account for new entity
+        Entity.entity_ids_issued += 1
+        # Add new entity to entity list
+        Entity.entity_list.append(temp_entity)
+        # HANDLE INSIDE OF CLI
 
     # Equip Start
     # Equips item to designated slot or determines best slot based on item
