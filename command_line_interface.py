@@ -15,6 +15,9 @@ Purpose: Run all public facing functions that the player will use to interact wi
 # Could also update after these movements - pick one to reduce redundancy (Probs do the latter)
 
 # Imports
+import domain_library as dl
+from grid import Grid, Tile
+from entity import Entity
 
 
 # Handles all Command Line Interface commands for the game
@@ -25,7 +28,7 @@ class CLI:
     # Initialize CLI
     def __init__(self):
         self.grid = None
-        self.entities_list = []
+        self.entity_list = []
         self.entity_ids_issued = 0
         self.map_created = False  # Bool that checks to see if a map was already created
 
@@ -43,6 +46,42 @@ class CLI:
     def reset_id_issuer_tracker(self):
         self.entity_ids_issued = 0
 
+    # Process Command Start
+    # Handles all commands that user can write
+    # Params: command - string - The command entered by the user
+    # Return: None
+    def process_command(self, command):
+        # Split command into command_pieces for use in match statements and the associated methods
+        command_pieces = command.lower().split()
+
+        # Check for empty command
+        if not command_pieces:
+            print("error: Empty command!")
+            return
+
+        # Dictionary with command handlers
+        command_handlers = {
+            "init": self.process_init_command,
+            "set": self.process_set_command,
+            "spawn": self.process_spawn_command,
+            "equip": self.process_equip_command,
+            "inventory": self.process_inventory_command,
+            "inspect": self.process_inspect_command,
+            "tile": self.process_tile_command,
+        }
+
+        # Match handler to command
+        handler = command_handlers.get(command_pieces[0])
+
+        # Check for unknown command
+        if handler is None:
+            print("error: Unknown command!")
+            return
+
+        # Process Command
+        handler(command_pieces)
+
+    """
     # Process Command Start
     # Handles all commands that user can write
     def process_command(self, command):
@@ -134,17 +173,28 @@ class CLI:
             # default command - unknown command
             case _:
                 print("error: Unknown command!")
+    """
 
-    # Init Map Start
+    # Process Init Command Start
     # Creates a map if one does not already exist
-    # Params: wdith/height - ints - grid position
-    def init_map(self, width, height):
+    # Params: command_pieces - list - list of strings that make up the command
+    # Returns: None
+    def process_init_command(self, command_pieces):
+        # Test for valid amount of command pieces and full command
+        if len(command_pieces) == 4 and command_pieces[1] == "map":
+            # Assign width and height
+            width = command_pieces[2]
+            height = command_pieces[3]
+        else:
+            print("error: map_init_failed due to invalid arguments.")
+            return
         # Map already created
         if self.map_created:
             print("error: map_init_failed - Map is already created!")
+            return
 
         # width and height are not valid ints
-        elif not Grid.are_valid_ints(width, height):
+        elif not dl.are_valid_ints(width, height):
             print("error: map_init_failed - Width and height are not valid integers!")
 
         # width and heigth within bounds
@@ -160,21 +210,31 @@ class CLI:
             # mark Create map as True
             self.map_created = True
             # Set entity tracker for mapp
-            Entity.reset_id_issuer_tracker()
+            self.reset_id_issuer_tracker()
             # Success message
             print(f"ok: map_initialized width: {width} height: {height}!")
 
-    # Set Tile Start
+    # Process set command
     # Sets tile at given position
-    # Params: x/y - ints - grid position
-    #       tile_type - string - Type of tile to set
-    def set_tile(self, x, y, tile_type):
+    # Params: command_pieces - list - list of strings that make up the command
+    # Returns: None
+    def process_set_command(self, command_pieces):
+        # Test for valid amount of command pieces and correct commands/typing
+        if len(command_pieces) == 5 and command_pieces[1] == "tile":
+            # Set variables
+            x = command_pieces[2]
+            y = command_pieces[3]
+            tile_type = command_pieces[4]
+        else:
+            print("error: set_tile_failed - Invalid arguments!")
+            return
+
         # checks if map was created
         if not self.map_created:
             print("error: tile_set_failed - Map does not exist!")
 
         # x and y are not valid ints
-        elif not Grid.are_valid_ints(x, y):
+        elif not dl.are_valid_ints(x, y):
             print("error: set_tile_failed - x and y are not valid integers!")
 
             """# x and y within bounds
@@ -199,18 +259,30 @@ class CLI:
                 print(f"ok: tile_set {x}, {y} type: {tile_type.capitalize()}!")
             # update entity if present
 
-    # Spawn Start
+    # Process Spawn Command Start
     # Spawns a unit at designated position
-    # Params: x/y - ints - grid position
-    #       entity_type - string - Type of entity to set
-    def spawn(self, entity_type, x, y):
+    # Params: command_pieces - list - list of strings that make up the command
+    # Return: None
+    def process_spawn_command(self, command_pieces):
+        # Test for valid amount of command pieces and correct commands/typing
+        if len(command_pieces) == 4 and command_pieces[1] in [
+            entity.lower() for entity in dl.ENTITY_TYPES
+        ]:
+            x = command_pieces[2]
+            y = command_pieces[3]
+            entity_type = command_pieces[1]
+        else:
+            print("error: spawn_failed - Invalid arguments!")
+            return
         # Ensure map exists
         if not self.map_created:
             print("error: spawn_failed - Map does not exist!")
+            return
 
         # x and y are not valid ints
-        elif not Grid.are_valid_ints(x, y):
+        elif not dl.are_valid_ints(x, y):
             print("error: spawn_failed - x and y are not valid integers!")
+            return
 
             """# x and y within bounds
             elif not Grid.within_bounds(x, y):
@@ -219,43 +291,65 @@ class CLI:
         # x and y exceeds current grid bounds
         elif not Grid.is_valid_grid_position(self.grid, x, y):
             print("error: spawn_failed - x and y exceed current grid bounds!")
+            return
 
         # ensure grid location is empty
         elif Grid.is_occupied(self.grid, x, y):
             print(f"error: spawn_failed - Entity is already present at ({x}, {y})!")
+            return
 
         # invalid entity type
-        elif not Entity.is_valid_entity(entity_type):
+        elif not dl.is_valid_entity(entity_type):
             print("error: spawn_failed - Invalid entity type!")
+            return
 
         # All valid inputs
         else:
             # updates grid with new entity and returns entity
-            entity = self.grid.spawn_entity(x, y, entity_type)
+            entity = self.grid.spawn_entity(x, y, entity_type, self.entity_ids_issued)
             # success output
             print(f"ok: Spawned {entity_type} at {x}, {y}. id: {entity.id}!")
-
-        # HANDLE INSIDE OF CLI
-        # Increment entity_ids_issued to account for new entity
-        Entity.entity_ids_issued += 1
-        # Add new entity to entity list
-        Entity.entity_list.append(temp_entity)
-        # HANDLE INSIDE OF CLI
+            # Increment entity_ids_issued to account for new entity
+            self.entity_ids_issued += 1
+            # Add new entity to entity list
+            self.entity_list.append(entity)
 
     # Equip Start
     # Equips item to designated slot or determines best slot based on item
     # Player system is not added yet so will default player to be first entity created entity_list[0]
     # Equip will overwrite previous items
-    # Params: Item - Equipment - item to be equipped
-    #       slot - string - slot to equip item in
-    def equip(self, item, slot=""):
+    # Params: command_pieces - list - list of strings thate make up the command
+    # Return: None
+    def process_equip_command(self, command_pieces):
+        # Test for valid amount of command pieces and correct commands/typing
+        if (
+            len(command_pieces) == 3
+            and command_pieces[1]
+            in [equipment.lower() for equipment in dl.EQUIPMENT_TYPES]
+            and command_pieces[2] in [equipment.lower() for equipment in dl.VALID_SLOTS]
+        ):
+            # Run equip with item name and slot
+            item = command_pieces[1]
+            slot = command_pieces[2]
+
+        # If slot is not included
+        elif len(command_pieces) == 2 and command_pieces[1] in [
+            equipment.lower() for equipment in dl.EQUIPMENT_TYPES
+        ]:
+            # Run equip with JUST item name
+            item = command_pieces[1]
+            slot = ""
+        else:
+            print("error: equip_failed - Invalid arguments!")
+            return
+
         # Ensure "player" entity exists
-        if not len(Entity.entity_list) > 0:
+        if not len(self.entity_list) > 0:
             print("error: equip_failed - Player entity does not exist!")
             return
 
         # Find equipment matching item name
-        new_item = Equipment.create_equipment(item)
+        new_item = dl.create_equipment(item)
 
         # check that slot was provided
         if slot != "":
@@ -268,34 +362,48 @@ class CLI:
             slot = new_item.slot
 
         # Equip new item to correct slot
-        Entity.equip_item(Entity.entity_list[0], new_item, slot.lower())
+        Entity.equip_item(self.entity_list[0], new_item, slot.lower())
         # update stats of entity
-        Entity.entity_list[0].update_stats(self.grid)
+        self.entity_list[0].update_stats(self.grid)
         # Success message
-        print("Valid items:", ", ".join(Equipment.VALID_ITEMS))
-        print("Valid slots:", ", ".join(Equipment.VALID_SLOTS))
+        print("Valid items:", ", ".join(dl.EQUIPMENT_TYPES))
+        print("Valid slots:", ", ".join(dl.VALID_SLOTS))
         print(f"ok: Equipped {new_item.name} to {new_item.slot}!")
 
-    # Inventory Start
+    # Process Inventory Command Start
     # displays current inventory to user
     # Player system is not added yet so will default player to be first entity created entity_list[0]
-    def inventory():
+    # Params: command_pieces - list - list of strings that make up the command
+    # Return: None
+    def process_inventory_command(self, command_pieces):
+        if len(command_pieces) > 1:
+            print("error: inventory_failed - Too many command arguemnts!")
+            return
         # Ensure "player" entity exists
-        if not len(Entity.entity_list) > 0:
+        if not len(self.entity_list) > 0:
             print("error: inventory_failed - Player entity does not exist!")
             return
 
         # Display inventory of entity
-        print(f"Weapon: {Entity.entity_list[0].inventory[0].name}")
-        print(f"Armor: {Entity.entity_list[0].inventory[1].name}")
-        print(f"Accessory: {Entity.entity_list[0].inventory[2].name}")
+        print(f"Weapon: {self.entity_list[0].inventory[0].name}")
+        print(f"Armor: {self.entity_list[0].inventory[1].name}")
+        print(f"Accessory: {self.entity_list[0].inventory[2].name}")
 
-    # Inspect Start
+    # Process Inspect Command Start
     # Inspects entity with given ID
-    # Params:   e_id - int - entity id
-    def inspect(self, e_id):
+    # Params:   command_pieces - list - list of strings that make up the command
+    # Return: None
+    def process_inspect_command(self, command_pieces):
+        # Test for valid amount of command pieces
+        if len(command_pieces) == 2:
+            # Run inspect with entity ID
+            e_id = command_pieces[1]
+        else:
+            print("error: inspect_failed - Invalid arguments!")
+            return
+
         # Ensure entities exists
-        if not len(Entity.entity_list) > 0:
+        if not len(self.entity_list) > 0:
             print("error: inspect_failed - No entities exist yet!")
             return
 
@@ -309,7 +417,7 @@ class CLI:
         # Ensure entity exists
         entity_exists = False
         # Check list of entities for entity with given ID
-        for entity in Entity.entity_list:
+        for entity in self.entity_list:
             if int(entity.id) == e_id:
                 # Set existence to true
                 entity_exists = True
@@ -341,17 +449,26 @@ class CLI:
                     count += len(contents)
                 print(f"{stat}: {count}")
 
-    # Tile Start
+    # Process Tile Command Start
     # Will describe the tile at the given grid position
-    # Params: x,y - ints - Grid position
-    def tile(self, x, y):
+    # Params: command_pieces - list - list of strings that make up the command
+    # Returns: None
+    def process_tile_command(self, command_pieces):
+        # Test for valid amount of command pieces and correct commands/typing
+        if len(command_pieces) == 3:
+            # Run spawn with x and y - position checked in grid functions
+            x = command_pieces[1]
+            y = command_pieces[2]
+        else:
+            print("error: tile_failed - Invalid command!")
+            return
         # Ensure map exists
         if not self.map_created:
             print("error: tile_failed - Map does not exist!")
             return
 
         # x and y are not valid ints
-        elif not Grid.are_valid_ints(x, y):
+        elif not dl.are_valid_ints(x, y):
             print("error: tile_failed - x and y are not valid integers!")
             return
 

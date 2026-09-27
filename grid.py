@@ -12,6 +12,7 @@ Purpose: Houses all functions necessary for proper grid/tile handling and logic 
 
 # imports
 import domain_library as dl
+import entity
 import command_line_interface as cli
 
 
@@ -170,12 +171,12 @@ class Grid:
     # Params: x/y - ints - grid position
     #       entity_type - string - Type of entity to spawn
     # Returns: new_entity - Entity - spawned in entity
-    def spawn_entity(self, x, y, entity_type):
+    def spawn_entity(self, x, y, entity_type, entity_ids_issued):
         # typing fix
         x = int(x)
         y = int(y)
         # spawn/get entity
-        new_entity = dl.create_entity(entity_type, x, y, cli.entity_ids_issued)
+        new_entity = entity.create_entity(entity_type, x, y, entity_ids_issued)
 
         # occupy position on map
         self.occupy(x, y, new_entity.id)
@@ -195,6 +196,52 @@ class Grid:
         # return grid to CLI
         return Grid.grid
 
+    # Add Item To Tile List Start
+    # Adds the provided item to the current grids
+    # Params: x,y - ints - grid position of tile
+    #         item_name - string - Name of item to be added
+    # Returns: None
+    def add_item_to_tile_item_list(self, x, y, item_name):
+        # fetch/create item
+        if item_name.lower() in dl.EQUIPMENT_TYPES:
+            item = dl.EQUIPMENT_TYPES.get(item_name.lower())
+        else:
+            return
+        # Append to list
+        self.grid[x][y].item_list.append(item)
+
+    # Remove Item From Tile List Start
+    # Removes the provided item from the current grids
+    # Params: x,y - ints - grid position of tile
+    #         item_name - string - Name of item to be removed
+    # Returns: item - Equipment Object - Corresponds to item that was remvoed from the ground
+    def remove_item_from_tile_item_list(self, x, y, item_name):
+        # fetch/create item
+        for item in self.grid[x][y].item_list:
+            if item.name.lower() == item_name.lower():
+                # Remove the item
+                self.grid[x][y].item_list.remove(item)
+            else:
+                continue
+
+    # Set Tile Item List Start
+    # Adds the provided item list to the current grids
+    # Intended use is for map creation - not player actions
+    # Params: x,y - ints - grid position of tile
+    #         item_name - string - Name of item to be added
+    # Returns: None
+    def set_tile_item_list(self, x, y, item_list):
+        for item in item_list:
+            self.grid[x][y].item_list.append(item)
+
+    # Clear Tile Item List Start
+    # Clears the current grid positions item list
+    # Intended use is for map creation and testing - not player actions
+    # Params: x,y - ints - grid position of tile
+    # Returns: None
+    def clear_tile_item_list(self, x, y):
+        self.grid[x][y].item_list.clear()
+
 
 # Create Tile class because the grid will be made up of Tiles
 class Tile:
@@ -202,7 +249,7 @@ class Tile:
     VALID_TYPES = ("Floor", "Wall", "ShallowWater")
 
     # Initialize Tile with t_type, passable, occupant
-    def __init__(self, t_type, passable, occupants, modifiers=None):
+    def __init__(self, t_type, passable, occupants, modifiers=None, item_list=None):
         self.t_type = t_type
         self.passable = passable
         self.occupants = occupants
@@ -210,7 +257,11 @@ class Tile:
         if modifiers is None:
             modifiers = {}
 
+        if item_list is None:
+            item_list = []
+
         self.modifiers = modifiers
+        self.item_list = item_list
 
     # Is Valid Tile Start
     # Checks to see input is a valid tile type

@@ -182,3 +182,134 @@ class TestEquipment(unittest.TestCase):
             item.effects,
             {"Speed": "+2"},
         )
+
+    # Test SmallHealthPotion initialization
+    def test_small_health_potion_init(self):
+        item = equipment.SmallHealthPotion()
+
+        self.assertEqual(item.name, "SmallHealthPotion")
+        self.assertEqual(item.slot, "Consumable")
+        self.assertEqual(item.effects, {})
+        self.assertEqual(
+            item.instant_effects,
+            {
+                "Flat_modifiers": {
+                    "Health": "20",
+                },
+                "Percent_modifiers": {},
+            },
+        )
+        self.assertEqual(
+            item.over_time_effects,
+            {
+                "Flat_modifiers": {},
+                "Percent_modifiers": {},
+            },
+        )
+        self.assertEqual(item.duration, 0)
+
+    # Test GreaterHealthPotion initialization
+    def test_greater_health_potion_init(self):
+        item = equipment.GreaterHealthPotion()
+
+        self.assertEqual(item.name, "GreaterHealthPotion")
+        self.assertEqual(item.slot, "Consumable")
+        self.assertEqual(item.effects, {})
+        self.assertEqual(
+            item.instant_effects,
+            {
+                "Flat_modifiers": {
+                    "Health": "50",
+                },
+                "Percent_modifiers": {},
+            },
+        )
+        self.assertEqual(
+            item.over_time_effects,
+            {
+                "Flat_modifiers": {},
+                "Percent_modifiers": {},
+            },
+        )
+        self.assertEqual(item.duration, 0)
+
+    # Test SuperiorHealthPotion initialization
+    def test_superior_health_potion_init(self):
+        item = equipment.SuperiorHealthPotion()
+
+        self.assertEqual(item.name, "SuperiorHealthPotion")
+        self.assertEqual(item.slot, "Consumable")
+        self.assertEqual(item.effects, {})
+        self.assertEqual(
+            item.instant_effects,
+            {
+                "Flat_modifiers": {
+                    "Health": "100",
+                },
+                "Percent_modifiers": {},
+            },
+        )
+        self.assertEqual(
+            item.over_time_effects,
+            {
+                "Flat_modifiers": {},
+                "Percent_modifiers": {},
+            },
+        )
+        self.assertEqual(item.duration, 0)
+
+    # Test ManaPotion initialization
+    def test_mana_potion_init(self):
+        item = equipment.ManaPotion()
+
+        self.assertEqual(item.name, "ManaPotion")
+        self.assertEqual(item.slot, "Consumable")
+        self.assertEqual(item.effects, {})
+        self.assertEqual(
+            item.instant_effects,
+            {
+                "Flat_modifiers": {
+                    "Mana": "50",
+                },
+                "Percent_modifiers": {},
+            },
+        )
+        self.assertEqual(
+            item.over_time_effects,
+            {
+                "Flat_modifiers": {},
+                "Percent_modifiers": {},
+            },
+        )
+        self.assertEqual(item.duration, 0)
+
+    # Test TurtleMasterPotion initialization
+    def test_turtle_master_potion_init(self):
+        item = equipment.TurtleMasterPotion()
+
+        self.assertEqual(item.name, "TurtleMasterPotion")
+        self.assertEqual(item.slot, "Consumable")
+        self.assertEqual(item.effects, {})
+        self.assertEqual(
+            item.instant_effects,
+            {
+                "Flat_modifiers": {},
+                "Percent_modifiers": {
+                    "Health": "10",
+                },
+            },
+        )
+        self.assertEqual(
+            item.over_time_effects,
+            {
+                "Flat_modifiers": {
+                    "Speed": "-3",
+                    "Defence": "10",
+                },
+                "Percent_modifiers": {
+                    "Health": "10",
+                    "Defence": "20",
+                },
+            },
+        )
+        self.assertEqual(item.duration, 5)

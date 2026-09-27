@@ -27,6 +27,7 @@ these functions are handled within the CLI prior to calling this function.
 import unittest
 from grid import Grid, Tile
 import command_line_interface as cli
+import domain_library as dl
 
 
 class TestEquipment(unittest.TestCase):
@@ -336,3 +337,260 @@ class TestEquipment(unittest.TestCase):
     def test_create_tile_invalid(self):
         tile = Tile.create_tile("invalid")
         self.assertEqual(tile, None)
+
+    # Test adding an item to a tile item list
+    def test_add_item_to_tile_item_list(self):
+        temp_grid = Grid(5, 5)
+        # reset
+        temp_grid.clear_tile_item_list(0, 0)
+        # Add item
+        temp_grid.add_item_to_tile_item_list(
+            0,
+            0,
+            "ironsword",
+        )
+
+        # Check item was added
+        self.assertEqual(
+            len(temp_grid.grid[0][0].item_list),
+            1,
+        )
+
+        self.assertEqual(
+            temp_grid.grid[0][0].item_list[0].name,
+            "IronSword",
+        )
+
+    # Test adding multiple items to a tile item list
+    def test_add_multiple_items_to_tile_item_list(self):
+        temp_grid = Grid(5, 5)
+        # reset
+        temp_grid.clear_tile_item_list(0, 0)
+        # Add items
+        temp_grid.add_item_to_tile_item_list(
+            0,
+            0,
+            "ironsword",
+        )
+
+        temp_grid.add_item_to_tile_item_list(
+            0,
+            0,
+            "curseddagger",
+        )
+
+        # Check items
+        self.assertEqual(
+            len(temp_grid.grid[0][0].item_list),
+            2,
+        )
+
+        self.assertEqual(
+            temp_grid.grid[0][0].item_list[0].name,
+            "IronSword",
+        )
+
+        self.assertEqual(
+            temp_grid.grid[0][0].item_list[1].name,
+            "CursedDagger",
+        )
+
+    # Test adding an item to a different tile
+    def test_add_item_to_different_tile(self):
+        temp_grid = Grid(5, 5)
+        # reset
+        temp_grid.clear_tile_item_list(0, 0)
+        temp_grid.clear_tile_item_list(2, 3)
+        # Add item to first tile
+        temp_grid.add_item_to_tile_item_list(
+            0,
+            0,
+            "ironsword",
+        )
+        # Add item to second tile
+        temp_grid.add_item_to_tile_item_list(
+            2,
+            3,
+            "magestaff",
+        )
+        # Check first tile
+        self.assertEqual(
+            len(temp_grid.grid[0][0].item_list),
+            1,
+        )
+        self.assertEqual(
+            temp_grid.grid[0][0].item_list[0].name,
+            "IronSword",
+        )
+
+        # Check second tile
+        self.assertEqual(
+            len(temp_grid.grid[2][3].item_list),
+            1,
+        )
+
+        self.assertEqual(
+            temp_grid.grid[2][3].item_list[0].name,
+            "MageStaff",
+        )
+
+    # Test removing an item from a tile item list
+    def test_remove_item_from_tile_item_list(self):
+        temp_grid = Grid(5, 5)
+        # reset
+        temp_grid.clear_tile_item_list(0, 0)
+        # Add item
+        temp_grid.add_item_to_tile_item_list(
+            0,
+            0,
+            "ironsword",
+        )
+
+        # Remove item
+        temp_grid.remove_item_from_tile_item_list(
+            0,
+            0,
+            "ironsword",
+        )
+
+        # Check item was removed
+        self.assertEqual(
+            temp_grid.grid[0][0].item_list,
+            [],
+        )
+
+    # Test removing one item while another remains
+    def test_remove_item_from_tile_item_list_with_multiple_items(self):
+        temp_grid = Grid(5, 5)
+        # reset
+        temp_grid.clear_tile_item_list(0, 0)
+        # Add items
+        temp_grid.add_item_to_tile_item_list(
+            0,
+            0,
+            "ironsword",
+        )
+
+        temp_grid.add_item_to_tile_item_list(
+            0,
+            0,
+            "curseddagger",
+        )
+
+        # Remove one item
+        temp_grid.remove_item_from_tile_item_list(
+            0,
+            0,
+            "ironsword",
+        )
+
+        # Check remaining item
+        self.assertEqual(
+            len(temp_grid.grid[0][0].item_list),
+            1,
+        )
+
+        self.assertEqual(
+            temp_grid.grid[0][0].item_list[0].name,
+            "CursedDagger",
+        )
+
+    # Test removing an item using different capitalization
+    def test_remove_item_case_insensitive(self):
+        temp_grid = Grid(5, 5)
+        # reset
+        temp_grid.clear_tile_item_list(0, 0)
+        # Add item
+        temp_grid.add_item_to_tile_item_list(
+            0,
+            0,
+            "ironsword",
+        )
+
+        # Remove item using uppercase
+        temp_grid.remove_item_from_tile_item_list(
+            0,
+            0,
+            "IRONSWORD",
+        )
+
+        # Check item was removed
+        self.assertEqual(
+            temp_grid.grid[0][0].item_list,
+            [],
+        )
+
+    # Test removing an item that does not exist
+    def test_remove_nonexistent_item_from_tile_item_list(self):
+        temp_grid = Grid(5, 5)
+        # reset
+        temp_grid.clear_tile_item_list(0, 0)
+        # Add item
+        temp_grid.add_item_to_tile_item_list(
+            0,
+            0,
+            "ironsword",
+        )
+
+        # Try removing different item
+        temp_grid.remove_item_from_tile_item_list(
+            0,
+            0,
+            "magestaff",
+        )
+
+        # Original item should remain
+        self.assertEqual(
+            len(temp_grid.grid[0][0].item_list),
+            1,
+        )
+
+        self.assertEqual(
+            temp_grid.grid[0][0].item_list[0].name,
+            "IronSword",
+        )
+
+    # Test setting a tile item list
+    def test_set_tile_item_list(self):
+        temp_grid = Grid(5, 5)
+        # reset
+        temp_grid.clear_tile_item_list(0, 0)
+        item_list = [
+            dl.EQUIPMENT_TYPES["ironsword"],
+            dl.EQUIPMENT_TYPES["magestaff"],
+        ]
+
+        temp_grid.set_tile_item_list(
+            0,
+            0,
+            item_list,
+        )
+
+        # Check item list
+        self.assertEqual(
+            temp_grid.grid[0][0].item_list,
+            item_list,
+        )
+
+    # Test clearing a tile item list
+    def test_clear_tile_item_list(self):
+        temp_grid = Grid(5, 5)
+        # reset
+        temp_grid.clear_tile_item_list(0, 0)
+        # Add items directly
+        temp_grid.grid[0][0].item_list = [
+            dl.EQUIPMENT_TYPES["ironsword"],
+            dl.EQUIPMENT_TYPES["magestaff"],
+        ]
+
+        # Clear list
+        temp_grid.clear_tile_item_list(
+            0,
+            0,
+        )
+
+        # Check list is empty
+        self.assertEqual(
+            temp_grid.grid[0][0].item_list,
+            [],
+        )

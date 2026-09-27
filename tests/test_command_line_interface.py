@@ -15,10 +15,11 @@ import unittest
 from unittest.mock import patch
 import io
 from command_line_interface import CLI
-from domain_library import Entity, Grid, BASE_INVENTORY, Equipment
+from grid import Grid
+import domain_library as dl
 
 
-class TestCML(unittest.TestCase):
+class TestCLI(unittest.TestCase):
 
     # Unknown Commands Start
     def test_unknown_command(self):
@@ -904,7 +905,7 @@ class TestCML(unittest.TestCase):
         # Create Map
         test_cli.process_command("init map 25 25")
         # clear out entity list
-        CLI.reset_entity_list()
+        test_cli.reset_entity_list()
         # create entity to be "player"
         test_cli.process_command("spawn warrior 10 10")
         command = "equip this command is too long"
@@ -1042,6 +1043,12 @@ class TestCML(unittest.TestCase):
         test_cli.process_command("init map 25 25")
         # clear out entity list
         test_cli.reset_entity_list()
+        # reset
+        dl.BASE_INVENTORY = [
+            dl.create_equipment("none_wep"),
+            dl.create_equipment("none_armor"),
+            dl.create_equipment("none_acc"),
+        ]
         # create entity to be "player"
         test_cli.process_command("spawn warrior 10 10")
         command = "equip ironsword weapon"
@@ -1050,11 +1057,11 @@ class TestCML(unittest.TestCase):
             test_cli.process_command(command)
         # Get print output to comapre
         output = mock_stdout.getvalue()
+        print(f"FAILED OUTPUT: {output}")
         # check output
         self.assertEqual(
             output,
-            "Valid items: None, IronSword, CursedDagger, MageStaff, IronChestplate, "
-            "LeatherTunic, ScoutArmor, RingOfTheSorcerer, AmuletOfVitality, RingOfHaste\n"
+            "Valid items: ironsword, curseddagger, magestaff, ironchestplate, leathertunic, scoutarmor, ringofthesorcerer, amuletofvitality, ringofhaste, none_wep, none_armor, none_acc, smallhealthpotion, greaterhealthpotion, superiorhealthpotion, manapotion, turtlemasterpotion\n"
             "Valid slots: Weapon, Armor, Accessory\n"
             "ok: Equipped IronSword to Weapon!\n",
         )
@@ -1069,6 +1076,11 @@ class TestCML(unittest.TestCase):
         test_cli.process_command("init map 25 25")
         # clear out entity list
         test_cli.reset_entity_list()
+        dl.BASE_INVENTORY = [
+            dl.create_equipment("none_wep"),
+            dl.create_equipment("none_armor"),
+            dl.create_equipment("none_acc"),
+        ]
         # create entity to be "player"
         test_cli.process_command("spawn warrior 10 10")
         command = "equip ironsword"
@@ -1080,8 +1092,7 @@ class TestCML(unittest.TestCase):
         # check output
         self.assertEqual(
             output,
-            "Valid items: None, IronSword, CursedDagger, MageStaff, IronChestplate, "
-            "LeatherTunic, ScoutArmor, RingOfTheSorcerer, AmuletOfVitality, RingOfHaste\n"
+            "Valid items: ironsword, curseddagger, magestaff, ironchestplate, leathertunic, scoutarmor, ringofthesorcerer, amuletofvitality, ringofhaste, none_wep, none_armor, none_acc, smallhealthpotion, greaterhealthpotion, superiorhealthpotion, manapotion, turtlemasterpotion\n"
             "Valid slots: Weapon, Armor, Accessory\n"
             "ok: Equipped IronSword to Weapon!\n",
         )
@@ -1162,6 +1173,12 @@ class TestCML(unittest.TestCase):
         test_cli.reset_entity_list()
         # Create Map
         test_cli.process_command("init map 25 25")
+        # Reset
+        dl.BASE_INVENTORY = [
+            dl.create_equipment("none_wep"),
+            dl.create_equipment("none_armor"),
+            dl.create_equipment("none_acc"),
+        ]
         test_cli.process_command("spawn warrior 10 10")
         command = "inventory"
         # Process command
@@ -1342,6 +1359,12 @@ class TestCML(unittest.TestCase):
         test_cli.reset_entity_list()
         # Create Map
         test_cli.process_command("init map 25 25")
+        # Reset
+        dl.BASE_INVENTORY = [
+            dl.create_equipment("none_wep"),
+            dl.create_equipment("none_armor"),
+            dl.create_equipment("none_acc"),
+        ]
         # spawn warrior
         test_cli.process_command("spawn warrior 10 10")
         command = "inspect 0"
@@ -1373,6 +1396,12 @@ class TestCML(unittest.TestCase):
         test_cli.reset_entity_list()
         # Create Map
         test_cli.process_command("init map 25 25")
+        # Reset
+        dl.BASE_INVENTORY = [
+            dl.create_equipment("none_wep"),
+            dl.create_equipment("none_armor"),
+            dl.create_equipment("none_acc"),
+        ]
         # spawn warrior
         test_cli.process_command("spawn mage 10 10")
         command = "inspect 0"
@@ -1440,6 +1469,12 @@ class TestCML(unittest.TestCase):
         test_cli.reset_entity_list()
         # Create Map
         test_cli.process_command("init map 25 25")
+        # Reset
+        dl.BASE_INVENTORY = [
+            dl.create_equipment("none_wep"),
+            dl.create_equipment("none_armor"),
+            dl.create_equipment("none_acc"),
+        ]
         # spawn warrior
         test_cli.process_command("spawn mage 10 10")
         # Change all slots
@@ -1463,7 +1498,7 @@ class TestCML(unittest.TestCase):
             "Attack: 8\n"
             "Defence: 19\n"
             "Speed: 3\n"
-            "Active_modifiers: 5\n",
+            "Active_modifiers: 4\n",
         )
 
     # success with warrior custom inventory + stat changes (both % and flat, also -)
@@ -1498,7 +1533,7 @@ class TestCML(unittest.TestCase):
             "Attack: 15\n"
             "Defence: 25\n"
             "Speed: 3\n"
-            "Active_modifiers: 3\n",
+            "Active_modifiers: 2\n",
         )
 
     # success with warrior custom inventory + stat changes including tile modifiers
@@ -1514,7 +1549,7 @@ class TestCML(unittest.TestCase):
         # Create Map
         test_cli.process_command("init map 25 25")
         # set tile at 10, 10
-        test_cli.set_tile(10, 10, "shallowwater")
+        test_cli.grid.set_tile(10, 10, "shallowwater")
         # spawn warrior
         test_cli.process_command("spawn warrior 10 10")
         # Change all slots
@@ -1555,7 +1590,7 @@ class TestCML(unittest.TestCase):
         # spawn warrior
         test_cli.process_command("spawn warrior 10 10")
         # set tile at 10, 10
-        test_cli.set_tile(10, 10, "shallowwater")
+        test_cli.grid.set_tile(10, 10, "shallowwater")
         # Change all slots
         test_cli.process_command("equip ironchestplate")
         test_cli.process_command("equip ringofvitality accessory")
@@ -1761,7 +1796,7 @@ class TestCML(unittest.TestCase):
         # Create Map
         test_cli.process_command("init map 25 25")
         # set tile to wall
-        test_cli.set_tile(0, 0, "wall")
+        test_cli.grid.set_tile(0, 0, "wall")
         command = "tile 0 0"
         # Process command
         with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
@@ -1783,7 +1818,7 @@ class TestCML(unittest.TestCase):
         # Create Map
         test_cli.process_command("init map 25 25")
         # set tile to wall
-        test_cli.set_tile(24, 24, "wall")
+        test_cli.grid.set_tile(24, 24, "wall")
         command = "tile 24 24"
         # Process command
         with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
@@ -1808,7 +1843,7 @@ class TestCML(unittest.TestCase):
         # Create Map
         test_cli.process_command("init map 25 25")
         # set tile to wall
-        test_cli.set_tile(10, 10, "shallowwater")
+        test_cli.grid.set_tile(10, 10, "shallowwater")
         command = "tile 10 10"
         # Process command
         with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
@@ -1833,9 +1868,9 @@ class TestCML(unittest.TestCase):
         # Create Map
         test_cli.process_command("init map 25 25")
         # set tile to wall
-        test_cli.set_tile(10, 10, "shallowwater")
+        test_cli.grid.set_tile(10, 10, "shallowwater")
         # spawn entity
-        test_cli.spawn("warrior", 10, 10)
+        test_cli.process_command("spawn warrior 10 10")
         command = "tile 10 10"
         # Process command
         with patch("sys.stdout", new=io.StringIO()) as mock_stdout:

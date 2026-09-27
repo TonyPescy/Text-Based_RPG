@@ -11,7 +11,7 @@ Purpose: Houses all functions necessary for proper entity handling and logic in 
 """
 
 # imports
-import domain_library as d_Lib
+import domain_library as dl
 from equipment import Equipment
 
 
@@ -19,13 +19,16 @@ from equipment import Equipment
 class Entity:
     """# Base Invetory for all Entities
     BASE_INVENTORY = [
-        d_Lib.create_equipment("none_wep"),
-        d_Lib.create_equipment("none_armor"),
-        d_Lib.create_equipment("none_acc"),
+        dl.create_equipment("none_wep"),
+        dl.create_equipment("none_armor"),
+        dl.create_equipment("none_acc"),
     ]"""
 
     # Base Modifiers for all Entities
-    BASE_MODIFIERS = {"Flat_modifiers": {}, "Percent_modifiers": {}}
+    # BASE_MODIFIERS = {"Flat_modifiers": {}, "Percent_modifiers": {}}
+
+    # Backpack Size
+    BACKPACK_SIZE = 5
 
     # Initialize Entity Class with id, type, position, health, attack, defence, speed, inventory, active_modifiers
     def __init__(
@@ -39,6 +42,7 @@ class Entity:
         speed,
         inventory,
         active_modifiers,
+        backpack,
     ):
         self.id = id
         self.e_type = e_type
@@ -49,6 +53,7 @@ class Entity:
         self.speed = speed
         self.inventory = inventory
         self.active_modifiers = active_modifiers
+        self.backpack = backpack
 
     # Get Stats Start
     # Gets all relevant stats of the entity and returns them
@@ -298,6 +303,35 @@ class Entity:
             case "accessory":
                 self.inventory[2] = item
 
+        # add to backpack
+        self.add_item_to_backpack(item)
+
+    # Add Item To Backpack
+    # Adds provided item to backpack
+    # Size Handling responses TBD
+    # Params: item - Equipment Object - item to be added to the backpack
+    # Returns: None
+    def add_item_to_backpack(self, item):
+        """HANDLE IN CLI
+        # if backpack is full
+        if len(self.backpack) > 5:
+            print(f"error: pickup_failed - Backpack full!")
+        """
+        self.backpack.append(item)
+
+    # Remove Item From Backpack
+    # Removes provided item from the backpack
+    # Size Handling responses TBD - CLI?
+    # Params: item - Equipment Object - item to be removed from the backpack
+    # Returns: None
+    def remove_item_from_backpack(self, item):
+        """HANDLE IN CLI
+        # if backpack is full
+        if len(self.backpack) > 5:
+            print(f"error: pickup_failed - Backpack full!")
+        """
+        self.backpack.remove(item)
+
 
 # Warrior Class extend from Entity class
 # Uses all functions without any changes
@@ -312,7 +346,13 @@ class Warrior(Entity):
     }
 
     # Initialize warrior class with entity class attributes
-    def __init__(self, id, position, active_modifiers=Entity.BASE_MODIFIERS):
+    def __init__(self, id, position, active_modifiers=None, backpack=None):
+        if active_modifiers is None:
+            active_modifiers = {"Flat_modifiers": {}, "Percent_modifiers": {}}
+
+        if backpack is None:
+            backpack = []
+
         # Inherit init from Entity super class
         super().__init__(
             id,
@@ -322,8 +362,9 @@ class Warrior(Entity):
             self.BASE_STATS["Attack"],
             self.BASE_STATS["Defence"],
             self.BASE_STATS["Speed"],
-            d_Lib.BASE_INVENTORY,
+            dl.BASE_INVENTORY,
             active_modifiers,
+            backpack,
         )
 
 
@@ -340,7 +381,12 @@ class Skeleton(Entity):
     }
 
     # Initialize skeleton class with entity class attributes
-    def __init__(self, id, position, active_modifiers=Entity.BASE_MODIFIERS):
+    def __init__(self, id, position, active_modifiers=None, backpack=None):
+        if active_modifiers is None:
+            active_modifiers = {"Flat_modifiers": {}, "Percent_modifiers": {}}
+
+        if backpack is None:
+            backpack = []
         # Inherit init from Entity super class
         super().__init__(
             id,
@@ -350,8 +396,9 @@ class Skeleton(Entity):
             self.BASE_STATS["Attack"],
             self.BASE_STATS["Defence"],
             self.BASE_STATS["Speed"],
-            d_Lib.BASE_INVENTORY,
+            dl.BASE_INVENTORY,
             active_modifiers,
+            backpack,
         )
 
 
@@ -368,7 +415,13 @@ class Goblin(Entity):
     }
 
     # Initialize goblin class with entity class attributes
-    def __init__(self, id, position, active_modifiers=Entity.BASE_MODIFIERS):
+    def __init__(self, id, position, active_modifiers=None, backpack=None):
+        if active_modifiers is None:
+            active_modifiers = {"Flat_modifiers": {}, "Percent_modifiers": {}}
+
+        if backpack is None:
+            backpack = []
+
         # Inherit init from Entity super class
         super().__init__(
             id,
@@ -378,8 +431,9 @@ class Goblin(Entity):
             self.BASE_STATS["Attack"],
             self.BASE_STATS["Defence"],
             self.BASE_STATS["Speed"],
-            d_Lib.BASE_INVENTORY,
+            dl.BASE_INVENTORY,
             active_modifiers,
+            backpack,
         )
 
 
@@ -396,8 +450,12 @@ class Mage(Entity):
     }
 
     # Initialize mage class with entity class attributes + new ones: mana and spell power
-    def __init__(self, id, position, active_modifiers=Entity.BASE_MODIFIERS):
+    def __init__(self, id, position, active_modifiers=None, backpack=None):
+        if active_modifiers is None:
+            active_modifiers = {"Flat_modifiers": {}, "Percent_modifiers": {}}
 
+        if backpack is None:
+            backpack = []
         # Inherit init from Entity super class
         super().__init__(
             id,
@@ -407,8 +465,9 @@ class Mage(Entity):
             self.BASE_STATS["Attack"],
             self.BASE_STATS["Defence"],
             self.BASE_STATS["Speed"],
-            d_Lib.BASE_INVENTORY,
+            dl.BASE_INVENTORY,
             active_modifiers,
+            backpack,
         )
         # New attributes
         self.mana = self.BASE_STATS["Mana"]
@@ -506,3 +565,38 @@ class Mage(Entity):
         self.calculate_final_stats()
 
         # Update Stats End
+
+
+# Entities Factory
+# Create Entity Start
+# Creates entity with base stats and values based on the entity
+# Holds base stats for all of the entities
+# Params: e_type - String - Type of entity to create
+#       x,y - int - Coordinates to spawn entity at
+#       e_id - int - id generated for entity based on current entity ID counter
+def create_entity(e_type, x, y, e_id):
+    # ensure correct typing
+    try:
+        x = int(x)
+        y = int(y)
+    except:
+        print(f"error: spawn_failed x ({x}) and/or y ({y}) are not integers!")
+
+    match e_type:  # MATCH WITH ENUMS UPON THAT UPDATE
+        case "warrior":
+            return Warrior(e_id, [x, y])
+
+        case "mage":
+            return Mage(e_id, [x, y])
+
+        case "skeleton":
+            return Skeleton(e_id, [x, y])
+
+        case "goblin":
+            return Goblin(e_id, [x, y])
+
+        case _:  # error no matching entity type found - May be redundant
+            print(
+                f"error: Invalid entity type '{e_type}'. "
+                f"Expected one of: {dl.ENTITY_TYPES}."
+            )

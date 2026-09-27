@@ -142,3 +142,89 @@ class RingOfHaste(Equipment):
             "Accessory",
             {"Speed": "+2"},
         )
+
+
+# Consumable Class - Inherits from Equipment
+# Has different effect types - instant/over_time as well as percent/flat modifiers
+class Consumable(Equipment):
+    def __init__(self, name, instant_effects=None, over_time_effects=None, duration=0):
+        super().__init__(name, "Consumable", {})
+        # effect types
+        if instant_effects is None:
+            instant_effects = {"Flat_modifiers": {}, "Percent_modifiers": {}}
+        if over_time_effects is None:
+            over_time_effects = {"Flat_modifiers": {}, "Percent_modifiers": {}}
+
+        self.instant_effects = instant_effects
+        self.over_time_effects = over_time_effects
+        self.duration = duration
+
+
+# Small Health Potion Class - Inherits from Consumable Class
+class SmallHealthPotion(Consumable):
+    # Init with base stats
+    def __init__(self):
+        super().__init__(
+            "SmallHealthPotion",
+            instant_effects={
+                "Flat_modifiers": {"Health": "20"},
+                "Percent_modifiers": {},
+            },
+        )
+
+
+# Greater Health Potion Class - Inherits from Consumable Class
+class GreaterHealthPotion(Consumable):
+    # Init with base stats
+    def __init__(self):
+        super().__init__(
+            "GreaterHealthPotion",
+            instant_effects={
+                "Flat_modifiers": {"Health": "50"},
+                "Percent_modifiers": {},
+            },
+        )
+
+
+# Greater Health Potion Class - Inherits from Consumable Class
+class SuperiorHealthPotion(Consumable):
+    # Init with base stats
+    def __init__(self):
+        super().__init__(
+            "SuperiorHealthPotion",
+            instant_effects={
+                "Flat_modifiers": {"Health": "100"},
+                "Percent_modifiers": {},
+            },
+        )
+
+
+# Mana Potion Class - Inherits from Consumable Class
+class ManaPotion(Consumable):
+    # Init with base stats
+    def __init__(self):
+        super().__init__(
+            "ManaPotion",
+            instant_effects={
+                "Flat_modifiers": {"Mana": "50"},
+                "Percent_modifiers": {},
+            },
+        )
+
+
+# Greater Health Potion Class - Inherits from Consumable Class
+class TurtleMasterPotion(Consumable):
+    # Init with base stats
+    def __init__(self):
+        super().__init__(
+            "TurtleMasterPotion",
+            instant_effects={
+                "Flat_modifiers": {},
+                "Percent_modifiers": {"Health": "10"},
+            },
+            over_time_effects={
+                "Flat_modifiers": {"Speed": "-3", "Defence": "10"},
+                "Percent_modifiers": {"Health": "10", "Defence": "20"},
+            },
+            duration=5,
+        )

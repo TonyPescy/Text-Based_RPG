@@ -12,9 +12,6 @@ Purpose: Houses all private facing functions that will be used to run the game, 
 
 # Imports
 import equipment
-from entity import Warrior, Skeleton, Goblin, Mage
-
-# from equipment import Equipment
 
 # Constants
 # Equipment Types Dictionary
@@ -31,12 +28,17 @@ EQUIPMENT_TYPES = {
     "none_wep": equipment.NoneWeapon(),
     "none_armor": equipment.NoneArmor(),
     "none_acc": equipment.NoneAccessory(),
+    "smallhealthpotion": equipment.SmallHealthPotion(),
+    "greaterhealthpotion": equipment.GreaterHealthPotion(),
+    "superiorhealthpotion": equipment.SuperiorHealthPotion(),
+    "manapotion": equipment.ManaPotion(),
+    "turtlemasterpotion": equipment.TurtleMasterPotion(),
 }
-# Valid Equipment Slots
+# Valid Equipment Slots MAKE INTO AN ENUM
 VALID_SLOTS = ("Weapon", "Armor", "Accessory")
 
 # Entity Types Constant
-# Entity Constants
+# Entity Constants MAKE INTO AN ENUM
 ENTITY_TYPES = ("Warrior", "Mage", "Skeleton", "Goblin")
 
 
@@ -61,41 +63,6 @@ BASE_INVENTORY = [
     create_equipment("none_armor"),
     create_equipment("none_acc"),
 ]
-
-
-# Entities Factory
-# Create Entity Start
-# Creates entity with base stats and values based on the entity
-# Holds base stats for all of the entities
-# Params: e_type - String - Type of entity to create
-#       x,y - int - Coordinates to spawn entity at
-#       e_id - int - id generated for entity based on current entity ID counter
-def create_entity(e_type, x, y, e_id):
-    # ensure correct typing
-    try:
-        x = int(x)
-        y = int(y)
-    except:
-        print(f"error: spawn_failed x ({x}) and/or y ({y}) are not integers!")
-
-    match e_type:
-        case "warrior":
-            return Warrior(e_id, [x, y])
-
-        case "mage":
-            return Mage(e_id, [x, y])
-
-        case "skeleton":
-            return Skeleton(e_id, [x, y])
-
-        case "goblin":
-            return Goblin(e_id, [x, y])
-
-        case _:  # error no matching entity type found - May be redundant
-            print(
-                f"error: Invalid entity type '{e_type}'. "
-                f"Expected one of: {ENTITY_TYPES}."
-            )
 
 
 # Is Valid Entity Start # MOVE TO D_LIB

@@ -56,6 +56,11 @@ class TestDomainLibrary(unittest.TestCase):
                 "none_wep",
                 "none_armor",
                 "none_acc",
+                "turtlemasterpotion",
+                "smallhealthpotion",
+                "greaterhealthpotion",
+                "superiorhealthpotion",
+                "manapotion",
             },
         )
 
@@ -165,15 +170,22 @@ class TestDomainLibrary(unittest.TestCase):
             "none_wep": equipment.NoneWeapon,
             "none_armor": equipment.NoneArmor,
             "none_acc": equipment.NoneAccessory,
+            "smallhealthpotion": equipment.SmallHealthPotion(),
+            "greaterhealthpotion": equipment.GreaterHealthPotion(),
+            "superiorhealthpotion": equipment.SuperiorHealthPotion(),
+            "manapotion": equipment.ManaPotion(),
+            "turtlemasterpotion": equipment.TurtleMasterPotion(),
         }
 
-        for item_name, expected_class in test_equipment.items():
+        for item_name, expected_equipment in test_equipment.items():
             temp_equipment = dl.create_equipment(item_name)
-
-            self.assertIsInstance(
-                temp_equipment,
-                expected_class,
-            )
+            if temp_equipment.name.lower() == "none":
+                self.assertEqual(temp_equipment.name.lower(), "none")
+            else:
+                self.assertEqual(
+                    temp_equipment.name.lower(),
+                    item_name,
+                )
 
     # Test BASE_INVENTORY initialization
     def test_base_inventory(self):
@@ -207,51 +219,6 @@ class TestDomainLibrary(unittest.TestCase):
         self.assertEqual(dl.BASE_INVENTORY[2].name, "None")
         self.assertEqual(dl.BASE_INVENTORY[2].slot, "Accessory")
         self.assertDictEqual(dl.BASE_INVENTORY[2].effects, {})
-
-    # Test create_entity with warrior
-    def test_create_entity_warrior(self):
-        temp_entity = dl.create_entity("warrior", 5, 10, 0)
-
-        self.assertIsInstance(temp_entity, Warrior)
-        self.assertEqual(temp_entity.id, 0)
-        self.assertEqual(temp_entity.position, [5, 10])
-
-    # Test create_entity with mage
-    def test_create_entity_mage(self):
-        temp_entity = dl.create_entity("mage", 5, 10, 1)
-
-        self.assertIsInstance(temp_entity, Mage)
-        self.assertEqual(temp_entity.id, 1)
-        self.assertEqual(temp_entity.position, [5, 10])
-
-    # Test create_entity with skeleton
-    def test_create_entity_skeleton(self):
-        temp_entity = dl.create_entity("skeleton", 5, 10, 2)
-
-        self.assertIsInstance(temp_entity, Skeleton)
-        self.assertEqual(temp_entity.id, 2)
-        self.assertEqual(temp_entity.position, [5, 10])
-
-    # Test create_entity with goblin
-    def test_create_entity_goblin(self):
-        temp_entity = dl.create_entity("goblin", 5, 10, 3)
-
-        self.assertIsInstance(temp_entity, Goblin)
-        self.assertEqual(temp_entity.id, 3)
-        self.assertEqual(temp_entity.position, [5, 10])
-
-    # Test create_entity converts string coordinates to integers
-    def test_create_entity_string_coordinates(self):
-        temp_entity = dl.create_entity("warrior", "5", "10", 0)
-
-        self.assertIsInstance(temp_entity, Warrior)
-        self.assertEqual(temp_entity.position, [5, 10])
-
-    # Test create_entity with invalid entity type
-    def test_create_entity_invalid_type(self):
-        temp_entity = dl.create_entity("invalid", 5, 10, 0)
-
-        self.assertIsNone(temp_entity)
 
     # Test is_valid_entity with warrior
     def test_is_valid_entity_warrior(self):

@@ -24,9 +24,9 @@ these functions are handled within the CLI prior to calling this function.
 
 # Imports
 import unittest
-from entity import Warrior, Mage, Goblin, Skeleton
+from entity import Warrior, Mage, Goblin, Skeleton, create_entity
 from grid import Grid
-from domain_library import EQUIPMENT_TYPES
+from domain_library import EQUIPMENT_TYPES, is_valid_entity
 
 
 # Class for testing entities
@@ -41,6 +41,7 @@ class TestEntity(unittest.TestCase):
         )
         # Reset
         entity.active_modifiers = {"Flat_modifiers": {}, "Percent_modifiers": {}}
+        entity.backpack = []
         # Reset
         entity.inventory[0] = EQUIPMENT_TYPES["none_wep"]
         entity.inventory[1] = EQUIPMENT_TYPES["none_armor"]
@@ -63,6 +64,7 @@ class TestEntity(unittest.TestCase):
                 "Percent_modifiers": {},
             },
         )
+        self.assertEqual(entity.backpack, [])
 
     # Init goblin with base stats
     def test_goblin_init(self):
@@ -72,6 +74,7 @@ class TestEntity(unittest.TestCase):
         )
         # Reset
         entity.active_modifiers = {"Flat_modifiers": {}, "Percent_modifiers": {}}
+        entity.backpack = []
         # Reset
         entity.inventory[0] = EQUIPMENT_TYPES["none_wep"]
         entity.inventory[1] = EQUIPMENT_TYPES["none_armor"]
@@ -94,6 +97,7 @@ class TestEntity(unittest.TestCase):
                 "Percent_modifiers": {},
             },
         )
+        self.assertEqual(entity.backpack, [])
 
     # Init skeleton with base stats
     def test_skeleton_init(self):
@@ -103,6 +107,7 @@ class TestEntity(unittest.TestCase):
         )
         # Reset
         entity.active_modifiers = {"Flat_modifiers": {}, "Percent_modifiers": {}}
+        entity.backpack = []
         # Reset
         entity.inventory[0] = EQUIPMENT_TYPES["none_wep"]
         entity.inventory[1] = EQUIPMENT_TYPES["none_armor"]
@@ -125,6 +130,7 @@ class TestEntity(unittest.TestCase):
                 "Percent_modifiers": {},
             },
         )
+        self.assertEqual(entity.backpack, [])
 
     # Init Mage with base stats
     def test_mage_init(self):
@@ -134,6 +140,7 @@ class TestEntity(unittest.TestCase):
         )
         # Reset
         entity.active_modifiers = {"Flat_modifiers": {}, "Percent_modifiers": {}}
+        entity.backpack = []
         # Reset
         entity.inventory[0] = EQUIPMENT_TYPES["none_wep"]
         entity.inventory[1] = EQUIPMENT_TYPES["none_armor"]
@@ -156,6 +163,7 @@ class TestEntity(unittest.TestCase):
                 "Percent_modifiers": {},
             },
         )
+        self.assertEqual(entity.backpack, [])
         self.assertEqual(entity.mana, 100)
         self.assertEqual(entity.spell_power, 25)
 
@@ -168,6 +176,7 @@ class TestEntity(unittest.TestCase):
         )
         # Reset
         entity.active_modifiers = {"Flat_modifiers": {}, "Percent_modifiers": {}}
+        entity.backpack = []
         stat_dict = entity.get_stats()
         # check values
         self.assertDictEqual(
@@ -195,6 +204,7 @@ class TestEntity(unittest.TestCase):
         )
         # Reset
         entity.active_modifiers = {"Flat_modifiers": {}, "Percent_modifiers": {}}
+        entity.backpack = []
         stat_dict = entity.get_stats()
         # check values
         self.assertDictEqual(
@@ -222,6 +232,7 @@ class TestEntity(unittest.TestCase):
         )
         # Reset
         entity.active_modifiers = {"Flat_modifiers": {}, "Percent_modifiers": {}}
+        entity.backpack = []
         stat_dict = entity.get_stats()
         # check values
         self.assertDictEqual(
@@ -249,6 +260,7 @@ class TestEntity(unittest.TestCase):
         )
         # Reset
         entity.active_modifiers = {"Flat_modifiers": {}, "Percent_modifiers": {}}
+        entity.backpack = []
         stat_dict = entity.get_stats()
         # check values
         self.assertDictEqual(
@@ -281,6 +293,7 @@ class TestEntity(unittest.TestCase):
         entity.defence = 999
         entity.speed = 999
         entity.active_modifiers = {"Flat_modifiers": {}, "Percent_modifiers": {}}
+        entity.backpack = []
         # Reset
         entity.reset_stats()
         stat_dict = entity.get_stats()
@@ -310,6 +323,7 @@ class TestEntity(unittest.TestCase):
         )
         # Reset
         entity.active_modifiers = {"Flat_modifiers": {}, "Percent_modifiers": {}}
+        entity.backpack = []
 
         # change stats that can change
         entity.attack = 999
@@ -345,6 +359,7 @@ class TestEntity(unittest.TestCase):
         )
         # Reset
         entity.active_modifiers = {"Flat_modifiers": {}, "Percent_modifiers": {}}
+        entity.backpack = []
 
         # change stats that can change
         entity.attack = 999
@@ -380,6 +395,7 @@ class TestEntity(unittest.TestCase):
         )
         # Reset
         entity.active_modifiers = {"Flat_modifiers": {}, "Percent_modifiers": {}}
+        entity.backpack = []
         # Reset
         entity.inventory[0] = EQUIPMENT_TYPES["none_wep"]
         entity.inventory[1] = EQUIPMENT_TYPES["none_armor"]
@@ -422,6 +438,7 @@ class TestEntity(unittest.TestCase):
         )
         # Reset
         entity.active_modifiers = {"Flat_modifiers": {}, "Percent_modifiers": {}}
+        entity.backpack = []
         # Add flat modifier
         entity.handle_modifiers("Attack", "+5")
         # Check values
@@ -443,6 +460,7 @@ class TestEntity(unittest.TestCase):
         )
         # Reset
         entity.active_modifiers = {"Flat_modifiers": {}, "Percent_modifiers": {}}
+        entity.backpack = []
 
         # Add percent modifier
         entity.handle_modifiers("Attack", "+25%")
@@ -465,6 +483,7 @@ class TestEntity(unittest.TestCase):
         )
         # Reset
         entity.active_modifiers = {"Flat_modifiers": {}, "Percent_modifiers": {}}
+        entity.backpack = []
 
         # Add flat modifiers
         entity.handle_modifiers("Attack", "-5")
@@ -488,6 +507,7 @@ class TestEntity(unittest.TestCase):
         )
         # Reset
         entity.active_modifiers = {"Flat_modifiers": {}, "Percent_modifiers": {}}
+        entity.backpack = []
 
         # Add percent modifiers
         entity.handle_modifiers("Attack", "+10%")
@@ -511,6 +531,7 @@ class TestEntity(unittest.TestCase):
         )
         # Reset
         entity.active_modifiers = {"Flat_modifiers": {}, "Percent_modifiers": {}}
+        entity.backpack = []
 
         # Add flat and percent modifiers
         entity.handle_modifiers("Attack", "+5")
@@ -540,6 +561,7 @@ class TestEntity(unittest.TestCase):
         )
         # Reset
         entity.active_modifiers = {"Flat_modifiers": {}, "Percent_modifiers": {}}
+        entity.backpack = []
         # Add flat and percent modifiers
         entity.handle_modifiers("Attack", "+5")
         entity.handle_modifiers("Attack", "+10%")
@@ -1136,6 +1158,7 @@ class TestEntity(unittest.TestCase):
             [0, 0],
         )
         # RESET
+        self.assertEqual(entity.backpack, [])
         entity.inventory[0] = EQUIPMENT_TYPES["none_wep"]
         entity.inventory[1] = EQUIPMENT_TYPES["none_armor"]
         entity.inventory[2] = EQUIPMENT_TYPES["none_acc"]
@@ -1157,6 +1180,7 @@ class TestEntity(unittest.TestCase):
                 "Percent_modifiers": {},
             },
         )
+        self.assertEqual(entity.backpack[0], entity.inventory[0])
 
     # armor
     def test_equip_item_armor(self):
@@ -1165,6 +1189,7 @@ class TestEntity(unittest.TestCase):
             [0, 0],
         )
         # RESET
+        self.assertEqual(entity.backpack, [])
         entity.inventory[0] = EQUIPMENT_TYPES["none_wep"]
         entity.inventory[1] = EQUIPMENT_TYPES["none_armor"]
         entity.inventory[2] = EQUIPMENT_TYPES["none_acc"]
@@ -1184,6 +1209,7 @@ class TestEntity(unittest.TestCase):
                 "Percent_modifiers": {},
             },
         )
+        self.assertEqual(entity.backpack[0], entity.inventory[1])
 
     # acc
     def test_equip_item_accessory(self):
@@ -1213,6 +1239,7 @@ class TestEntity(unittest.TestCase):
                 "Percent_modifiers": {},
             },
         )
+        self.assertEqual(entity.backpack[0], entity.inventory[2])
 
     # all
     def test_equip_item_all(self):
@@ -1221,6 +1248,7 @@ class TestEntity(unittest.TestCase):
             [0, 0],
         )
         # RESET
+        entity.backpack = []
         entity.inventory[0] = EQUIPMENT_TYPES["none_wep"]
         entity.inventory[1] = EQUIPMENT_TYPES["none_armor"]
         entity.inventory[2] = EQUIPMENT_TYPES["none_acc"]
@@ -1249,6 +1277,9 @@ class TestEntity(unittest.TestCase):
                 "Percent_modifiers": {"Health": 10},
             },
         )
+        self.assertEqual(entity.backpack[0], entity.inventory[0])
+        self.assertEqual(entity.backpack[1], entity.inventory[1])
+        self.assertEqual(entity.backpack[2], entity.inventory[2])
 
     # all on warrior with mage effects
     def test_equip_item_all_on_warrior_with_mage_effects(self):
@@ -1257,6 +1288,7 @@ class TestEntity(unittest.TestCase):
             [0, 0],
         )
         # RESET
+        entity.backpack = []
         entity.inventory[0] = EQUIPMENT_TYPES["none_wep"]
         entity.inventory[1] = EQUIPMENT_TYPES["none_armor"]
         entity.inventory[2] = EQUIPMENT_TYPES["none_acc"]
@@ -1287,6 +1319,9 @@ class TestEntity(unittest.TestCase):
                 "Percent_modifiers": {},
             },
         )
+        self.assertEqual(entity.backpack[0], entity.inventory[0])
+        self.assertEqual(entity.backpack[1], entity.inventory[1])
+        self.assertEqual(entity.backpack[2], entity.inventory[2])
 
     # all on mage with mage effects
     def test_equip_item_all_on_mage_with_mage_effects(self):
@@ -1295,6 +1330,7 @@ class TestEntity(unittest.TestCase):
             [0, 0],
         )
         # RESET
+        entity.backpack = []
         entity.inventory[0] = EQUIPMENT_TYPES["none_wep"]
         entity.inventory[1] = EQUIPMENT_TYPES["none_armor"]
         entity.inventory[2] = EQUIPMENT_TYPES["none_acc"]
@@ -1324,6 +1360,9 @@ class TestEntity(unittest.TestCase):
                 "Percent_modifiers": {"Mana": 15},
             },
         )
+        self.assertEqual(entity.backpack[0], entity.inventory[0])
+        self.assertEqual(entity.backpack[1], entity.inventory[1])
+        self.assertEqual(entity.backpack[2], entity.inventory[2])
 
     # wrong slot
     def test_equip_item_with_wrong_slot(self):
@@ -1332,6 +1371,7 @@ class TestEntity(unittest.TestCase):
             [0, 0],
         )
         # RESET
+        entity.backpack = []
         entity.inventory[0] = EQUIPMENT_TYPES["none_wep"]
         entity.inventory[1] = EQUIPMENT_TYPES["none_armor"]
         entity.inventory[2] = EQUIPMENT_TYPES["none_acc"]
@@ -1352,6 +1392,7 @@ class TestEntity(unittest.TestCase):
                 "Percent_modifiers": {},
             },
         )
+        self.assertEqual(len(entity.backpack), 0)
 
     # no existing weapon
     def test_equip_item_without_item(self):
@@ -1360,6 +1401,7 @@ class TestEntity(unittest.TestCase):
             [0, 0],
         )
         # RESET
+        entity.backpack = []
         entity.inventory[0] = EQUIPMENT_TYPES["none_wep"]
         entity.inventory[1] = EQUIPMENT_TYPES["none_armor"]
         entity.inventory[2] = EQUIPMENT_TYPES["none_acc"]
@@ -1377,3 +1419,49 @@ class TestEntity(unittest.TestCase):
                 "Percent_modifiers": {},
             },
         )
+        self.assertEqual(len(entity.backpack), 0)
+
+    # Test create_entity with warrior
+    def test_create_entity_warrior(self):
+        temp_entity = create_entity("warrior", 5, 10, 0)
+
+        self.assertIsInstance(temp_entity, Warrior)
+        self.assertEqual(temp_entity.id, 0)
+        self.assertEqual(temp_entity.position, [5, 10])
+
+    # Test create_entity with mage
+    def test_create_entity_mage(self):
+        temp_entity = create_entity("mage", 5, 10, 1)
+
+        self.assertIsInstance(temp_entity, Mage)
+        self.assertEqual(temp_entity.id, 1)
+        self.assertEqual(temp_entity.position, [5, 10])
+
+    # Test create_entity with skeleton
+    def test_create_entity_skeleton(self):
+        temp_entity = create_entity("skeleton", 5, 10, 2)
+
+        self.assertIsInstance(temp_entity, Skeleton)
+        self.assertEqual(temp_entity.id, 2)
+        self.assertEqual(temp_entity.position, [5, 10])
+
+    # Test create_entity with goblin
+    def test_create_entity_goblin(self):
+        temp_entity = create_entity("goblin", 5, 10, 3)
+
+        self.assertIsInstance(temp_entity, Goblin)
+        self.assertEqual(temp_entity.id, 3)
+        self.assertEqual(temp_entity.position, [5, 10])
+
+    # Test create_entity converts string coordinates to integers
+    def test_create_entity_string_coordinates(self):
+        temp_entity = create_entity("warrior", "5", "10", 0)
+
+        self.assertIsInstance(temp_entity, Warrior)
+        self.assertEqual(temp_entity.position, [5, 10])
+
+    # Test create_entity with invalid entity type
+    def test_create_entity_invalid_type(self):
+        temp_entity = create_entity("invalid", 5, 10, 0)
+
+        self.assertIsNone(temp_entity)
