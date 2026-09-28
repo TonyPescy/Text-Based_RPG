@@ -13,7 +13,7 @@ Purpose: Houses all functions necessary for proper grid/tile handling and logic 
 # imports
 import domain_library as dl
 import entity
-import command_line_interface as cli
+from enum import Enum
 
 
 # Grid class with all methods needed for manipulating the grid
@@ -157,6 +157,9 @@ class Grid:
     def set_tile(self, x, y, tile_type):
         # Create tile to be placed
         temp_tile = Tile.create_tile(tile_type)
+        # Stop if the tile type was invalid
+        if temp_tile is None:
+            return
         # cast to int
         x = int(x)
         y = int(y)
@@ -204,31 +207,51 @@ class Grid:
     def add_item_to_tile_item_list(self, x, y, item_name):
         # fetch/create item
         if item_name.lower() in dl.EQUIPMENT_TYPES:
-            item = dl.EQUIPMENT_TYPES.get(item_name.lower())
+            item = dl.EQUIPMENT_TYPES.get(item_name.lower())()
         else:
             return
         # Append to list
-        self.grid[x][y].item_list.append(item)
+        self.grid[int(x)][int(y)].item_list.append(item)
 
     # Remove Item From Tile List Start
     # Removes the provided item from the current grids
     # Params: x,y - ints - grid position of tile
     #         item_name - string - Name of item to be removed
-    # Returns: item - Equipment Object - Corresponds to item that was remvoed from the ground
+    # Returns: None
     def remove_item_from_tile_item_list(self, x, y, item_name):
-        # fetch/create item
+        # Get item name
+        if isinstance(item_name, type):
+            item_name = item_name.__name__
+
+        elif hasattr(item_name, "name"):
+            item_name = item_name.name
+
+        # Find and remove item
         for item in self.grid[x][y].item_list:
-            if item.name.lower() == item_name.lower():
-                # Remove the item
-                self.grid[x][y].item_list.remove(item)
+
+            # Get item name
+            if isinstance(item, type):
+                tile_item_name = item.__name__
+
+            elif hasattr(item, "name"):
+                tile_item_name = item.name
+
+            elif isinstance(item, str):
+                tile_item_name = item
+
             else:
                 continue
+
+            # Compare item names
+            if tile_item_name.lower() == item_name.lower():
+                self.grid[x][y].item_list.remove(item)
+                return
 
     # Set Tile Item List Start
     # Adds the provided item list to the current grids
     # Intended use is for map creation - not player actions
     # Params: x,y - ints - grid position of tile
-    #         item_name - string - Name of item to be added
+    #         item_list - list - list of items to add
     # Returns: None
     def set_tile_item_list(self, x, y, item_list):
         for item in item_list:
@@ -245,8 +268,12 @@ class Grid:
 
 # Create Tile class because the grid will be made up of Tiles
 class Tile:
-    # Constants
-    VALID_TYPES = ("Floor", "Wall", "ShallowWater")
+    # Tile Type Enum
+    class TileType(Enum):
+        FLOOR = "Floor"
+        WALL = "Wall"
+        SHALLOW_WATER = "ShallowWater"
+        FOREST = "Forest"
 
     # Initialize Tile with t_type, passable, occupant
     def __init__(self, t_type, passable, occupants, modifiers=None, item_list=None):
@@ -268,37 +295,65 @@ class Tile:
     # Params: tile_type - string - tile name
     # Returns: Bool
     def is_valid_tile(tile_type):
-        if tile_type in [t_type.lower() for t_type in Tile.VALID_TYPES]:
-            return True
-        else:
-            return False
+        # Check if the provided tile type is a string
+        if isinstance(tile_type, str):
+
+            # Check against each valid TileType Enum value
+            for valid_type in Tile.TileType:
+                if tile_type.lower() == valid_type.value.lower():
+                    return True
+
+        # Invalid tile type
+        return False
 
     # Create Tile Start
-    # Creates an empty tile based on the tile type adn returns it - Tiles occupied later
+    # Creates an empty tile based on the tile type and returns it - Tiles occupied later
     # WITH MORE TILES WILL LEAD TO CYCLOMATIC COMPLEXITY - split into different tile creators + factory?
-    # Params: t_type - string - Type of tile to create
+    # Params: t_type - TileType - Type of tile to create
     # Returns: Tile - Tile based on tile type provided
+    # Create Tile Start
     def create_tile(t_type):
+
+        # Convert string to enum - prevents no tiles being placed error
+        if isinstance(t_type, str):
+            for valid_type in Tile.TileType:
+                if t_type.lower() == valid_type.value.lower():
+                    t_type = valid_type
+                    break
+
         # Match case for each type of tile
         match t_type:
+
             # Floor tile
-            case "floor":
+            case Tile.TileType.FLOOR:
                 # create and return floor tile
-                return Tile(t_type, True, [])
+                return Tile(t_type.value, True, [])
+
             # Wall tile
-            case "wall":
+            case Tile.TileType.WALL:
                 # create and return Wall tile
-                return Tile(t_type, False, [])
+                return Tile(t_type.value, False, [])
+
             # ShallowWater tile
-            case "shallowwater":
+            case Tile.TileType.SHALLOW_WATER:
                 # create and return ShallowWater tile
                 return Tile(
-                    t_type,
+                    t_type.value,
                     True,
                     [],
                     {"Speed": "-2"},
                 )
+
             # Forest Tile
-            case "forest":
+            case Tile.TileType.FOREST:
                 # create and return Forest tile
-                return Tile(t_type, True, [], {"Defence": "+5", "Speed": "-1"})
+                return Tile(
+                    t_type.value,
+                    True,
+                    [],
+                    {"Defence": "+5", "Speed": "-1"},
+                )
+
+            # Invalid tile type
+            case _:
+                return None

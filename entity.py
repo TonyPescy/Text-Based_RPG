@@ -37,6 +37,7 @@ class Entity:
         e_type,
         position,
         health,
+        max_health,
         attack,
         defence,
         speed,
@@ -48,12 +49,14 @@ class Entity:
         self.e_type = e_type
         self.position = position
         self.health = health
+        self.max_health = max_health
         self.attack = attack
         self.defence = defence
         self.speed = speed
         self.inventory = inventory
         self.active_modifiers = active_modifiers
         self.backpack = backpack
+        self.temp_buffs = []  # temp buffs list of dictionarys
 
     # Get Stats Start
     # Gets all relevant stats of the entity and returns them
@@ -81,6 +84,7 @@ class Entity:
     # Return: None
     def reset_stats(self):
         self.health = self.BASE_STATS["Health"]
+        self.max_health = self.BASE_STATS["Health"]
         self.attack = self.BASE_STATS["Attack"]
         self.defence = self.BASE_STATS["Defence"]
         self.speed = self.BASE_STATS["Speed"]
@@ -90,9 +94,9 @@ class Entity:
     # Update Stats Start
     # Calculates final stats and updates entities stats based on their bases and modifiers
     # Called when inventory is changed or if unit is positioned on a tile that modifies stats
-    # Params: active_grid - Grid - Current grid used by the CLI
+    # Params: CLI - cli instance - Current active game objects/features
     # Return: None
-    def update_stats(self, active_grid):
+    def update_stats(self, cli):  # UPDATE TEST
         # Clear active modifiers to avoid double counting of modifiers
         self.active_modifiers["Flat_modifiers"] = {}
         self.active_modifiers["Percent_modifiers"] = {}
@@ -114,16 +118,42 @@ class Entity:
         y = self.position[1]
 
         # Get current tile
-        tile = active_grid.grid[x][y]
+        tile = cli.grid.grid[x][y]
 
         # Handle modifiers for tile - split due to way tile modifiers are setup - could be cleaned up later
         for stat, modifier in tile.modifiers.items():
+            # Ignore stats that onlt affect Mage class
+            if stat == "Mana" or stat == "Spell_power":
+                continue
+
             self.handle_modifiers(stat, modifier)
+
+        # Handle temp buffs
+        for buff in self.temp_buffs:
+            for modifier_type, modifiers in buff["Effects"].items():
+                for stat, amount in modifiers.items():
+
+                    # Ignore stats that onlt affect Mage class
+                    if stat == "Mana" or stat == "Spell_power":
+                        continue
+                    # Convert modifier into handle_modifiers format
+                    elif modifier_type == "Flat_modifiers":
+                        modifier = str(amount)
+
+                    elif modifier_type == "Percent_modifiers":
+                        modifier = str(amount) + "%"
+
+                    else:
+                        continue
+
+                    self.handle_modifiers(stat, modifier)
 
         # Since stats will be changed and overwritten, we need the entity stats set to their bases
         self.reset_stats()
         # Calculate the entities final stats
         self.calculate_final_stats()
+        # Update max stats
+        self.calculate_max_stats()
 
     # Update Stats End
 
@@ -159,6 +189,27 @@ class Entity:
 
     # Handle Modifiers End
 
+    # Calculate Max Values
+    # Calculates the max health and/or mana of entity
+    # Params: None
+    # Returns:  None
+    def calculate_max_stats(self):
+        # Stats to be checked
+        stats = ["Health"]
+        # Iterate through all stats and add flat modifiers first, then calculate multiplicative modifiers
+        for stat in stats:
+            temp_value = self.BASE_STATS.get(stat, 0)
+            # If flat values exist
+            if stat in self.active_modifiers["Flat_modifiers"]:
+                temp_value += self.active_modifiers["Flat_modifiers"][stat]
+            # If percent modifiers exist
+            if stat in self.active_modifiers["Percent_modifiers"]:
+                temp_percent_value = self.active_modifiers["Percent_modifiers"][stat]
+                temp_value += temp_value * (temp_percent_value / 100)
+            # Update max stats
+            if stat == "Health":
+                self.max_health = temp_value
+
     # Calculate Final Stats Start
     # Handles stat calculation for entities and updates them
     # Params: None
@@ -180,6 +231,21 @@ class Entity:
             setattr(self, stat.lower(), temp_value)
 
     # Calculate Final Stats End
+
+    # Update Inventory
+    # Updates inventory after backpack changes - ensures no phantom items exist
+    # if dupes of an item exist, the dupe will remain equipped
+    # Params: None
+    # Returns:  None
+    def update_inventory(self):
+        # for item in inventory
+        for item in self.inventory.copy():  # copy to avoid skipping
+            # if item is in backpack - continue
+            if any(item == temp_item for temp_item in self.backpack):
+                continue
+            elif item.name != "None":  # no real item matches found - Remove
+                self.inventory.remove(item)
+                continue
 
     """
     # Create Entity Start - NEEDS FIX/REFACTOR
@@ -359,6 +425,7 @@ class Warrior(Entity):
             "warrior",
             position,
             self.BASE_STATS["Health"],
+            self.BASE_STATS["Health"],
             self.BASE_STATS["Attack"],
             self.BASE_STATS["Defence"],
             self.BASE_STATS["Speed"],
@@ -392,6 +459,7 @@ class Skeleton(Entity):
             id,
             "skeleton",
             position,
+            self.BASE_STATS["Health"],
             self.BASE_STATS["Health"],
             self.BASE_STATS["Attack"],
             self.BASE_STATS["Defence"],
@@ -428,6 +496,7 @@ class Goblin(Entity):
             "goblin",
             position,
             self.BASE_STATS["Health"],
+            self.BASE_STATS["Health"],
             self.BASE_STATS["Attack"],
             self.BASE_STATS["Defence"],
             self.BASE_STATS["Speed"],
@@ -462,6 +531,7 @@ class Mage(Entity):
             "mage",
             position,
             self.BASE_STATS["Health"],
+            self.BASE_STATS["Health"],
             self.BASE_STATS["Attack"],
             self.BASE_STATS["Defence"],
             self.BASE_STATS["Speed"],
@@ -471,6 +541,7 @@ class Mage(Entity):
         )
         # New attributes
         self.mana = self.BASE_STATS["Mana"]
+        self.max_mana = self.BASE_STATS["Mana"]
         self.spell_power = self.BASE_STATS["Spell_power"]
 
     # Get Stats Start
@@ -500,10 +571,12 @@ class Mage(Entity):
     # Return: None
     def reset_stats(self):
         self.health = self.BASE_STATS["Health"]
+        self.max_health = self.BASE_STATS["Health"]
         self.attack = self.BASE_STATS["Attack"]
         self.defence = self.BASE_STATS["Defence"]
         self.speed = self.BASE_STATS["Speed"]
         self.mana = self.BASE_STATS["Mana"]
+        self.max_mana = self.BASE_STATS["Mana"]
         self.spell_power = self.BASE_STATS["Spell_power"]
 
     # Reset Stats End
@@ -533,9 +606,9 @@ class Mage(Entity):
     # Update Stats Start
     # Calculates final stats and updates entities stats based on their bases and modifiers
     # Called when inventory is changed or if unit is positioned on a tile that modifies stats
-    # Params: None
+    # Params: CLI - cli instance - Current active game objects/features
     # Return: None
-    def update_stats(self, active_grid):
+    def update_stats(self, cli):  # UPDATE TESTS
         # Clear active modifiers to avoid double counting of modifiers
         self.active_modifiers["Flat_modifiers"] = {}
         self.active_modifiers["Percent_modifiers"] = {}
@@ -554,17 +627,61 @@ class Mage(Entity):
         y = self.position[1]
 
         # Get current tile
-        tile = active_grid.grid[x][y]
+        tile = cli.grid.grid[x][y]
 
         # Handle modifiers for tile - split due to way tile modifiers are setup - FIX
         for stat, modifier in tile.modifiers.items():
             self.handle_modifiers(stat, modifier)
+
+        # Handle temp buffs
+        for buff in self.temp_buffs:
+            for modifier_type, modifiers in buff["Effects"].items():
+                for stat, amount in modifiers.items():
+
+                    # Convert modifier into handle_modifiers format
+                    if modifier_type == "Flat_modifiers":
+                        modifier = str(amount)
+
+                    elif modifier_type == "Percent_modifiers":
+                        modifier = str(amount) + "%"
+
+                    else:
+                        continue
+
+                    self.handle_modifiers(stat, modifier)
+
         # Since stats will be changed and overwritten, we need the entity stats set to their bases
         self.reset_stats()
         # Calculate the entities final stats
         self.calculate_final_stats()
+        # Update max stats
+        self.calculate_max_stats()
 
         # Update Stats End
+
+    # Calculate Max Values
+    # Calculates the max health and/or mana of entity
+    # Params: cli - cli instance - Current active game objects/features
+    # Returns:  None
+    def calculate_max_stats(self):
+        # Stats to be checked
+        stats = ["Health", "Mana"]
+        # Iterate through all stats and add flat modifiers first, then calculate multiplicative modifiers
+        for stat in stats:
+            temp_value = self.BASE_STATS.get(stat, 0)
+            # If flat values exist
+            if stat in self.active_modifiers["Flat_modifiers"]:
+                temp_value += self.active_modifiers["Flat_modifiers"][stat]
+            # If percent modifiers exist
+            if stat in self.active_modifiers["Percent_modifiers"]:
+                temp_percent_value = self.active_modifiers["Percent_modifiers"][stat]
+                temp_value += temp_value * (temp_percent_value / 100)
+            # Update max stats
+            if stat == "Health":
+                self.max_health = temp_value
+
+            elif stat == "Mana":
+                self.max_mana = temp_value
 
 
 # Entities Factory
@@ -582,7 +699,7 @@ def create_entity(e_type, x, y, e_id):
     except:
         print(f"error: spawn_failed x ({x}) and/or y ({y}) are not integers!")
 
-    match e_type:  # MATCH WITH ENUMS UPON THAT UPDATE
+    match e_type.lower():  # MATCH WITH ENUMS UPON THAT UPDATE
         case "warrior":
             return Warrior(e_id, [x, y])
 
@@ -598,5 +715,6 @@ def create_entity(e_type, x, y, e_id):
         case _:  # error no matching entity type found - May be redundant
             print(
                 f"error: Invalid entity type '{e_type}'. "
-                f"Expected one of: {dl.ENTITY_TYPES}."
+                f"Expected one of: "
+                f"{[entity.value for entity in dl.EntityType]}."
             )

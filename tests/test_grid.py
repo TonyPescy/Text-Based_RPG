@@ -232,7 +232,7 @@ class TestEquipment(unittest.TestCase):
         stats = temp_grid.get_stats(0, 0)
         self.assertEqual(stats[0], 0)
         self.assertEqual(stats[1], 0)
-        self.assertEqual(stats[2], "shallowwater")
+        self.assertEqual(stats[2], "ShallowWater")
         self.assertEqual(stats[3], True)
         self.assertEqual(stats[4], [1, 2, 0])
 
@@ -244,7 +244,7 @@ class TestEquipment(unittest.TestCase):
         cli.entity_list = []
         cli.entity_ids_issued = 0
         # spawn entity
-        temp_entity = temp_grid.spawn_entity(0, 0, "warrior")
+        temp_entity = temp_grid.spawn_entity(0, 0, "warrior", cli.entity_ids_issued)
         # check values
         self.assertEqual(temp_entity.position, [0, 0])
         self.assertEqual(temp_grid.grid[0][0].occupants, [temp_entity.id])
@@ -295,7 +295,7 @@ class TestEquipment(unittest.TestCase):
     def test_create_tile_floor(self):
         tile = Tile.create_tile("floor")
 
-        self.assertEqual(tile.t_type, "floor")
+        self.assertEqual(tile.t_type, "Floor")
         self.assertEqual(tile.passable, True)
         self.assertEqual(tile.occupants, [])
         self.assertDictEqual(tile.modifiers, {})
@@ -304,7 +304,7 @@ class TestEquipment(unittest.TestCase):
     def test_create_tile_wall(self):
         tile = Tile.create_tile("wall")
 
-        self.assertEqual(tile.t_type, "wall")
+        self.assertEqual(tile.t_type, "Wall")
         self.assertEqual(tile.passable, False)
         self.assertEqual(tile.occupants, [])
         self.assertDictEqual(tile.modifiers, {})
@@ -313,7 +313,7 @@ class TestEquipment(unittest.TestCase):
     def test_create_tile_shallow_water(self):
         tile = Tile.create_tile("shallowwater")
 
-        self.assertEqual(tile.t_type, "shallowwater")
+        self.assertEqual(tile.t_type, "ShallowWater")
         self.assertEqual(tile.passable, True)
         self.assertEqual(tile.occupants, [])
         self.assertDictEqual(
@@ -325,7 +325,7 @@ class TestEquipment(unittest.TestCase):
     def test_create_tile_forest(self):
         tile = Tile.create_tile("forest")
 
-        self.assertEqual(tile.t_type, "forest")
+        self.assertEqual(tile.t_type, "Forest")
         self.assertEqual(tile.passable, True)
         self.assertEqual(tile.occupants, [])
         self.assertDictEqual(

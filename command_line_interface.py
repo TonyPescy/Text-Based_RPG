@@ -64,10 +64,15 @@ class CLI:
             "init": self.process_init_command,
             "set": self.process_set_command,
             "spawn": self.process_spawn_command,
-            "equip": self.process_equip_command,
+            # "equip": self.process_equip_command,
             "inventory": self.process_inventory_command,
             "inspect": self.process_inspect_command,
             "tile": self.process_tile_command,
+            "pickup": self.process_pickup_item_command,
+            "give": self.process_give_item_command,
+            "drop": self.process_drop_item_command,
+            "swap": self.process_swap_item_command,
+            "use": self.process_use_item_command,
         }
 
         # Match handler to command
@@ -192,17 +197,14 @@ class CLI:
         if self.map_created:
             print("error: map_init_failed - Map is already created!")
             return
-
         # width and height are not valid ints
         elif not dl.are_valid_ints(width, height):
             print("error: map_init_failed - Width and height are not valid integers!")
-
         # width and heigth within bounds
         elif not Grid.within_bounds(width, height):
             print(
                 "error: map_init_failed - Width and height exceed bound minimum and maximum!"
             )
-
         # Valid inputs
         else:
             # Create grid with width and height
@@ -232,7 +234,6 @@ class CLI:
         # checks if map was created
         if not self.map_created:
             print("error: tile_set_failed - Map does not exist!")
-
         # x and y are not valid ints
         elif not dl.are_valid_ints(x, y):
             print("error: set_tile_failed - x and y are not valid integers!")
@@ -240,11 +241,9 @@ class CLI:
             """# x and y within bounds
             elif not Grid.within_bounds(x, y):
                 print("error: set_tile_failed - x and y exceed bound minimum and maximum!")"""
-
         # x and y exceeds current grid bounds
         elif not Grid.is_valid_grid_position(self.grid, x, y):
             print("error: set_tile_failed - x and y exceed current grid bounds!")
-
         # tile is not valid
         elif not Tile.is_valid_tile(tile_type):
             print("error: set_tile_failed - Tile type provided was invalid!")
@@ -253,7 +252,7 @@ class CLI:
             # updates grid with new tile
             self.grid.set_tile(x, y, tile_type)
             # success output -  with special case for shallowwater
-            if tile_type == "shallowwater":
+            if tile_type.lower() == "shallowwater":
                 print(f"ok: tile_set {x}, {y} type: ShallowWater!")
             else:
                 print(f"ok: tile_set {x}, {y} type: {tile_type.capitalize()}!")
@@ -265,56 +264,27 @@ class CLI:
     # Return: None
     def process_spawn_command(self, command_pieces):
         # Test for valid amount of command pieces and correct commands/typing
-        if len(command_pieces) == 4 and command_pieces[1] in [
-            entity.lower() for entity in dl.ENTITY_TYPES
+        if len(command_pieces) == 4 and command_pieces[1].lower() in [  # SPAWN ENTITY
+            entity.value.lower() for entity in dl.EntityType
         ]:
             x = command_pieces[2]
             y = command_pieces[3]
             entity_type = command_pieces[1]
+            # Spawn entity
+            self.spawn_entity_for_cli(x, y, entity_type)
+
+        elif len(command_pieces) == 5 and command_pieces[1] == "loot":
+            # Set variables
+            item_name = command_pieces[2]
+            x = command_pieces[3]
+            y = command_pieces[4]
+            # Spawn loot
+            self.spawn_loot_for_cli(item_name, x, y)
         else:
             print("error: spawn_failed - Invalid arguments!")
             return
-        # Ensure map exists
-        if not self.map_created:
-            print("error: spawn_failed - Map does not exist!")
-            return
 
-        # x and y are not valid ints
-        elif not dl.are_valid_ints(x, y):
-            print("error: spawn_failed - x and y are not valid integers!")
-            return
-
-            """# x and y within bounds
-            elif not Grid.within_bounds(x, y):
-                print("error: spawn_failed - x and y exceed bound minimum and maximum!")"""
-
-        # x and y exceeds current grid bounds
-        elif not Grid.is_valid_grid_position(self.grid, x, y):
-            print("error: spawn_failed - x and y exceed current grid bounds!")
-            return
-
-        # ensure grid location is empty
-        elif Grid.is_occupied(self.grid, x, y):
-            print(f"error: spawn_failed - Entity is already present at ({x}, {y})!")
-            return
-
-        # invalid entity type
-        elif not dl.is_valid_entity(entity_type):
-            print("error: spawn_failed - Invalid entity type!")
-            return
-
-        # All valid inputs
-        else:
-            # updates grid with new entity and returns entity
-            entity = self.grid.spawn_entity(x, y, entity_type, self.entity_ids_issued)
-            # success output
-            print(f"ok: Spawned {entity_type} at {x}, {y}. id: {entity.id}!")
-            # Increment entity_ids_issued to account for new entity
-            self.entity_ids_issued += 1
-            # Add new entity to entity list
-            self.entity_list.append(entity)
-
-    # Equip Start
+    """ # Equip Start
     # Equips item to designated slot or determines best slot based on item
     # Player system is not added yet so will default player to be first entity created entity_list[0]
     # Equip will overwrite previous items
@@ -368,7 +338,7 @@ class CLI:
         # Success message
         print("Valid items:", ", ".join(dl.EQUIPMENT_TYPES))
         print("Valid slots:", ", ".join(dl.VALID_SLOTS))
-        print(f"ok: Equipped {new_item.name} to {new_item.slot}!")
+        print(f"ok: Equipped {new_item.name} to {new_item.slot}!")"""
 
     # Process Inventory Command Start
     # displays current inventory to user
@@ -376,18 +346,47 @@ class CLI:
     # Params: command_pieces - list - list of strings that make up the command
     # Return: None
     def process_inventory_command(self, command_pieces):
-        if len(command_pieces) > 1:
-            print("error: inventory_failed - Too many command arguemnts!")
+        if len(command_pieces) != 2:
+            print("error: inventory_failed - Invalid command!")
             return
+        else:
+            # Validate e_id as int
+            try:
+                e_id = int(command_pieces[1])
+            except:
+                print("error: inventory - Entity id is not valid integer!")
+                return
         # Ensure "player" entity exists
-        if not len(self.entity_list) > 0:
+        entity = None
+
+        for temp_entity in self.entity_list:
+            if temp_entity.id == e_id:
+                entity = temp_entity
+                break
+
+        if entity is None:
             print("error: inventory_failed - Player entity does not exist!")
             return
 
         # Display inventory of entity
-        print(f"Weapon: {self.entity_list[0].inventory[0].name}")
-        print(f"Armor: {self.entity_list[0].inventory[1].name}")
-        print(f"Accessory: {self.entity_list[0].inventory[2].name}")
+        print(f"Weapon: {entity.inventory[0].name}")
+        print(f"Armor: {entity.inventory[1].name}")
+        print(f"Accessory: {entity.inventory[2].name}")
+        print("Backpack Slots:")
+        # Iterate through all backpack slots
+        for index in range(entity.BACKPACK_SIZE):
+            # Check if slot contains an item
+            if index < len(entity.backpack):
+                item = entity.backpack[index]
+                if item is None:
+                    item_name = "Empty"
+                else:
+                    item_name = item.name
+            else:
+                # Slot is empty
+                item_name = "Empty"
+            # Display slot number and item
+            print(f"{index + 1}. {item_name}")
 
     # Process Inspect Command Start
     # Inspects entity with given ID
@@ -430,7 +429,7 @@ class CLI:
             return
 
         # update entity stats - in case changes occurred
-        found_entity.update_stats(self.grid)
+        found_entity.update_stats(self)
         # get stats of entity
         entity_stats = found_entity.get_stats()
         # Display stats of entity
@@ -466,12 +465,10 @@ class CLI:
         if not self.map_created:
             print("error: tile_failed - Map does not exist!")
             return
-
         # x and y are not valid ints
         elif not dl.are_valid_ints(x, y):
             print("error: tile_failed - x and y are not valid integers!")
             return
-
         # x and y exceeds current grid bounds
         elif not self.grid.is_valid_grid_position(x, y):
             print("error: tile_failed - x and y exceed current grid bounds!")
@@ -482,8 +479,11 @@ class CLI:
         # Get tile
         current_tile = self.grid.grid[int(x)][int(y)]
 
+        if current_tile is None:
+            print("error: tile_failed - No tile exists at this position!")
+            return
         # Special case with shallowwater for proper capitalization
-        if current_tile.t_type == "shallowwater":
+        elif current_tile.t_type.lower() == "shallowwater":
             print("Type: ShallowWater")
         else:
             print(f"Type: {current_tile.t_type.capitalize()}")
@@ -496,6 +496,381 @@ class CLI:
             print("Occupants: None")
         else:
             print(f"Occupants: {current_tile.occupants[0]}")
+
+    # Process Pickup Item Command
+    # Handles picking up of items at position of entity's id
+    # Params: command_pieces - list - list of strings that make up the command
+    # Returns: None
+    def process_pickup_item_command(self, command_pieces):
+        # Test for valid amount of command pieces and correct commands/typing
+        if len(command_pieces) == 3:
+            # assign commands
+            entity_id = command_pieces[1]
+            item_name = command_pieces[2]
+        else:
+            print("error: pickup_failed - Invalid command!")
+            return
+
+        # Ensure map exists
+        if not self.map_created:
+            print("error: pickup_failed - Map does not exist!")
+            return
+        # ensure entity_id is valid and within list
+        elif not any(entity_id == str(entity.id) for entity in self.entity_list):
+            print("error: pickup_failed - Entity does not exist!")
+            return
+        # ensure item_name is valid
+        elif not any(
+            item_name.lower() == item_type.lower() for item_type in dl.EQUIPMENT_TYPES
+        ):
+            print("error: pickup_failed - Item name not found!")
+            return
+
+        # Assign variables
+        for temp_entity in self.entity_list:
+            if str(temp_entity.id) == entity_id:
+                entity = temp_entity
+                break
+        entity_x = entity.position[0]
+        entity_y = entity.position[1]
+
+        # Check for backpack space
+        if len(entity.backpack) >= Entity.BACKPACK_SIZE:
+            print("error: pickup_failed - Backpack if full!")
+            return
+
+        # Find the item at the entity's location
+        e_tile = self.grid.grid[entity_x][entity_y]
+        tile_item = None
+
+        for grid_item in e_tile.item_list:
+
+            # Tile contains an equipment class
+            if isinstance(grid_item, type):
+                if grid_item.__name__.lower() == item_name.lower():
+                    tile_item = grid_item
+                    break
+
+            # Tile contains an equipment instance
+            elif hasattr(grid_item, "name"):
+                if grid_item.name.lower() == item_name.lower():
+                    tile_item = grid_item
+                    break
+
+            # Tile contains an item name as a string
+            elif isinstance(grid_item, str):
+                if grid_item.lower() == item_name.lower():
+                    tile_item = grid_item
+                    break
+
+        # Ensure item is on the tile
+        if tile_item is None:
+            print("error: pickup_failed - Item not in tiles item list!")
+            return
+        else:  # item is present and there is backpack space - pickup
+            item = dl.create_equipment(item_name.lower())
+            entity.add_item_to_backpack(item)
+            # Remove item from item_list in grid
+            self.grid.remove_item_from_tile_item_list(entity_x, entity_y, tile_item)
+            # Success message
+            print(f"ok: picked_up {item.name} into backpack!")
+
+    # Process Give Item Command
+    # Gives matching entity the provided item
+    # Params: command_pieces - list - list of strings that make up the command
+    # Returns: None
+    def process_give_item_command(self, command_pieces):
+        # Test for valid amount of command pieces and correct commands/typing
+        if len(command_pieces) == 3:
+            # assign commands
+            entity_id = command_pieces[1]
+            item_name = command_pieces[2]
+        else:
+            print("error: give_failed - Invalid command!")
+            return
+
+        # Ensure map exists
+        if not self.map_created:
+            print("error: give_failed - Map does not exist!")
+            return
+        # ensure entity_id is valid and within list
+        elif not any(entity_id == str(entity.id) for entity in self.entity_list):
+            print("error: give_failed - Entity does not exist!")
+            return
+        # ensure item_name is valid
+        elif not any(
+            item_name.lower() == item_type.lower() for item_type in dl.EQUIPMENT_TYPES
+        ):
+            print("error: give_failed - Item name not found!")
+            return
+        # Assign variables
+        item = dl.create_equipment(item_name.lower())
+        for temp_entity in self.entity_list:
+            if str(temp_entity.id) == entity_id:
+                entity = temp_entity
+
+        # Check for backpack space
+        if len(entity.backpack) >= Entity.BACKPACK_SIZE:
+            print("error: give_failed - Backpack if full!")
+            return
+        else:
+            # Give item to entity
+            entity.add_item_to_backpack(item)
+            # Success message
+            print(f"ok: added {item.name} to {entity.id}'s backpack!")
+
+    # Process Drop Item Command
+    # Drop matching entitys provided item
+    # Params: command_pieces - list - list of strings that make up the command
+    # Returns: None
+    def process_drop_item_command(self, command_pieces):
+        # Test for valid amount of command pieces and correct commands/typing
+        if len(command_pieces) == 3:
+            # assign commands
+            entity_id = command_pieces[1]
+            item_name = command_pieces[2]
+        else:
+            print("error: drop_failed - Invalid command!")
+            return
+        # Ensure map exists
+        if not self.map_created:
+            print("error: drop_failed - Map does not exist!")
+            return
+        # ensure entity_id is valid and within list
+        elif not any(entity_id == str(entity.id) for entity in self.entity_list):
+            print("error: drop_failed - Entity does not exist!")
+            return
+        # ensure item_name is valid
+        elif not any(
+            item_name.lower() == item_type.lower() for item_type in dl.EQUIPMENT_TYPES
+        ):
+            print("error: drop_failed - Item name not found!")
+            return
+        # Assign variables
+        for temp_entity in self.entity_list:
+            if str(temp_entity.id) == entity_id:
+                entity = temp_entity
+        # Always valid as this is checked during spawning/moving of said entity
+        entity_x = entity.position[0]
+        entity_y = entity.position[1]
+
+        # Find item in backpack
+        item = None
+        for temp_item in entity.backpack:
+            if item_name.lower() == temp_item.name.lower():
+                item = temp_item
+                break
+
+        # Ensure item is in backpack
+        if item == None:
+            print("error: drop_failed - Item not in backpack!")
+        else:  # Success case
+            # Add item to the tile
+            self.grid.add_item_to_tile_item_list(entity_x, entity_y, item.name)
+            # Remove item from entitys bag
+            entity.remove_item_from_backpack(item)
+            # Check if item was in entity's inventory
+            entity.update_inventory()
+            # update entity's stats - incase item removed was equipped
+            entity.update_stats(self)
+            # success message
+            print(f"ok: dropped {item.name} onto tile!")
+
+    # Process Swap Item Command
+    # Swop matching entitys provided item with item in slot
+    # Params: command_pieces - list - list of strings that make up the command
+    # Returns: None
+    def process_swap_item_command(self, command_pieces):
+        # Test for valid amount of command pieces and correct commands/typing
+        if len(command_pieces) == 4:
+            # assign commands
+            entity_id = command_pieces[1]
+            item_slot = command_pieces[2]
+            item_name = command_pieces[3]
+        else:
+            print("error: swap_failed - Invalid command!")
+            return
+        # Ensure map exists
+        if not self.map_created:
+            print("error: swap_failed - Map does not exist!")
+            return
+        # ensure entity_id is valid and within list
+        elif not any(entity_id == str(entity.id) for entity in self.entity_list):
+            print("error: swap_failed - Entity does not exist!")
+            return
+        # ensure item_name is valid
+        elif not any(
+            item_name.lower() == item_type.lower() for item_type in dl.EQUIPMENT_TYPES
+        ):
+            print("error: swap_failed - Item name not found!")
+            return
+        # Ensure slot is valid - blocks consumables from equipping also
+        slot = None
+
+        for valid_slot in dl.EquipmentSlot:
+            if item_slot.lower() == valid_slot.value.lower():
+                slot = valid_slot
+                break
+
+        if slot is None:
+            print("error: swap_failed - Item slot not valid inventory slot!")
+            return
+
+        # Assign variables
+        item = dl.create_equipment(item_name.lower())
+        for temp_entity in self.entity_list:
+            if str(temp_entity.id) == entity_id:
+                entity = temp_entity
+
+        # Check for correct slot for item assignment
+        if item.slot.lower() != slot.value.lower():
+            print("error: swap_failed - Slot inccorect for item type!")
+            return
+        # Ensure item is in units backpack
+        elif not any(
+            backpack_item is not None
+            and item_name.lower() == backpack_item.name.lower()
+            for backpack_item in entity.backpack
+        ):
+            print("error: swap_failed - Item not in backpack!")
+            return
+        else:  # Success - assign item
+            entity.inventory[dl.EquipmentSlotIndex[slot.name].value] = item
+
+        # Success message and stat update
+        entity.update_stats(self)
+        print("Valid items:", ", ".join(dl.EQUIPMENT_TYPES))
+        print(
+            "Valid slots:",
+            ", ".join(valid_slot.value for valid_slot in dl.EquipmentSlot),
+        )
+        print(f"ok: swapped {item.slot} with backpack item!")
+
+    # Uses the current consumable - Inputs cleaned in CLI - MAKE SURE ITEM IN BACKPACK
+    # Process Use Item Command
+    # Use matching entitys provided item
+    # Params: command_pieces - list - list of strings that make up the command
+    # Returns: None
+    def process_use_item_command(self, command_pieces):
+        # Test for valid amount of command pieces and correct commands/typing
+        if len(command_pieces) == 3:
+            # assign commands
+            entity_id = command_pieces[1]
+            item_name = command_pieces[2]
+        else:
+            print("error: use_failed - Invalid command!")
+            return
+        # ensure entity_id is valid and within list
+        if not any(entity_id == str(entity.id) for entity in self.entity_list):
+            print("error: use_failed - Entity does not exist!")
+            return
+        # ensure item_name is valid
+        elif not any(
+            item_name.lower() == item_type.lower() for item_type in dl.EQUIPMENT_TYPES
+        ):
+            print("error: use_failed - Item name not found!")
+            return
+
+        # Assign variables
+        for temp_entity in self.entity_list:
+            if str(temp_entity.id) == entity_id:
+                entity = temp_entity
+        # Find item in backpack
+        item = None
+        for temp_item in entity.backpack:
+            if item_name.lower() == temp_item.name.lower():
+                item = temp_item
+                break
+        # Ensure item is in backpack
+        if item == None:
+            print("error: use_failed - Item not in backpack!")
+        # Ensure that item is a consumable
+        elif item.slot != "Consumable":
+            print("error: use_failed - Item is not a consumable!")
+            return
+        else:  # Success case
+            # Use consumable
+            dl.use_consumable(item, entity)
+            # Remove consumable from backpack
+            entity.backpack.remove(item)
+            print(f"ok: used {item.name}!")
+
+    # Spawn Entity For CLI
+    # Contains logic for all entity spawning in the CLI
+    # Params: x,y - ints - Grid coordinates to spawn entity at
+    #           entity_type - string - String used to create the correct entity type
+    # Return: None
+    def spawn_entity_for_cli(self, x, y, entity_type):
+        if not self.map_created:
+            print("error: spawn_failed - Map does not exist!")
+            return
+        # x and y are not valid ints
+        elif not dl.are_valid_ints(x, y):
+            print("error: spawn_failed - x and y are not valid integers!")
+            return
+            """# x and y within bounds
+            elif not Grid.within_bounds(x, y):
+                print("error: spawn_failed - x and y exceed bound minimum and maximum!")"""
+        # x and y exceeds current grid bounds
+        elif not Grid.is_valid_grid_position(self.grid, x, y):
+            print("error: spawn_failed - x and y exceed current grid bounds!")
+            return
+        # ensure grid location is empty
+        elif Grid.is_occupied(self.grid, x, y):
+            print(f"error: spawn_failed - Entity is already present at ({x}, {y})!")
+            return
+        # invalid entity type
+        elif not dl.is_valid_entity(entity_type):
+            print("error: spawn_failed - Invalid entity type!")
+            return
+        # All valid inputs  # TEST
+        else:
+            # updates grid with new entity and returns entity
+            entity = self.grid.spawn_entity(x, y, entity_type, self.entity_ids_issued)
+            # success output
+            print(f"ok: Spawned {entity_type} at {x}, {y}. id: {entity.id}!")
+            # Increment entity_ids_issued to account for new entity
+            self.entity_ids_issued += 1
+            # Add new entity to entity list
+            self.entity_list.append(entity)
+            # Add current max stats to the dict
+            if entity.e_type.lower() == "mage":  # spanws in with full health and mana
+                entity.max_health = entity.health
+                entity.max_mana = entity.mana
+            else:  # Not a mage - spawns with max/full hp
+                entity.max_health = entity.health
+            # Add temp buffs for entity
+            entity.temp_buffs = []
+            return
+
+    # Spawn Loot For CLI
+    # Contains logic for all loot spawning in the CLI
+    # Params:   item_name - string - String used to create the correct entity type
+    #           x,y - ints - Grid coordinates to spawn loot at
+    # Return: None
+    def spawn_loot_for_cli(self, item_name, x, y):
+        # checks if map was created
+        if not self.map_created:
+            print("error: spawn_failed - Map does not exist!")
+            return
+        # x and y are not valid ints
+        elif not dl.are_valid_ints(x, y):
+            print("error: spawn_failed - x and y are not valid integers!")
+            return
+        # x and y exceeds current grid bounds
+        elif not Grid.is_valid_grid_position(self.grid, x, y):
+            print("error: spawn_failed - x and y exceed current grid bounds!")
+            return
+        # ensure item_name is valid
+        elif not any(
+            item_name.lower() == item_type.lower() for item_type in dl.EQUIPMENT_TYPES
+        ):
+            print("error: spawn_failed - Item name not found!")
+            return
+        else:  # Success
+            self.grid.add_item_to_tile_item_list(x, y, item_name)
+            print(f"ok: spawn_loot {item_name} at {x}, {y}!")
+            return
 
     # Capitalize If String Start
     # Will capitalize and return string if it is a string
