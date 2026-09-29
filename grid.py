@@ -11,6 +11,7 @@ Purpose: Houses all functions necessary for proper grid/tile handling and logic 
 """
 
 # imports
+import heapq
 import domain_library as dl
 import entity
 from enum import Enum
@@ -65,32 +66,23 @@ class Grid:
 
     # Occupy Start
     # Sets grid location to given entity's ID, marking it as occupied
-    # only called after tile is known to be unoccupied
+    # only called after tile is known to be unoccupied and x,y are cleaned valid ints
     # Params: x,y - int - grid position to occupy
     #       e_ID - int - entity ID value
     # Return: None
     def occupy(self, x, y, e_ID):
-        # typing fix
-        try:
-            x = int(x)
-            y = int(y)
-            self.grid[x][y].occupants.append(e_ID)
-        except:
-            print(
-                f"error: Grid.occupy_failed - x ({x}) and/or y ({y}) is/are not integer(s)!"
-            )
+        self.grid[x][y].occupants.append(e_ID)
 
     # Occupy End
 
     # Clear Occupant Start
     # Removes occupant from grid location at given x,y
+    # x,y are cleaned valid ints
     # Params: x,y - int - tile position to clear occupant from
     #       e_ID - int - id number of occupant to remove at given tile
     # Return: None
     def clear_occupant(self, x, y, e_ID):
-        # typing fix
-        x = int(x)
-        y = int(y)
+        # functionality with multiple occupants
         for occupant in self.grid[x][y].occupants:
             if occupant == e_ID:
                 self.grid[x][y].occupants.remove(occupant)
@@ -99,12 +91,10 @@ class Grid:
 
     # Is Passable Start
     # Sets grid location at given x,y to open
+    # x,y are cleaned valid ints
     # Params: x,y - int - grid position to clear
     # Returns: Bool - if tile is passable
     def is_passable(self, x, y):
-        # typing fix
-        x = int(x)
-        y = int(y)
         return self.grid[x][y].passable
 
     # Is Passable End
@@ -265,6 +255,141 @@ class Grid:
     def clear_tile_item_list(self, x, y):
         self.grid[x][y].item_list.clear()
 
+    # Is Within Range
+    # Returns bool based on if provided tile location is within the range of the entity
+    # All variables are cleaned prior to passing into this function
+    # Params:   entity_ordered_pair - list - [x, y] current gird position of entity
+    #           target_ordered_pair - list - [x, y] target gird position
+    #           range - int - entity mvoement speed or weapon range
+    #           current_grid - grid - CLI current game grid
+    # Returns:  bool - true if target is within range of entity
+    def is_within_range(self, entity_ordered_pair, target_ordered_pair, range):
+        # Assign x's and y's
+        start_x = int(entity_ordered_pair[0])
+        start_y = int(entity_ordered_pair[1])
+        target_x = int(target_ordered_pair[0])
+        target_y = int(target_ordered_pair[1])
+
+        # Priority Queue for A* - (estimated cost, distance, x, y)
+        open_tile_list = []
+        # Start at intial position
+        heapq.heappush(
+            open_tile_list,
+            (
+                Grid.manhattan_distance_calculator(
+                    target_x, start_x, target_y, start_y
+                ),
+                0,
+                start_x,
+                start_y,
+            ),
+        )
+
+        # Keep track of shortest ditances to each tile
+        distances = {}
+        distances[(start_x, start_y)] = 0
+
+        # While there are open tiles remaining
+        while open_tile_list:
+            # Get "cheapest" tile
+            _, distance, x, y = heapq.heappop(open_tile_list)
+
+            # Skip over old paths
+            if distance != distances.get((x, y)):
+                continue
+
+            # Target found
+            if int(x) == target_x and int(y) == target_y:
+                # Check distance against range
+                if distance <= range:
+                    return True
+                else:  # Not within range
+                    return False
+
+            # Skip over tiles outside of range
+            if distance >= range:
+                continue  # Skips checking neighbors when at ranges limit
+
+            # Get neighbor tiles
+            neighbors = self.get_neighbors([x, y])
+
+            # Check each neighbor tile
+            for next_tile in neighbors:
+                # Set next x and y
+                next_x = next_tile[0]
+                next_y = next_tile[1]
+
+                # Count each step - Speed effects of tiles only happen when started on them
+                new_distance = distance + 1
+
+                # Only keep the shortest distance
+                if new_distance < distances.get((next_x, next_y), float("inf")):
+
+                    distances[(next_x, next_y)] = new_distance
+
+                    # A* priority - (distance traveled + Manhattan distance)
+                    priority = new_distance + Grid.manhattan_distance_calculator(
+                        next_x, next_y, target_x, target_y
+                    )
+                    # Push neighbor tile to priority queue
+                    heapq.heappush(
+                        open_tile_list,
+                        (priority, new_distance, next_x, next_y),
+                    )
+
+        # No path within range
+        return False
+
+    # Manhattan Distance Calculator
+    # Calculates the manhattan distance using formula
+    # Params:   x,y - ints - intial x and y coordinates
+    #           x2,y2 - ints - target x and y coordinates
+    # Returns: manhattan_distance - int
+    def manhattan_distance_calculator(x2, x, y2, y):
+        try:
+            x2 = int(x2)
+            x = int(x)
+            y2 = int(y2)
+            y = int(y)
+        except:
+            return  # never will happen as the x's and y's are pulled from grid positions
+        return abs(x2 - x) + abs(y2 - y)
+
+    # Get Neighbors
+    # Gets all valid neighboring positions
+    # Params: ordered_pair - list - [x, y] current position
+    # Returns: list - Valid neighboring positions
+    def get_neighbors(self, ordered_pair):
+
+        # Store valid neighbors
+        neighbors = []
+
+        # Get current x and y coordinates
+        x = ordered_pair[0]
+        y = ordered_pair[1]
+
+        # Check each cardinal direction
+        for dir in Direction:
+
+            # Get direction moves
+            direction_x = dir.value[0]
+            direction_y = dir.value[1]
+
+            # Calculate neighbor
+            next_x = x + direction_x
+            next_y = y + direction_y
+
+            # Create ordered pair for neighbor
+            next_position = [next_x, next_y]
+
+            # Check valid grid position and passable tile
+            if self.is_valid_grid_position(next_x, next_y) and self.is_passable(
+                next_x, next_y
+            ):
+                neighbors.append(next_position)
+
+        return neighbors
+
 
 # Create Tile class because the grid will be made up of Tiles
 class Tile:
@@ -357,3 +482,12 @@ class Tile:
             # Invalid tile type
             case _:
                 return None
+
+
+# Direction Enum - used within A* pathfinding for manhattan distance calcs
+class Direction(Enum):
+
+    UP = (0, -1)
+    DOWN = (0, 1)
+    LEFT = (-1, 0)
+    RIGHT = (1, 0)

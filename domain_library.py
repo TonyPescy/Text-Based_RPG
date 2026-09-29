@@ -69,6 +69,12 @@ class EntityType(Enum):
     GOBLIN = "Goblin"
 
 
+# Attack Types Constants Enums
+class AttackTypes(Enum):
+    MELEE = "Melee"
+    RANGED = "Ranged"
+
+
 # Equipment Factory Start
 # Used to create all of the equipment based on item_name provided
 # Params: item_name - string - name of item to be created
@@ -116,145 +122,3 @@ def are_valid_ints(x, y):
     except:  # Return error for proper error message
         return False
     return True
-
-
-# Use Consumable
-# Uses the current consumable - Inputs cleaned in CLI - MAKE SURE ITEM IN BACKPACK
-# Params: consumable - Consumable instance - Consumable to be used
-#         entity - Entity instance - entity using the item
-# Return: None
-def use_consumable(
-    consumable,
-    entity,
-):
-    # Apply instant effects
-    for modifier_type, modifiers in consumable.instant_effects.items():
-
-        # Flat modifiers
-        if modifier_type == "Flat_modifiers":
-            for stat, amount in modifiers.items():
-
-                # Convert modifier amount to int
-                amount = int(amount)
-                # Get current stat
-                current_value = getattr(entity, stat.lower())
-                # Calculate new stat
-                new_value = current_value + amount
-
-                # Prevent oveflow of health/mana
-                # max
-                max_stat = None
-                if stat == "Health":
-                    max_stat = entity.max_health
-                elif stat == "Mana" and hasattr(entity, "max_mana"):
-                    max_stat = entity.max_mana
-                # Prevent overflow
-                if max_stat is not None:
-                    new_value = min(new_value, max_stat)
-
-                # Apply the new value
-                setattr(entity, stat.lower(), new_value)
-
-        # Percent modifiers
-        elif modifier_type == "Percent_modifiers":
-            for stat, amount in modifiers.items():
-
-                # Convert percentage to int
-                amount = int(amount)
-                # Get current stat
-                current_value = getattr(entity, stat.lower())
-                # Calculate percentage change
-                modifier = current_value * (amount / 100)
-                # Calculate new stat
-                new_value = int(current_value + modifier)
-
-                # Prevent overflow of health/mana
-                # max
-                max_stat = None
-                if stat == "Health":
-                    max_stat = entity.max_health
-
-                elif stat == "Mana" and hasattr(entity, "max_mana"):
-                    max_stat = entity.max_mana
-
-                # Prevent stat from exceeding its maximum
-                if max_stat is not None:
-                    new_value = min(new_value, max_stat)
-
-                # Apply the new value
-                setattr(entity, stat.lower(), new_value)
-
-        # Add over time effects as a temp buff
-        if consumable.over_time_effects and consumable.duration > 0:
-            # Store temp buff
-            entity.temp_buffs.append(
-                {
-                    "Name": consumable.name,
-                    "Effects": consumable.over_time_effects,
-                    "Turns": consumable.duration,
-                }
-            )
-
-
-# NO TIME ADDED YET, SO THIS IS  A PLACEHOLDER - WILL NEED TESTS WHEN TIME IS ADDED AS WELL
-# Process temp buffs
-# Processes the temp buffs on the entity
-# Params: entity - Entity instance - entity whose buffs are being processed
-#         cli - current cli instance - houses entity max stats and entity temp buffs
-# Return: None
-def process_temp_buffs(entity, cli):
-
-    # Get temporary buffs for entity
-    temp_buffs = cli.entity_temp_buffs.get(entity.id, [])
-
-    # Get max stats for entity
-    max_stats = cli.entity_max_stats.get(entity.id, {})
-
-    # Process temp buffS
-    for buff in temp_buffs:
-
-        # Get effects from buff
-        effects = buff["Effects"]
-
-        # Process each modifier type
-        for modifier_type, modifiers in effects.items():
-
-            # Process each stat modifier
-            for stat, amount in modifiers.items():
-
-                # Convert to int
-                amount = int(amount)
-                # Get current stat
-                current_value = getattr(entity, stat)
-
-                # Flat modifiers
-                if modifier_type == "Flat_modifiers":
-
-                    # Calculate new stat
-                    new_value = current_value + amount
-
-                # Percent modifiers
-                elif modifier_type == "Percent_modifiers":
-
-                    # Calculate percentage change
-                    modifier = current_value * (amount / 100)
-                    # Calculate new stat
-                    new_value = int(current_value + modifier)
-
-                else:
-                    continue
-
-                # Prevent stat from exceeding its maximum
-                if stat in max_stats:
-                    new_value = min(new_value, max_stats[stat])
-
-                # Apply modifier
-                setattr(entity, stat, new_value)
-
-        # Reduce remaining duration
-        buff["Turns"] -= 1
-
-    # Remove expired buffs
-    cli.entity_temp_buffs[entity.id] = [
-        buff for buff in temp_buffs if buff["Turns"] > 0
-    ]

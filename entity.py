@@ -44,6 +44,7 @@ class Entity:
         inventory,
         active_modifiers,
         backpack,
+        attack_type,
     ):
         self.id = id
         self.e_type = e_type
@@ -56,6 +57,7 @@ class Entity:
         self.inventory = inventory
         self.active_modifiers = active_modifiers
         self.backpack = backpack
+        self.attack_type = attack_type
         self.temp_buffs = []  # temp buffs list of dictionarys
 
     # Get Stats Start
@@ -432,6 +434,7 @@ class Warrior(Entity):
             dl.BASE_INVENTORY,
             active_modifiers,
             backpack,
+            dl.AttackTypes.MELEE,
         )
 
 
@@ -467,6 +470,7 @@ class Skeleton(Entity):
             dl.BASE_INVENTORY,
             active_modifiers,
             backpack,
+            dl.AttackTypes.RANGED,
         )
 
 
@@ -503,6 +507,7 @@ class Goblin(Entity):
             dl.BASE_INVENTORY,
             active_modifiers,
             backpack,
+            dl.AttackTypes.MELEE,
         )
 
 
@@ -538,6 +543,7 @@ class Mage(Entity):
             dl.BASE_INVENTORY,
             active_modifiers,
             backpack,
+            dl.AttackTypes.MELEE,  # When not using spells using staff to attack physically
         )
         # New attributes
         self.mana = self.BASE_STATS["Mana"]
@@ -629,7 +635,7 @@ class Mage(Entity):
         # Get current tile
         tile = cli.grid.grid[x][y]
 
-        # Handle modifiers for tile - split due to way tile modifiers are setup - FIX
+        # Handle modifiers for tile - split due to way tile modifiers are setup - FIX?
         for stat, modifier in tile.modifiers.items():
             self.handle_modifiers(stat, modifier)
 
@@ -699,17 +705,17 @@ def create_entity(e_type, x, y, e_id):
     except:
         print(f"error: spawn_failed x ({x}) and/or y ({y}) are not integers!")
 
-    match e_type.lower():  # MATCH WITH ENUMS UPON THAT UPDATE
-        case "warrior":
+    match e_type.capitalize():  # MATCH WITH ENUMS UPON THAT UPDATE
+        case dl.EntityType.WARRIOR:
             return Warrior(e_id, [x, y])
 
-        case "mage":
+        case dl.EntityType.MAGE:
             return Mage(e_id, [x, y])
 
-        case "skeleton":
+        case dl.EntityType.SKELETON:
             return Skeleton(e_id, [x, y])
 
-        case "goblin":
+        case dl.EntityType.GOBLIN:
             return Goblin(e_id, [x, y])
 
         case _:  # error no matching entity type found - May be redundant

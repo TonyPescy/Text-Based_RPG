@@ -24,9 +24,10 @@ these functions are handled within the CLI prior to calling this function.
 
 # Imports
 import unittest
+from equipment import Consumable
 from entity import Warrior, Mage, Goblin, Skeleton, create_entity
 from grid import Grid
-from domain_library import EQUIPMENT_TYPES, create_equipment, use_consumable
+from domain_library import EQUIPMENT_TYPES
 import command_line_interface as cli
 
 
@@ -1969,7 +1970,7 @@ class TestEntity(unittest.TestCase):
         consumable = EQUIPMENT_TYPES["smallhealthpotion"]()
 
         # Use consumable
-        use_consumable(consumable, entity)
+        Consumable.use_consumable(consumable, entity)
 
         # Check Health increased by 20
         self.assertEqual(entity.health, 70)
@@ -1995,7 +1996,7 @@ class TestEntity(unittest.TestCase):
         consumable = EQUIPMENT_TYPES["greaterhealthpotion"]()
 
         # Use consumable
-        use_consumable(consumable, entity)
+        Consumable.use_consumable(consumable, entity)
 
         # Check Health increased by 50
         self.assertEqual(entity.health, 100)
@@ -2018,7 +2019,7 @@ class TestEntity(unittest.TestCase):
         consumable = EQUIPMENT_TYPES["superiorhealthpotion"]()
 
         # Use consumable
-        use_consumable(consumable, entity)
+        Consumable.use_consumable(consumable, entity)
 
         # Check Health is capped at max Health
         self.assertEqual(entity.health, 120)
@@ -2040,7 +2041,7 @@ class TestEntity(unittest.TestCase):
         consumable = EQUIPMENT_TYPES["greaterhealthpotion"]()
 
         # Use consumable
-        use_consumable(consumable, entity)
+        Consumable.use_consumable(consumable, entity)
 
         # Check Health does not exceed max Health
         self.assertEqual(entity.health, 120)
@@ -2062,7 +2063,7 @@ class TestEntity(unittest.TestCase):
         consumable = EQUIPMENT_TYPES["smallhealthpotion"]()
 
         # Use consumable
-        use_consumable(consumable, entity)
+        Consumable.use_consumable(consumable, entity)
 
         # Check Health remains at max Health
         self.assertEqual(entity.health, 120)
@@ -2084,7 +2085,7 @@ class TestEntity(unittest.TestCase):
         consumable = EQUIPMENT_TYPES["turtlemasterpotion"]()
 
         # Use consumable
-        use_consumable(consumable, entity)
+        Consumable.use_consumable(consumable, entity)
 
         # Check Health increased by 10 percent of current Health
         self.assertEqual(entity.health, 55)
@@ -2106,7 +2107,7 @@ class TestEntity(unittest.TestCase):
         consumable = EQUIPMENT_TYPES["manapotion"]()
 
         # Use consumable
-        use_consumable(consumable, entity)
+        Consumable.use_consumable(consumable, entity)
 
         # Check Mana increased by 50
         self.assertEqual(entity.mana, 75)
@@ -2130,7 +2131,7 @@ class TestEntity(unittest.TestCase):
         consumable = EQUIPMENT_TYPES["manapotion"]()
 
         # Use consumable
-        use_consumable(consumable, entity)
+        Consumable.use_consumable(consumable, entity)
 
         # Check Mana does not exceed max Mana
         self.assertEqual(entity.mana, 100)
@@ -2154,7 +2155,7 @@ class TestEntity(unittest.TestCase):
         consumable = EQUIPMENT_TYPES["manapotion"]()
 
         # Use consumable
-        use_consumable(consumable, entity)
+        Consumable.use_consumable(consumable, entity)
 
         # Check Mana remains at max Mana
         self.assertEqual(entity.mana, 100)
@@ -2176,7 +2177,7 @@ class TestEntity(unittest.TestCase):
         consumable = EQUIPMENT_TYPES["turtlemasterpotion"]()
 
         # Use consumable
-        use_consumable(consumable, entity)
+        Consumable.use_consumable(consumable, entity)
 
         # Check buff name
         self.assertEqual(
@@ -2222,10 +2223,10 @@ class TestEntity(unittest.TestCase):
         second_consumable = EQUIPMENT_TYPES["turtlemasterpotion"]()
 
         # Use first consumable
-        use_consumable(first_consumable, entity)
+        Consumable.use_consumable(first_consumable, entity)
 
         # Use second consumable
-        use_consumable(second_consumable, entity)
+        Consumable.use_consumable(second_consumable, entity)
 
         # Check first buff duration
         self.assertEqual(
@@ -2255,7 +2256,7 @@ class TestEntity(unittest.TestCase):
         consumable = EQUIPMENT_TYPES["smallhealthpotion"]()
 
         # Use consumable
-        use_consumable(consumable, entity)
+        Consumable.use_consumable(consumable, entity)
 
         # Check no temporary buffs were added
         self.assertEqual(entity.temp_buffs, [])
@@ -2279,7 +2280,7 @@ class TestEntity(unittest.TestCase):
         consumable = EQUIPMENT_TYPES["turtlemasterpotion"]()
 
         # Use consumable
-        use_consumable(consumable, entity)
+        Consumable.use_consumable(consumable, entity)
 
         # Check instant Health effect
         self.assertEqual(entity.health, 55)
@@ -2319,7 +2320,7 @@ class TestEntity(unittest.TestCase):
         consumable = EQUIPMENT_TYPES["turtlemasterpotion"]()
 
         # Use consumable
-        use_consumable(consumable, entity)
+        Consumable.use_consumable(consumable, entity)
 
         # Check existing buff was preserved
         self.assertEqual(

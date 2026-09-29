@@ -18,6 +18,7 @@ Purpose: Run all public facing functions that the player will use to interact wi
 import domain_library as dl
 from grid import Grid, Tile
 from entity import Entity
+from equipment import Consumable
 
 
 # Handles all Command Line Interface commands for the game
@@ -73,6 +74,8 @@ class CLI:
             "drop": self.process_drop_item_command,
             "swap": self.process_swap_item_command,
             "use": self.process_use_item_command,
+            "move": self.process_move_command,
+            "attack": self.process_attack_command,
         }
 
         # Match handler to command
@@ -527,10 +530,7 @@ class CLI:
             return
 
         # Assign variables
-        for temp_entity in self.entity_list:
-            if str(temp_entity.id) == entity_id:
-                entity = temp_entity
-                break
+        entity = self.assign_entity_from_list(int(entity_id))
         entity_x = entity.position[0]
         entity_y = entity.position[1]
 
@@ -605,9 +605,7 @@ class CLI:
             return
         # Assign variables
         item = dl.create_equipment(item_name.lower())
-        for temp_entity in self.entity_list:
-            if str(temp_entity.id) == entity_id:
-                entity = temp_entity
+        entity = self.assign_entity_from_list(int(entity_id))
 
         # Check for backpack space
         if len(entity.backpack) >= Entity.BACKPACK_SIZE:
@@ -647,9 +645,7 @@ class CLI:
             print("error: drop_failed - Item name not found!")
             return
         # Assign variables
-        for temp_entity in self.entity_list:
-            if str(temp_entity.id) == entity_id:
-                entity = temp_entity
+        entity = self.assign_entity_from_list(int(entity_id))
         # Always valid as this is checked during spawning/moving of said entity
         entity_x = entity.position[0]
         entity_y = entity.position[1]
@@ -718,9 +714,7 @@ class CLI:
 
         # Assign variables
         item = dl.create_equipment(item_name.lower())
-        for temp_entity in self.entity_list:
-            if str(temp_entity.id) == entity_id:
-                entity = temp_entity
+        entity = self.assign_entity_from_list(int(entity_id))
 
         # Check for correct slot for item assignment
         if item.slot.lower() != slot.value.lower():
@@ -772,9 +766,7 @@ class CLI:
             return
 
         # Assign variables
-        for temp_entity in self.entity_list:
-            if str(temp_entity.id) == entity_id:
-                entity = temp_entity
+        entity = self.assign_entity_from_list(int(entity_id))
         # Find item in backpack
         item = None
         for temp_item in entity.backpack:
@@ -790,10 +782,111 @@ class CLI:
             return
         else:  # Success case
             # Use consumable
-            dl.use_consumable(item, entity)
+            Consumable.use_consumable(item, entity)
             # Remove consumable from backpack
             entity.backpack.remove(item)
             print(f"ok: used {item.name}!")
+
+    # Process Move Command
+    # Moves the entity to the grid position if able
+    # Params: command_pieces - list - list of strings that make up the command
+    # Returns: None
+    def process_move_command(self, command_pieces):
+        # Test for valid amount of command pieces and correct commands/typing
+        if len(command_pieces) == 4:
+            # assign commands
+            entity_id = command_pieces[1]
+            x = command_pieces[2]
+            y = command_pieces[3]
+        else:
+            print("error: move_failed - Invalid command!")
+            return
+        # Map created?
+        if not self.map_created:
+            print("error: move_failed - Map does not exist!")
+            return
+        # x and y are not valid ints
+        elif not dl.are_valid_ints(x, y):
+            print("error: move_failed - x and y are not valid integers!")
+            return
+            """# x and y within bounds
+            elif not Grid.within_bounds(x, y):
+                print("error: spawn_failed - x and y exceed bound minimum and maximum!")"""
+        # assign proper typing
+        x = int(x)
+        y = int(y)
+        # x and y exceeds current grid bounds
+        if not Grid.is_valid_grid_position(self.grid, x, y):
+            print("error: move_failed - x and y exceed current grid bounds!")
+            return
+        # ensure grid location is empty
+        elif Grid.is_occupied(self.grid, x, y):
+            print(f"error: move_failed - Entity is already present at ({x}, {y})!")
+            return
+        # Ensure target tile is passable
+        elif not Grid.is_passable(self.grid, x, y):
+            print(f"error: move_failed - Target tile ({x}, {y}) is impassable!")
+            return
+        # invalid entity type
+        # ensure entity_id is valid and within list
+        if not any(entity_id == str(entity.id) for entity in self.entity_list):
+            print("error: move_failed - Entity does not exist!")
+            return
+        # Assign entity
+        entity = self.assign_entity_from_list(int(entity_id))
+        # Check if target grid position is within range of entity
+        if not Grid.is_within_range(
+            self.grid, [entity.position[0], entity.position[1]], [x, y], entity.speed
+        ):
+            print(f"error: move_failed - Target: {x}, {y} is out of entity's range!")
+            return
+        # Success Case
+        else:
+            # Move entity
+            self.move_entity(entity, x, y)
+            # Update stats for entity - may have moved to shallowwater tile
+            entity.update_stats(self)
+            print(f"ok: moved {entity_id} to {x}, {y}!")
+            return
+
+    # Process Move Command
+    # Attacker entity attacks the defending entity and lowering their current health value (not max)
+    # attack vs defence - Spells are done in cast command (involves spell power and defence)
+    # Params: command_pieces - list - list of strings that make up the command
+    # Returns: None
+    def process_attack_command(self, command_pieces):
+        # Test for valid amount of command pieces and full command
+        if len(command_pieces) == 3:
+            # Assign ids
+            attacker_id = command_pieces[1]
+            defender_id = command_pieces[2]
+        else:
+            print("error: attack_failed due to invalid arguments.")
+            return
+        # Map created
+        if not self.map_created:
+            print("error: attack_failed - Map does not exist!")
+            return
+        # Valid ints for entity ids
+        elif not dl.are_valid_ints(attacker_id, defender_id):
+            print("error: attack_failed - entity ids are not valid integers!")
+            return
+        # Valid entity ids in entity list
+        elif not any(attacker_id == str(entity.id) for entity in self.entity_list):
+            print("error: attack_failed - Attacking entity does not exist!")
+            return
+        elif not any(defender_id == str(entity.id) for entity in self.entity_list):
+            print("error: attack_failed - Defending entity does not exist!")
+            return
+        # Assign entities
+        attacker = self.assign_entity_from_list(int(attacker_id))
+        defender = self.assign_entity_from_list(int(defender_id))
+        # assign grid positions
+        attacker_x = attacker.position[0]
+        attacker_y = attacker.position[1]
+        defender_x = defender.position[0]
+        defender_y = defender.position[1]
+        # Validate whether Entity can engage from range or just melee
 
     # Spawn Entity For CLI
     # Contains logic for all entity spawning in the CLI
@@ -841,6 +934,8 @@ class CLI:
                 entity.max_health = entity.health
             # Add temp buffs for entity
             entity.temp_buffs = []
+            # update stats - spawning on tile with effect
+            entity.update_stats(self)
             return
 
     # Spawn Loot For CLI
@@ -871,6 +966,30 @@ class CLI:
             self.grid.add_item_to_tile_item_list(x, y, item_name)
             print(f"ok: spawn_loot {item_name} at {x}, {y}!")
             return
+
+    # Move Entity
+    # Contains logic to complete the full move of an entity
+    # Params:   entity - entity instance - Entity that will move
+    #           x,y - ints - cleaned valid ints with position to move entity to
+    # Returns: None
+    def move_entity(self, entity, x, y):
+        # Update tile occupancy for atincipated move
+        self.grid.occupy(x, y, entity.id)
+        self.grid.clear_occupant(entity.position[0], entity.position[1], entity.id)
+        # Change entity positions
+        entity.position = [x, y]
+
+    # Assign Entity from list
+    # Assign entity with matching id from cli.entity_list
+    # Entitys existence is confirmed prior to this being called - so will always return one
+    # Params: e_id - int - Cleaned/valid int to look for in entity list
+    # Return: entity - entity - Matching entity in entity list
+    def assign_entity_from_list(self, e_id):
+        for temp_entity in self.entity_list:
+            if temp_entity.id == e_id:
+                entity = temp_entity
+                break
+        return entity
 
     # Capitalize If String Start
     # Will capitalize and return string if it is a string

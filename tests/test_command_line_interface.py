@@ -4881,6 +4881,603 @@ class TestCLI(unittest.TestCase):
         # Check other tile
         self.assertEqual(len(other_tile.item_list), 0)
 
+    # Invalid command - too few command pieces
+    def test_move_invalid_command(self):
+
+        # Create test CLI
+        test_cli = CLI()
+
+        # reset
+        reset_cli_stats(test_cli)
+
+        # Create map
+        test_cli.process_command("init map 25 25")
+
+        command = "move 0 2"
+
+        # Process command
+        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
+            test_cli.process_command(command)
+
+        # Get print output to compare
+        output = mock_stdout.getvalue()
+
+        # Check output
+        self.assertEqual(output, "error: move_failed - Invalid command!\n")
+
+    # Invalid command - too few command pieces
+    def test_move_invalid_command(self):
+
+        # Create test CLI
+        test_cli = CLI()
+
+        # reset
+        reset_cli_stats(test_cli)
+
+        # Create map
+        test_cli.process_command("init map 25 25")
+
+        command = "move 0 2"
+
+        # Process command
+        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
+            test_cli.process_command(command)
+
+        # Get print output to compare
+        output = mock_stdout.getvalue()
+
+        # Check output
+        self.assertEqual(output, "error: move_failed - Invalid command!\n")
+
+    # Invalid command - too few command pieces
+    def test_move_invalid_command(self):
+
+        # Create test CLI
+        test_cli = CLI()
+
+        # reset
+        reset_cli_stats(test_cli)
+
+        # Create map
+        test_cli.process_command("init map 25 25")
+
+        command = "move 0 2"
+
+        # Process command
+        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
+            test_cli.process_command(command)
+
+        # Get print output to compare
+        output = mock_stdout.getvalue()
+
+        # Check output
+        self.assertEqual(output, "error: move_failed - Invalid command!\n")
+
+    # Invalid command - too few command pieces
+    def test_move_invalid_command(self):
+
+        # Create test CLI
+        test_cli = CLI()
+
+        # reset
+        reset_cli_stats(test_cli)
+
+        # Create map
+        test_cli.process_command("init map 25 25")
+
+        command = "move 0 2"
+
+        # Process command
+        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
+            test_cli.process_command(command)
+
+        # Get print output to compare
+        output = mock_stdout.getvalue()
+
+        # Check output
+        self.assertEqual(output, "error: move_failed - Invalid command!\n")
+
+    # Invalid command - too few command pieces
+    def test_move_invalid_command(self):
+
+        # Create test CLI
+        test_cli = CLI()
+        # reset
+        reset_cli_stats(test_cli)
+
+        # Create map
+        test_cli.process_command("init map 25 25")
+
+        command = "move 0 2"
+
+        # Process command
+        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
+            test_cli.process_command(command)
+
+        # Get print output to compare
+        output = mock_stdout.getvalue()
+
+        # Check output
+        self.assertEqual(output, "error: move_failed - Invalid command!\n")
+
+    # Target tile is impassable - Failure
+    def test_move_impassable_tile(self):
+
+        # Create test CLI
+        test_cli = CLI()
+
+        # reset
+        reset_cli_stats(test_cli)
+
+        # Create map
+        test_cli.process_command("init map 25 25")
+
+        # Spawn entity
+        test_cli.process_command("spawn warrior 1 1")
+        entity = test_cli.entity_list[0]
+        reset_ent_stats(entity, test_cli)
+
+        # Set target tile to wall
+        test_cli.grid.set_tile(2, 2, "wall")
+
+        command = "move 0 2 2"
+
+        # Process command
+        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
+            test_cli.process_command(command)
+
+        # Get print output
+        output = mock_stdout.getvalue()
+
+        # Check output
+        self.assertEqual(
+            output, "error: move_failed - Target tile (2, 2) is impassable!\n"
+        )
+
+    # Entity does not exist - Failure
+    def test_move_entity_does_not_exist(self):
+
+        # Create test CLI
+        test_cli = CLI()
+
+        # reset
+        reset_cli_stats(test_cli)
+
+        # Create map
+        test_cli.process_command("init map 25 25")
+
+        command = "move 99 2 2"
+
+        # Process command
+        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
+            test_cli.process_command(command)
+
+        # Get print output
+        output = mock_stdout.getvalue()
+
+        # Check output
+        self.assertEqual(output, "error: move_failed - Entity does not exist!\n")
+
+    # Target is outside entity's range - Failure
+    def test_move_out_of_range(self):
+
+        # Create test CLI
+        test_cli = CLI()
+
+        # reset
+        reset_cli_stats(test_cli)
+
+        # Create map
+        test_cli.process_command("init map 25 25")
+
+        # Spawn entity
+        test_cli.process_command("spawn warrior 1 1")
+
+        # Get entity
+        entity = test_cli.entity_list[0]
+        reset_ent_stats(entity, test_cli)
+
+        # Attempt to move farther than the entity's speed
+        command = "move 0 20 20"
+
+        # Process command
+        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
+            test_cli.process_command(command)
+
+        # Get print output
+        output = mock_stdout.getvalue()
+
+        # Check output
+        self.assertEqual(
+            output, "error: move_failed - Target: 20, 20 is out of entity's range!\n"
+        )
+
+    # Successful move
+    def test_move_success(self):
+
+        # Create test CLI
+        test_cli = CLI()
+
+        # reset
+        reset_cli_stats(test_cli)
+
+        # Create map
+        test_cli.process_command("init map 25 25")
+
+        # Spawn entity
+        test_cli.process_command("spawn warrior 1 1")
+        # Get entity
+        entity = test_cli.entity_list[0]
+        reset_ent_stats(entity, test_cli)
+
+        command = "move 0 2 1"
+        # Process command
+        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
+            test_cli.process_command(command)
+
+        # Get print output
+        output = mock_stdout.getvalue()
+
+        # Check output
+        self.assertEqual(output, "ok: moved 0 to 2, 1!\n")
+
+        # Check entity position
+        self.assertEqual(entity.position, [2, 1])
+
+        # check tile occupancy
+        self.assertEqual(len(test_cli.grid.grid[2][1].occupants), 1)
+
+    # Successful move to shallow water
+    def test_move_to_shallow_water(self):
+
+        # Create test CLI
+        test_cli = CLI()
+
+        # reset
+        reset_cli_stats(test_cli)
+
+        # Create map
+        test_cli.process_command("init map 25 25")
+
+        # Spawn entity
+        test_cli.process_command("spawn warrior 1 1")
+        # Get entity
+        entity = test_cli.entity_list[0]
+        reset_ent_stats(entity, test_cli)
+        # Set target tile to shallow water
+        test_cli.grid.set_tile(2, 1, "shallowwater")
+
+        command = "move 0 2 1"
+
+        self.assertEqual(entity.speed, 5)
+
+        # Process command
+        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
+            test_cli.process_command(command)
+
+        # Get print output
+        output = mock_stdout.getvalue()
+
+        # Check output
+        self.assertEqual(output, "ok: moved 0 to 2, 1!\n")
+
+        # Check entity position
+        self.assertEqual(entity.position, [2, 1])
+        self.assertEqual(entity.speed, 3)
+        # check tile occupancy
+        self.assertEqual(len(test_cli.grid.grid[2][1].occupants), 1)
+
+    # Move to lower grid boundary - Success
+    def test_move_to_lower_boundary(self):
+
+        # Create test CLI
+        test_cli = CLI()
+        # reset
+        reset_cli_stats(test_cli)
+
+        # Create map
+        test_cli.process_command("init map 25 25")
+
+        # Spawn entity
+        test_cli.process_command("spawn warrior 1 1")
+        entity = test_cli.entity_list[0]
+        reset_ent_stats(entity, test_cli)
+
+        # Move to coordinate 0, 1
+        command = "move 0 0 1"
+
+        # Process command
+        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
+            test_cli.process_command(command)
+
+        # Get print output
+        output = mock_stdout.getvalue()
+
+        # Check output
+        self.assertEqual(output, "ok: moved 0 to 0, 1!\n")
+
+        # Check entity position
+        entity = test_cli.entity_list[0]
+        self.assertEqual(entity.position, [0, 1])
+        # check tile occupancy
+        self.assertEqual(len(test_cli.grid.grid[0][1].occupants), 1)
+
+    # Move to higher grid boundary - Success
+    def test_move_to_higher_boundary(self):
+
+        # Create test CLI
+        test_cli = CLI()
+
+        # reset
+        reset_cli_stats(test_cli)
+
+        # Create map
+        test_cli.process_command("init map 25 25")
+
+        # Spawn entity
+        test_cli.process_command("spawn warrior 1 1")
+        entity = test_cli.entity_list[0]
+        reset_ent_stats(entity, test_cli)
+
+        # Move to coordinate 24, 1
+        # This test assumes the entity has enough movement range.
+        # If not, spawn the entity closer to the boundary.
+
+        test_cli.entity_list[0].speed = 30
+
+        command = "move 0 24 1"
+
+        # Process command
+        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
+            test_cli.process_command(command)
+
+        # Get print output
+        output = mock_stdout.getvalue()
+
+        # Check output
+        self.assertEqual(output, "ok: moved 0 to 24, 1!\n")
+
+        # Check entity position
+        entity = test_cli.entity_list[0]
+        self.assertEqual(entity.position, [24, 1])
+        # check tile occupancy
+        self.assertEqual(len(test_cli.grid.grid[24][1].occupants), 1)
+
+    # Move from shallow water to floor - Success
+    def test_move_from_shallow_water_to_floor(self):
+
+        # Create test CLI
+        test_cli = CLI()
+
+        # reset
+        reset_cli_stats(test_cli)
+
+        # Create map
+        test_cli.process_command("init map 25 25")
+
+        # Set starting tile to shallow water
+        test_cli.grid.set_tile(1, 1, "shallowwater")
+
+        # Spawn entity on shallow water
+        test_cli.process_command("spawn warrior 1 1")
+
+        # get entity
+        entity = test_cli.entity_list[0]
+        reset_ent_stats(entity, test_cli)
+
+        # Test starting speed
+        self.assertEqual(entity.speed, 3)
+
+        # Set target tile to floor
+        test_cli.grid.set_tile(2, 1, "floor")
+
+        command = "move 0 2 1"
+
+        # Process command
+        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
+            test_cli.process_command(command)
+
+        # Get print output to compare
+        output = mock_stdout.getvalue()
+
+        # Check output
+        self.assertEqual(output, "ok: moved 0 to 2, 1!\n")
+
+        # Check entity position
+        self.assertEqual(entity.position, [2, 1])
+        self.assertEqual(entity.speed, 5)
+        # check tile occupancy
+        self.assertEqual(len(test_cli.grid.grid[2][1].occupants), 1)
+
+    # Move Entity - Success
+    def test_move_entity(self):
+
+        # Create test CLI
+        test_cli = CLI()
+
+        # Reset CLI stats
+        reset_cli_stats(test_cli)
+
+        # Create map
+        test_cli.process_command("init map 25 25")
+
+        # Spawn entity
+        test_cli.process_command("spawn warrior 1 1")
+
+        # Get entity
+        entity = test_cli.entity_list[0]
+
+        # Reset entity stats
+        reset_ent_stats(entity, test_cli)
+
+        # Move entity
+        test_cli.move_entity(entity, 2, 1)
+
+        # Check entity position
+        self.assertEqual(entity.position, [2, 1])
+
+        # Check target tile occupancy
+        self.assertIn(entity.id, test_cli.grid.grid[2][1].occupants)
+
+        # Check starting tile occupancy
+        self.assertNotIn(entity.id, test_cli.grid.grid[1][1].occupants)
+
+    # Move Entity - Move Up
+    def test_move_entity_up(self):
+
+        # Create test CLI
+        test_cli = CLI()
+
+        # Reset CLI stats
+        reset_cli_stats(test_cli)
+
+        # Create map
+        test_cli.process_command("init map 25 25")
+
+        # Spawn entity
+        test_cli.process_command("spawn warrior 5 5")
+
+        # Get entity
+        entity = test_cli.entity_list[0]
+
+        # Reset entity stats
+        reset_ent_stats(entity, test_cli)
+
+        # Move entity up
+        test_cli.move_entity(entity, 5, 4)
+
+        # Check entity position
+        self.assertEqual(entity.position, [5, 4])
+
+        # Check target tile occupancy
+        self.assertIn(entity.id, test_cli.grid.grid[5][4].occupants)
+
+        # Check starting tile occupancy
+        self.assertNotIn(entity.id, test_cli.grid.grid[5][5].occupants)
+
+    # Move Entity - Move Down
+    def test_move_entity_down(self):
+
+        # Create test CLI
+        test_cli = CLI()
+
+        # Reset CLI stats
+        reset_cli_stats(test_cli)
+
+        # Create map
+        test_cli.process_command("init map 25 25")
+
+        # Spawn entity
+        test_cli.process_command("spawn warrior 5 5")
+
+        # Get entity
+        entity = test_cli.entity_list[0]
+
+        # Reset entity stats
+        reset_ent_stats(entity, test_cli)
+
+        # Move entity down
+        test_cli.move_entity(entity, 5, 6)
+
+        # Check entity position
+        self.assertEqual(entity.position, [5, 6])
+
+        # Check target tile occupancy
+        self.assertIn(entity.id, test_cli.grid.grid[5][6].occupants)
+
+        # Check starting tile occupancy
+        self.assertNotIn(entity.id, test_cli.grid.grid[5][5].occupants)
+
+    # Move Entity - Move Left
+    def test_move_entity_left(self):
+
+        # Create test CLI
+        test_cli = CLI()
+
+        # Reset CLI stats
+        reset_cli_stats(test_cli)
+
+        # Create map
+        test_cli.process_command("init map 25 25")
+
+        # Spawn entity
+        test_cli.process_command("spawn warrior 5 5")
+
+        # Get entity
+        entity = test_cli.entity_list[0]
+
+        # Reset entity stats
+        reset_ent_stats(entity, test_cli)
+
+        # Move entity left
+        test_cli.move_entity(entity, 4, 5)
+
+        # Check entity position
+        self.assertEqual(entity.position, [4, 5])
+
+        # Check target tile occupancy
+        self.assertIn(entity.id, test_cli.grid.grid[4][5].occupants)
+
+        # Check starting tile occupancy
+        self.assertNotIn(entity.id, test_cli.grid.grid[5][5].occupants)
+
+    # Move Entity - Move Right
+    def test_move_entity_right(self):
+
+        # Create test CLI
+        test_cli = CLI()
+
+        # Reset CLI stats
+        reset_cli_stats(test_cli)
+
+        # Create map
+        test_cli.process_command("init map 25 25")
+
+        # Spawn entity
+        test_cli.process_command("spawn warrior 5 5")
+
+        # Get entity
+        entity = test_cli.entity_list[0]
+
+        # Reset entity stats
+        reset_ent_stats(entity, test_cli)
+
+        # Move entity right
+        test_cli.move_entity(entity, 6, 5)
+
+        # Check entity position
+        self.assertEqual(entity.position, [6, 5])
+
+        # Check target tile occupancy
+        self.assertIn(entity.id, test_cli.grid.grid[6][5].occupants)
+
+        # Check starting tile occupancy
+        self.assertNotIn(entity.id, test_cli.grid.grid[5][5].occupants)
+
+
+# reset cli stats
+# Resets necessary cli stats for use in tests
+# Params:   cli - CLI - cli to reset
+# Returns: None
+def reset_cli_stats(cli):
+    cli.grid = Grid.reset_grid()
+    cli.entity_list.clear()
+    cli.entity_ids_issued = 0
+    cli.map_created = False
+
+
+# reset entity stats
+# Resets necessary entity stats for use in tests
+# Params:   entity - entity - entity to reset
+# Returns: None
+def reset_ent_stats(entity, cli):
+    entity.inventory = [
+        dl.EQUIPMENT_TYPES["none_wep"](),
+        dl.EQUIPMENT_TYPES["none_armor"](),
+        dl.EQUIPMENT_TYPES["none_acc"](),
+    ]
+    entity.update_stats(cli)
+
 
 if __name__ == "__main__":
     unittest.main()

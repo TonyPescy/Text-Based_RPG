@@ -30,7 +30,7 @@ import command_line_interface as cli
 import domain_library as dl
 
 
-class TestEquipment(unittest.TestCase):
+class TestGrid(unittest.TestCase):
 
     # test grid proper grid init
     def test_correct_grid_init_at_lower_bound(self):
@@ -101,16 +101,6 @@ class TestEquipment(unittest.TestCase):
         # add occupants
         test_grid.occupy(0, 0, 0)
         self.assertEqual(test_grid.grid[0][0].occupants[0], 0)
-
-    # test occupy failure due to ints not being strings
-    def test_occupy_int_typing_fail(self):
-        # create grid
-        test_grid = Grid(25, 25)
-        # Reset occupants  - LIST
-        test_grid.grid[0][0].occupants = []
-        # add occupants
-        test_grid.occupy(0, "sev", 0)
-        self.assertEqual(test_grid.grid[0][0].occupants, [])
 
     # test clear occupant (only 1) from grid position
     def test_clear_occupant_success(self):
@@ -594,3 +584,330 @@ class TestEquipment(unittest.TestCase):
             temp_grid.grid[0][0].item_list,
             [],
         )
+
+    # Test is_within_range - target is same position
+    def test_is_within_range_same_position(self):
+
+        # Create grid
+        test_grid = Grid(25, 25)
+
+        # Check if target is current position
+        result = test_grid.is_within_range([5, 5], [5, 5], 0)
+
+        self.assertEqual(result, True)
+
+    # Test is_within_range - target is one tile away
+    def test_is_within_range_one_tile(self):
+
+        # Create grid
+        test_grid = Grid(25, 25)
+
+        # Check if target is within range
+        result = test_grid.is_within_range([5, 5], [6, 5], 1)
+
+        self.assertEqual(result, True)
+
+    # Test is_within_range - target is exactly at range
+    def test_is_within_range_exact_range(self):
+
+        # Create grid
+        test_grid = Grid(25, 25)
+
+        # Check if target is exactly three tiles away
+        result = test_grid.is_within_range([5, 5], [8, 5], 3)
+
+        self.assertEqual(result, True)
+
+    # Test is_within_range - target is outside range
+    def test_is_within_range_outside_range(self):
+
+        # Create grid
+        test_grid = Grid(25, 25)
+
+        # Check if target is farther than the provided range
+        result = test_grid.is_within_range([5, 5], [8, 5], 2)
+
+        self.assertEqual(result, False)
+
+    # Test is_within_range - target is diagonal
+    def test_is_within_range_diagonal(self):
+
+        # Create grid
+        test_grid = Grid(25, 25)
+
+        # Manhattan distance from (5, 5) to (7, 7) is 4
+        result = test_grid.is_within_range([5, 5], [7, 7], 4)
+
+        self.assertEqual(result, True)
+
+    # Test is_within_range - diagonal target outside range
+    def test_is_within_range_diagonal_outside_range(self):
+
+        # Create grid
+        test_grid = Grid(25, 25)
+
+        # Manhattan distance from (5, 5) to (7, 7) is 4
+        result = test_grid.is_within_range([5, 5], [7, 7], 3)
+
+        self.assertEqual(result, False)
+
+    # Test is_within_range - zero range to another position
+    def test_is_within_range_zero_range(self):
+
+        # Create grid
+        test_grid = Grid(25, 25)
+
+        # Check if another position is reachable with zero range
+        result = test_grid.is_within_range([5, 5], [6, 5], 0)
+
+        self.assertEqual(result, False)
+
+    # Test is_within_range - shallow water is passable
+    def test_is_within_range_shallow_water(self):
+
+        # Create grid
+        test_grid = Grid(25, 25)
+
+        # Set target tile to shallow water
+        test_grid.set_tile(6, 5, "shallowwater")
+
+        # Check if shallow water can be reached
+        result = test_grid.is_within_range([5, 5], [6, 5], 1)
+
+        self.assertEqual(result, True)
+
+    # Test is_within_range - wall blocks direct path
+    def test_is_within_range_wall_blocks_path(self):
+
+        # Create grid
+        test_grid = Grid(25, 25)
+
+        # Set wall between starting position and target
+        test_grid.set_tile(6, 5, "wall")
+
+        # Target requires going around the wall
+        # Shortest path is 4 tiles
+        result = test_grid.is_within_range([5, 5], [7, 5], 3)
+
+        self.assertEqual(result, False)
+
+    # Test is_within_range - path around wall is within range
+    def test_is_within_range_path_around_wall(self):
+
+        # Create grid
+        test_grid = Grid(25, 25)
+
+        # Set wall between starting position and target
+        test_grid.set_tile(6, 5, "wall")
+
+        # Target can be reached by going around the wall
+        # Shortest path is 4 tiles
+        result = test_grid.is_within_range([5, 5], [7, 5], 4)
+
+        self.assertEqual(result, True)
+
+    # Test is_within_range - target is an impassable wall
+    def test_is_within_range_target_is_wall(self):
+
+        # Create grid
+        test_grid = Grid(25, 25)
+
+        # Set target tile to wall
+        test_grid.set_tile(6, 5, "wall")
+
+        # Check if wall can be reached
+        result = test_grid.is_within_range([5, 5], [6, 5], 1)
+
+        self.assertEqual(result, False)
+
+    # Test is_within_range - target at lower grid boundary
+    def test_is_within_range_lower_boundary(self):
+
+        # Create grid
+        test_grid = Grid(25, 25)
+
+        # Check if target at (0, 1) is within range
+        result = test_grid.is_within_range([1, 1], [0, 1], 1)
+
+        self.assertEqual(result, True)
+
+    # Test is_within_range - target outside grid
+    def test_is_within_range_outside_grid(self):
+
+        # Create grid
+        test_grid = Grid(25, 25)
+
+        # Check if target outside grid can be reached
+        result = test_grid.is_within_range([1, 1], [-1, 1], 2)
+
+        self.assertEqual(result, False)
+
+    # Test is_within_range - string coordinates
+    def test_is_within_range_string_coordinates(self):
+
+        # Create grid
+        test_grid = Grid(25, 25)
+
+        # Check if string coordinates are converted to integers
+        result = test_grid.is_within_range(["5", "5"], ["6", "5"], 1)
+
+        self.assertEqual(result, True)
+
+    # Test manhattan_distance_calculator - horizontal distance
+    def test_manhattan_distance_horizontal(self):
+
+        # Check horizontal distance
+        result = Grid.manhattan_distance_calculator(8, 5, 5, 5)
+
+        self.assertEqual(result, 3)
+
+    # Test manhattan_distance_calculator - vertical distance
+    def test_manhattan_distance_vertical(self):
+
+        # Check vertical distance
+        result = Grid.manhattan_distance_calculator(5, 5, 9, 5)
+
+        self.assertEqual(result, 4)
+
+    # Test manhattan_distance_calculator - diagonal distance
+    def test_manhattan_distance_diagonal(self):
+
+        # Check diagonal distance
+        result = Grid.manhattan_distance_calculator(7, 5, 8, 5)
+
+        self.assertEqual(result, 5)
+
+    # Test manhattan_distance_calculator - same position
+    def test_manhattan_distance_same_position(self):
+
+        # Check distance from position to itself
+        result = Grid.manhattan_distance_calculator(5, 5, 5, 5)
+
+        self.assertEqual(result, 0)
+
+    # Test manhattan_distance_calculator - negative coordinates
+    def test_manhattan_distance_negative_coordinates(self):
+
+        # Check distance using negative coordinates
+        result = Grid.manhattan_distance_calculator(2, -2, 3, -1)
+
+        self.assertEqual(result, 8)
+
+    # Test manhattan_distance_calculator - string coordinates
+    def test_manhattan_distance_string_coordinates(self):
+
+        # Check distance using string coordinates
+        result = Grid.manhattan_distance_calculator("8", "5", "7", "5")
+
+        self.assertEqual(result, 5)
+
+    # Test get_neighbors - all four directions
+    def test_get_neighbors_all_directions(self):
+
+        # Create grid
+        test_grid = Grid(25, 25)
+
+        # Get neighbors of center position
+        result = test_grid.get_neighbors([5, 5])
+
+        # Expected neighboring positions
+        expected_neighbors = [
+            [5, 4],
+            [5, 6],
+            [4, 5],
+            [6, 5],
+        ]
+
+        # Check neighbors
+        self.assertCountEqual(result, expected_neighbors)
+
+    # Test get_neighbors - lower left corner
+    def test_get_neighbors_lower_left_corner(self):
+
+        # Create grid
+        test_grid = Grid(25, 25)
+
+        # Get neighbors of lower left corner
+        result = test_grid.get_neighbors([0, 0])
+
+        # Expected valid neighbors
+        expected_neighbors = [
+            [0, 1],
+            [1, 0],
+        ]
+
+        # Check neighbors
+        self.assertCountEqual(result, expected_neighbors)
+
+    # Test get_neighbors - upper right corner
+    def test_get_neighbors_upper_right_corner(self):
+
+        # Create grid
+        test_grid = Grid(25, 25)
+
+        # Get neighbors of upper right corner
+        result = test_grid.get_neighbors([24, 24])
+
+        # Expected valid neighbors
+        expected_neighbors = [
+            [24, 23],
+            [23, 24],
+        ]
+
+        # Check neighbors
+        self.assertCountEqual(result, expected_neighbors)
+
+    # Test get_neighbors - wall is excluded
+    def test_get_neighbors_wall_excluded(self):
+
+        # Create grid
+        test_grid = Grid(25, 25)
+
+        # Set one neighboring tile to wall
+        test_grid.set_tile(6, 5, "wall")
+
+        # Get neighbors
+        result = test_grid.get_neighbors([5, 5])
+
+        # Expected neighbors excluding wall
+        expected_neighbors = [
+            [5, 4],
+            [5, 6],
+            [4, 5],
+        ]
+
+        # Check neighbors
+        self.assertCountEqual(result, expected_neighbors)
+
+    # Test get_neighbors - shallow water is included
+    def test_get_neighbors_shallow_water(self):
+
+        # Create grid
+        test_grid = Grid(25, 25)
+
+        # Set one neighboring tile to shallow water
+        test_grid.set_tile(6, 5, "shallowwater")
+
+        # Get neighbors
+        result = test_grid.get_neighbors([5, 5])
+
+        # Check shallow water is included
+        self.assertIn([6, 5], result)
+
+    # Test get_neighbors - all neighboring tiles are walls
+    def test_get_neighbors_surrounded_by_walls(self):
+
+        # Create grid
+        test_grid = Grid(25, 25)
+
+        # Set all four neighboring tiles to walls
+        test_grid.set_tile(5, 4, "wall")
+        test_grid.set_tile(5, 6, "wall")
+        test_grid.set_tile(4, 5, "wall")
+        test_grid.set_tile(6, 5, "wall")
+
+        # Get neighbors
+        result = test_grid.get_neighbors([5, 5])
+
+        # Check no valid neighbors remain
+        self.assertEqual(result, [])

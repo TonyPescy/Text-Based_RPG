@@ -144,6 +144,13 @@ Tony Pescatore
 
 **Contraints:** id must be an integer within the current entity list and the item must be a valid consumable within the given entity's inventory.
 
+### Move
+**Description:** Will move the given entity to the grid position if they are within range and a valid.
+
+**Called as:** move id x y
+
+**Contraints:** id must be an integer within the current entity list and the x,y must correspond to a valid grid position for the entity to occupy.
+
 ## Design Decisions
 [Table of Contents](#table-of-contents)
 
@@ -154,12 +161,15 @@ Tony Pescatore
 - This grid can range from 5x5 to a max of 50x50 Tiles. It is initialized in such a way that all tiles are passable and open floor tiles. 
 - It has a get_stats function which is used to get the stats of the tile at the designated grid position.
 - It has is_passable, within_bounds, is_valid_grid_position, etc. helper functions which help to verify the values that interact with the grid, especially in the CLI.
+- Grid distances will be calculating using Manhattan Distance.
+- When using A* pathing, entities will not block their tiles. So you will be able to move through entities but will not be able to end on the same tile as an entity.
 
 ### Tiles - ToDo: Reduce future cyclomatic complexity - Will need readme update as well
 - Tiles are what make up the grid. Each Tile has its typing, a boolean determining whether they are passable or not for collision/movement restrictions, and a list of occupants. 
 - Each tile can have more than 1 occupant, which will be represented by a list of entity IDs, or if there are no occupants it will be instead be filled with the empty tile constant value. 
 - Each tile also has an item_list for loot that can be picked up, dropped, or spawned at the tile location.
-- There are only 3 valid tile types, which are: Floor, Wall, and ShallowWater. 
+- Impassable tiles also block Line of sight for ranged/magic attacks.
+- There are only 4 valid tile types, which are: Floor, Wall, and ShallowWater. 
     - **Floor Tiles:** Act as open tiles which are passable and will not impede movement in anyway. 
     - **Wall Tiles:** Impassable tiles that will be used to enforce spatial boundaries and colision. 
     - **ShallowWater Tiles:** Passable tiles that apply a negative modifier that will impede the movement of its occupant(s).
@@ -177,7 +187,7 @@ Tony Pescatore
 - The items themselves will inherit the Equipment class then add their own stats to it so make getting the stats from each item simpler.
 - New items consumables will inherit the Equipment class but expand on it with two types of effects: over time effects and instant effects. This allows for them to be consumed (consumables), while other item cannot be consumed, and for their effects to effect the entity stats. Over time effects are waiting for time to be added (turns?) before their functionality is fully figured out.
 
-### Test Suite
+### Test Suite NEEDS REFACTOR WITH TEST FUNCTIONS TO REDUCE LINES/REDUNDANCY
 - The test suite tests the public facing methods as they will call and use the other private facing methods. This means that these private facing methods will also be tested in tandem. It incldues verbose tests includings tests on the boundary values, the validity of inputs, and ensures that all public facing methods and private methods are working as intended. 
 - All other aspects of the project are tested within this suite including the Command Line Interface, Equipment, Entities, Grid, and Tiles.
 
