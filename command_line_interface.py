@@ -24,8 +24,6 @@ from spell import Spell, get_spell
 
 # Handles all Command Line Interface commands for the game
 class CLI:
-    # Constants
-    # COMMAND_HEADERS = ("init", "set", "spawn", "equip", "inventory", "inspect", "tile")
 
     # Initialize CLI
     def __init__(self):
@@ -90,100 +88,6 @@ class CLI:
 
         # Process Command
         handler(command_pieces)
-
-    """
-    # Process Command Start
-    # Handles all commands that user can write
-    def process_command(self, command):
-        # Split command into command_pieces for use in match statements and the associated methods
-        command_pieces = command.lower().split()
-        # print(command_pieces)
-        # Match first word of command
-        match command_pieces[0]:
-
-            # init commands
-            case "init":
-                # Test for valid amount of command pieces and full command
-                if len(command_pieces) == 4 and command_pieces[1] == "map":
-                    # Run init_map with width and height
-                    self.init_map(command_pieces[2], command_pieces[3])
-                else:
-                    print("error: map_init_failed due to invalid arguments.")
-
-            # set commands
-            case "set":
-                # Test for valid amount of command pieces and correct commands/typing
-                if len(command_pieces) == 5 and command_pieces[1] == "tile":
-                    # Run set_tile with x and y - grid position checked in grid functions
-                    self.set_tile(
-                        command_pieces[2], command_pieces[3], command_pieces[4]
-                    )
-                else:
-                    print("error: set_tile_failed - Invalid arguments!")
-
-            # spawn commands
-            case "spawn":
-                # Test for valid amount of command pieces and correct commands/typing
-                if len(command_pieces) == 4 and command_pieces[1] in [
-                    entity.lower() for entity in ENTITY_TYPES
-                ]:
-                    self.spawn(command_pieces[1], command_pieces[2], command_pieces[3])
-                else:
-                    print("error: spawn_failed - Invalid arguments!")
-
-            # equip commands
-            case "equip":
-                # Test for valid amount of command pieces and correct commands/typing
-                if (
-                    len(command_pieces) == 3
-                    and command_pieces[1]
-                    in [equipment.lower() for equipment in Equipment.VALID_ITEMS]
-                    and command_pieces[2]
-                    in [equipment.lower() for equipment in Equipment.VALID_SLOTS]
-                ):
-                    # Run equip with item name and slot
-                    CLI.equip(self, command_pieces[1], command_pieces[2])
-
-                # If slot is not included
-                elif len(command_pieces) == 2 and command_pieces[1] in [
-                    equipment.lower() for equipment in Equipment.VALID_ITEMS
-                ]:
-                    # Run equip with JUST item name
-                    CLI.equip(self, command_pieces[1])
-                else:
-                    print("error: equip_failed - Invalid arguments!")
-
-            # inventory commands
-            case "inventory":
-                # Validate command
-                if len(command_pieces) > 1:
-                    print("error: inventory_failed - Too many command arguemnts!")
-                    return
-                # Run inventory
-                CLI.inventory()
-
-            # inspect commands
-            case "inspect":
-                # Test for valid amount of command pieces
-                if len(command_pieces) == 2:
-                    # Run inspect with entity ID
-                    self.inspect(command_pieces[1])
-                else:
-                    print("error: inspect_failed - Invalid arguments!")
-
-            # tile commands
-            case "tile":
-                # Test for valid amount of command pieces and correct commands/typing
-                if len(command_pieces) == 3:
-                    # Run spawn with x and y - position checked in grid functions
-                    self.tile(command_pieces[1], command_pieces[2])
-                else:
-                    print("error: tile_failed - Invalid command!")
-
-            # default command - unknown command
-            case _:
-                print("error: Unknown command!")
-    """
 
     # Process Init Command Start
     # Creates a map if one does not already exist
@@ -288,62 +192,6 @@ class CLI:
         else:
             print("error: spawn_failed - Invalid arguments!")
             return
-
-    """ # Equip Start
-    # Equips item to designated slot or determines best slot based on item
-    # Player system is not added yet so will default player to be first entity created entity_list[0]
-    # Equip will overwrite previous items
-    # Params: command_pieces - list - list of strings thate make up the command
-    # Return: None
-    def process_equip_command(self, command_pieces):
-        # Test for valid amount of command pieces and correct commands/typing
-        if (
-            len(command_pieces) == 3
-            and command_pieces[1]
-            in [equipment.lower() for equipment in dl.EQUIPMENT_TYPES]
-            and command_pieces[2] in [equipment.lower() for equipment in dl.VALID_SLOTS]
-        ):
-            # Run equip with item name and slot
-            item = command_pieces[1]
-            slot = command_pieces[2]
-
-        # If slot is not included
-        elif len(command_pieces) == 2 and command_pieces[1] in [
-            equipment.lower() for equipment in dl.EQUIPMENT_TYPES
-        ]:
-            # Run equip with JUST item name
-            item = command_pieces[1]
-            slot = ""
-        else:
-            print("error: equip_failed - Invalid arguments!")
-            return
-
-        # Ensure "player" entity exists
-        if not len(self.entity_list) > 0:
-            print("error: equip_failed - Player entity does not exist!")
-            return
-
-        # Find equipment matching item name
-        new_item = dl.create_equipment(item)
-
-        # check that slot was provided
-        if slot != "":
-            # check that slot matches
-            if slot != new_item.slot.lower():
-                print("error: equip_failed - Slot provided does not match items slot!")
-                return
-        # set slot to correct slot if not provided
-        else:
-            slot = new_item.slot
-
-        # Equip new item to correct slot
-        Entity.equip_item(self.entity_list[0], new_item, slot.lower())
-        # update stats of entity
-        self.entity_list[0].update_stats(self.grid)
-        # Success message
-        print("Valid items:", ", ".join(dl.EQUIPMENT_TYPES))
-        print("Valid slots:", ", ".join(dl.VALID_SLOTS))
-        print(f"ok: Equipped {new_item.name} to {new_item.slot}!")"""
 
     # Process Inventory Command Start
     # displays current inventory to user
@@ -811,9 +659,6 @@ class CLI:
         elif not dl.are_valid_ints(x, y):
             print("error: move_failed - x and y are not valid integers!")
             return
-            """# x and y within bounds
-            elif not Grid.within_bounds(x, y):
-                print("error: spawn_failed - x and y exceed bound minimum and maximum!")"""
         # assign proper typing
         x = int(x)
         y = int(y)
@@ -991,9 +836,6 @@ class CLI:
         elif not dl.are_valid_ints(x, y):
             print("error: spawn_failed - x and y are not valid integers!")
             return
-            """# x and y within bounds
-            elif not Grid.within_bounds(x, y):
-                print("error: spawn_failed - x and y exceed bound minimum and maximum!")"""
         # x and y exceeds current grid bounds
         elif not Grid.is_valid_grid_position(self.grid, x, y):
             print("error: spawn_failed - x and y exceed current grid bounds!")

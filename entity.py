@@ -17,12 +17,6 @@ from equipment import Equipment
 
 # Entity class with all methods needed for entities
 class Entity:
-    """# Base Invetory for all Entities
-    BASE_INVENTORY = [
-        dl.create_equipment("none_wep"),
-        dl.create_equipment("none_armor"),
-        dl.create_equipment("none_acc"),
-    ]"""
 
     # Base Modifiers for all Entities
     # BASE_MODIFIERS = {"Flat_modifiers": {}, "Percent_modifiers": {}}
@@ -251,105 +245,6 @@ class Entity:
                 self.inventory.remove(item)
                 continue
 
-    """
-    # Create Entity Start - NEEDS FIX/REFACTOR
-    # Creates entity with base stats and values based on the entity
-    # Holds base stats for all of the entities
-    # Params: e_type - String - Type of entity to create
-    #       x,y - int - Coordinates to spawn entity at
-    #       id__to_use - int - id generated for entity based on current entity ID counter
-    # Return: None
-    def create_entity(e_type, x, y, id_to_use):
-        # ensure correct typing
-        x = int(x)
-        y = int(y)
-        # Case statement to match to every entity type in game
-        match e_type:
-            # Warrior
-            case "warrior":
-                # Create warrior entity
-                temp_entity = Entity(
-                    id_to_use,
-                    "warrior",
-                    [x, y],
-                    Entity.WARRIOR_BASE_STATS["Health"],
-                    Entity.WARRIOR_BASE_STATS["Attack"],
-                    Entity.WARRIOR_BASE_STATS["Defence"],
-                    Entity.WARRIOR_BASE_STATS["Speed"],
-                    BASE_INVENTORY.copy(),
-                    {
-                        "Flat_modifiers": {},
-                        "Percent_modifiers": {},
-                    },  # Empty dictionaries
-                )
-            # Mage
-            case "mage":
-                # Create mage entity
-                temp_entity = Mage(
-                    id_to_use,
-                    "mage",
-                    [x, y],
-                    Mage.MAGE_BASE_STATS["Health"],
-                    Mage.MAGE_BASE_STATS["Attack"],
-                    Mage.MAGE_BASE_STATS["Defence"],
-                    Mage.MAGE_BASE_STATS["Speed"],
-                    BASE_INVENTORY.copy(),
-                    {
-                        "Flat_modifiers": {},
-                        "Percent_modifiers": {},
-                    },  # Empty dictionaries
-                    Mage.MAGE_BASE_STATS["Mana"],
-                    Mage.MAGE_BASE_STATS["Spell_power"],
-                )
-            # Skeleton
-            case "skeleton":
-                # Create skeleton entity
-                temp_entity = Entity(
-                    id_to_use,
-                    "skeleton",
-                    [x, y],
-                    Entity.SKELETON_BASE_STATS["Health"],
-                    Entity.SKELETON_BASE_STATS["Attack"],
-                    Entity.SKELETON_BASE_STATS["Defence"],
-                    Entity.SKELETON_BASE_STATS["Speed"],
-                    BASE_INVENTORY.copy(),
-                    {
-                        "Flat_modifiers": {},
-                        "Percent_modifiers": {},
-                    },  # Empty dictionaries
-                )
-            # Goblin
-            case "goblin":
-                # Create goblin entity
-                temp_entity = Entity(
-                    id_to_use,
-                    "goblin",
-                    [x, y],
-                    Entity.GOBLIN_BASE_STATS["Health"],
-                    Entity.GOBLIN_BASE_STATS["Attack"],
-                    Entity.GOBLIN_BASE_STATS["Defence"],
-                    Entity.GOBLIN_BASE_STATS["Speed"],
-                    BASE_INVENTORY.copy(),
-                    {
-                        "Flat_modifiers": {},
-                        "Percent_modifiers": {},
-                    },  # Empty dictionaries
-                )
-            case _:  # error no matching entity type found - May be redundant
-                print(
-                    f"error: Invalid entity type '{e_type}'. "
-                    f"Expected one of: {Entity.ENTITY_TYPES}."
-                )
-
-        # HANDLE INSIDE OF CLI
-        # Increment entity_ids_issued to account for new entity
-        Entity.entity_ids_issued += 1
-        # Add new entity to entity list
-        Entity.entity_list.append(temp_entity)
-        # HANDLE INSIDE OF CLI
-    """
-    # Create Entity End
-
     # Equip Item Start
     # Equips given item at given slot
     # Params: item - Equipment object - equipment to be equipped
@@ -382,11 +277,6 @@ class Entity:
     # Params: item - Equipment Object - item to be added to the backpack
     # Returns: None
     def add_item_to_backpack(self, item):
-        """HANDLE IN CLI
-        # if backpack is full
-        if len(self.backpack) > 5:
-            print(f"error: pickup_failed - Backpack full!")
-        """
         self.backpack.append(item)
 
     # Remove Item From Backpack
@@ -395,11 +285,6 @@ class Entity:
     # Params: item - Equipment Object - item to be removed from the backpack
     # Returns: None
     def remove_item_from_backpack(self, item):
-        """HANDLE IN CLI
-        # if backpack is full
-        if len(self.backpack) > 5:
-            print(f"error: pickup_failed - Backpack full!")
-        """
         self.backpack.remove(item)
 
     # Attack Entity
