@@ -75,6 +75,25 @@ class AttackTypes(Enum):
     RANGED = "Ranged"
 
 
+# Attack Types Constants
+MELEE_RANGE = 1
+RANGED_RANGE = 3  # May want to restrict to be 2-3 only not 1-3 so it doesnt completely outclass melee
+
+
+# Spell name enums
+class SpellNames(Enum):
+    FIREBALL = "Fireball"
+    HEAL = "Heal"
+    FROSTBOLT = "Frostbolt"
+
+
+# Spell Type enums
+class SpellTypes(Enum):
+    OFFENSIVE = "Offensive"
+    SUPPORT = "Support"
+    CONTROL = "Control"
+
+
 # Equipment Factory Start
 # Used to create all of the equipment based on item_name provided
 # Params: item_name - string - name of item to be created

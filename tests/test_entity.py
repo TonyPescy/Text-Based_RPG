@@ -69,6 +69,7 @@ class TestEntity(unittest.TestCase):
         self.assertEqual(entity.backpack, [])
         self.assertEqual(entity.max_health, 120)
         self.assertEqual(entity.temp_buffs, [])
+        self.assertEqual(entity.attack_type.value, "Melee")
 
     # Init goblin with base stats
     def test_goblin_init(self):
@@ -104,6 +105,7 @@ class TestEntity(unittest.TestCase):
         self.assertEqual(entity.backpack, [])
         self.assertEqual(entity.max_health, 45)
         self.assertEqual(entity.temp_buffs, [])
+        self.assertEqual(entity.attack_type.value, "Melee")
 
     # Init skeleton with base stats
     def test_skeleton_init(self):
@@ -139,6 +141,7 @@ class TestEntity(unittest.TestCase):
         self.assertEqual(entity.backpack, [])
         self.assertEqual(entity.max_health, 60)
         self.assertEqual(entity.temp_buffs, [])
+        self.assertEqual(entity.attack_type.value, "Ranged")
 
     # Init Mage with base stats
     def test_mage_init(self):
@@ -177,6 +180,7 @@ class TestEntity(unittest.TestCase):
         self.assertEqual(entity.max_health, 70)
         self.assertEqual(entity.temp_buffs, [])
         self.assertEqual(entity.max_mana, 100)
+        self.assertEqual(entity.attack_type.value, "Melee")
 
     # Tests for universal entity method testing
     # Tests for get_stats on warrior
@@ -2339,3 +2343,113 @@ class TestEntity(unittest.TestCase):
         self.assertEqual(entity.defence, 10)
         self.assertEqual(entity.speed, 5)
         self.assertEqual(entity.max_health, 120)
+
+    # success
+    def test_attack_entity_with_attack_greater_than_defence(self):
+        # Create attacker
+        attacker = Warrior(0, [0, 0])
+
+        # Create defender
+        defender = Goblin(1, [1, 0])
+
+        # Store defender's starting health
+        starting_health = defender.health
+
+        # Attack defender
+        damage = attacker.attack_entity(defender)
+
+        # Verify correct damage was returned
+        self.assertEqual(
+            damage,
+            attacker.attack - defender.defence,
+        )
+
+        # Verify defender lost the correct amount of health
+        self.assertEqual(
+            defender.health,
+            starting_health - damage,
+        )
+
+    # success
+    def test_attack_entity_minimum_damage(self):
+        # Create attacker
+        attacker = Warrior(0, [0, 0])
+
+        # Create defender
+        defender = Goblin(1, [1, 0])
+
+        # Set attack lower than defence
+        attacker.attack = 5
+        defender.defence = 10
+
+        # Store defender's starting health
+        starting_health = defender.health
+
+        # Attack defender
+        damage = attacker.attack_entity(defender)
+
+        # Verify minimum damage of 1 was returned
+        self.assertEqual(damage, 1)
+
+        # Verify defender lost exactly 1 health
+        self.assertEqual(
+            defender.health,
+            starting_health - 1,
+        )
+
+    # success
+    def test_attack_entity_health_does_not_go_below_zero(self):
+        # Create attacker
+        attacker = Warrior(0, [0, 0])
+
+        # Create defender
+        defender = Goblin(1, [1, 0])
+
+        # Set defender health below attack damage
+        defender.health = 5
+        attacker.attack = 20
+        defender.defence = 0
+
+        # Attack defender
+        damage = attacker.attack_entity(defender)
+
+        # Verify correct damage was returned
+        self.assertEqual(damage, 20)
+
+        # Verify defender health stopped at 0
+        self.assertEqual(defender.health, 0)
+
+    # success
+    def test_attack_entity_returns_damage_dealt(self):
+        # Create attacker
+        attacker = Warrior(0, [0, 0])
+
+        # Create defender
+        defender = Goblin(1, [1, 0])
+
+        # Set specific attack and defence values
+        attacker.attack = 15
+        defender.defence = 5
+
+        # Attack defender
+        damage = attacker.attack_entity(defender)
+
+        # Verify returned damage matches attack minus defence
+        self.assertEqual(damage, 10)
+
+    # success
+    def test_attack_entity_does_not_modify_attacker_health(self):
+        # Create attacker
+        attacker = Warrior(0, [0, 0])
+
+        # Create defender
+        defender = Goblin(1, [1, 0])
+
+        # Store attacker's starting health
+        starting_health = attacker.health
+
+        # Attack defender
+        attacker.attack_entity(defender)
+
+        # Verify attacker's health was not changed
+        self.assertEqual(attacker.health, starting_health)

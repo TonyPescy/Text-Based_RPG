@@ -19,6 +19,7 @@ import domain_library as dl
 from grid import Grid, Tile
 from entity import Entity
 from equipment import Consumable
+from spell import Spell, get_spell
 
 
 # Handles all Command Line Interface commands for the game
@@ -76,6 +77,7 @@ class CLI:
             "use": self.process_use_item_command,
             "move": self.process_move_command,
             "attack": self.process_attack_command,
+            "cast": self.process_cast_command,
         }
 
         # Match handler to command
@@ -849,7 +851,7 @@ class CLI:
             print(f"ok: moved {entity_id} to {x}, {y}!")
             return
 
-    # Process Move Command
+    # Process Attack Command
     # Attacker entity attacks the defending entity and lowering their current health value (not max)
     # attack vs defence - Spells are done in cast command (involves spell power and defence)
     # Params: command_pieces - list - list of strings that make up the command
@@ -886,7 +888,95 @@ class CLI:
         attacker_y = attacker.position[1]
         defender_x = defender.position[0]
         defender_y = defender.position[1]
-        # Validate whether Entity can engage from range or just melee
+        # Determine whether Entity can engage from range or just melee
+        if attacker.attack_type == dl.AttackTypes.MELEE:  # Melee assignment
+            attack_range = dl.MELEE_RANGE
+        else:  # Ranged assignment
+            attack_range = dl.RANGED_RANGE
+
+        # Determine if defender is within attack range
+        if self.grid.is_within_range(
+            [attacker_x, attacker_y], [defender_x, defender_y], attack_range
+        ):
+            # Continue attack as defender is within attack range
+            damage = attacker.attack_entity(defender)
+            # Print success message
+            print(
+                f"ok: attack {attacker_id} dealt {damage} {attacker.attack_type} damage to {defender_id}!"
+            )
+        else:  # Cancel attack as defender is out of range
+            print("error: attack_failed - Defender is out of range!")
+            return
+
+    # Process Cast Command
+    # Caster entity casts a spell on the targeted entity. This can be offensive/supportive/control
+    # Spells use spell power * spell-specific multipliers vs. defence
+    # Params: command_pieces - list - list of strings that make up the command
+    # Returns: None
+    def process_cast_command(self, command_pieces):
+        # Test for valid amount of command pieces and full command
+        if len(command_pieces) == 4:
+            # Assign variables
+            caster_id = command_pieces[1]
+            target_id = command_pieces[2]
+            spell_name = command_pieces[3]
+        else:
+            print("error: cast_failed due to invalid arguments.")
+            return
+        # Map created
+        if not self.map_created:
+            print("error: cast_failed - Map does not exist!")
+            return
+        # Valid ints for entity ids
+        elif not any(caster_id == str(entity.id) for entity in self.entity_list):
+            print("error: cast_failed - Casting entity does not exist!")
+            return
+        elif not any(target_id == str(entity.id) for entity in self.entity_list):
+            print("error: cast_failed - Targeted entity does not exist!")
+            return
+        # Check for spell name within enums
+        elif any(spell_name.lower() == name.value.lower() for name in dl.SpellNames):
+            # Assign spell
+            spell = get_spell(spell_name)
+            # Assign range for spell
+            spell_range = spell.get_range()
+        # Spell not found
+        else:
+            print("error: cast_failed - Spell does not exist!")
+            return
+        # Assign entities
+        caster = self.assign_entity_from_list(int(caster_id))
+        target = self.assign_entity_from_list(int(target_id))
+        # Ensure entity is a spell caster - currently only mage
+        if not caster.e_type.lower() == "mage":
+            print(
+                f"error: cast_failed - Caster is {caster.e_type}, which is not a valid spellcaster!"
+            )
+            return
+
+        # assign grid positions
+        caster_x = caster.position[0]
+        caster_y = caster.position[1]
+        target_x = target.position[0]
+        target_y = target.position[1]
+
+        # Determine if this spell is within range
+        if self.grid.is_within_range(
+            [caster_x, caster_y], [target_x, target_y], spell_range
+        ):
+            # cast spell on target
+            effect = spell.cast_spell(caster, target)
+            # update unit stats
+            # target.update_stats(self)
+            # Print success message
+            print(
+                f"ok: cast {spell.name} from {caster.id} to {target.id} effect: {effect}"
+            )
+        else:
+            print(
+                f"error: cast_failed - Target outside of range! {spell.name} Range: {spell_range}"
+            )
+            return
 
     # Spawn Entity For CLI
     # Contains logic for all entity spawning in the CLI
@@ -916,7 +1006,7 @@ class CLI:
         elif not dl.is_valid_entity(entity_type):
             print("error: spawn_failed - Invalid entity type!")
             return
-        # All valid inputs  # TEST
+        # All valid inputs
         else:
             # updates grid with new entity and returns entity
             entity = self.grid.spawn_entity(x, y, entity_type, self.entity_ids_issued)

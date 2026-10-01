@@ -3622,7 +3622,7 @@ class TestCLI(unittest.TestCase):
 
         # Create map and entity
         test_cli.process_command("init map 10 10")
-        test_cli.process_command("spawn Warrior 1 1")
+        test_cli.process_command("spawn warrior 1 1")
 
         # Get entity
         entity = test_cli.entity_list[0]
@@ -3657,7 +3657,7 @@ class TestCLI(unittest.TestCase):
 
         # Create map and entity
         test_cli.process_command("init map 10 10")
-        test_cli.process_command("spawn Warrior 1 1")
+        test_cli.process_command("spawn warrior 1 1")
 
         # Get entity
         entity = test_cli.entity_list[0]
@@ -5453,6 +5453,690 @@ class TestCLI(unittest.TestCase):
 
         # Check starting tile occupancy
         self.assertNotIn(entity.id, test_cli.grid.grid[5][5].occupants)
+
+    # success
+    def test_attack_with_valid_melee_attack(self):
+        # Create test CLI
+        test_cli = CLI()
+        # Clear out grid
+        test_cli.grid = Grid.reset_grid()
+        # Create Map
+        test_cli.process_command("init map 25 25")
+        # Clear out entity list
+        test_cli.reset_entity_list()
+
+        # Create attacker and defender
+        test_cli.process_command("spawn warrior 0 0")
+        test_cli.process_command("spawn goblin 1 0")
+
+        # Get spawned entities
+        attacker = test_cli.entity_list[0]
+        defender = test_cli.entity_list[1]
+
+        # Reset entity stats
+        reset_ent_stats(attacker, test_cli)
+        reset_ent_stats(defender, test_cli)
+
+        # Store defender health before attack
+        starting_health = defender.health
+
+        # Process attack
+        test_cli.process_command("attack 0 1")
+
+        # Verify defender lost health
+        self.assertLess(defender.health, starting_health)
+
+    # success
+    def test_attack_with_valid_ranged_attack(self):
+        # Create test CLI
+        test_cli = CLI()
+        # Clear out grid
+        test_cli.grid = Grid.reset_grid()
+        # Create Map
+        test_cli.process_command("init map 25 25")
+        # Clear out entity list
+        test_cli.reset_entity_list()
+
+        # Create attacker and defender
+        test_cli.process_command("spawn skeleton 0 0")
+        test_cli.process_command("spawn goblin 2 0")
+
+        # Get spawned entities
+        attacker = test_cli.entity_list[0]
+        defender = test_cli.entity_list[1]
+
+        # Reset entity stats
+        reset_ent_stats(attacker, test_cli)
+        reset_ent_stats(defender, test_cli)
+
+        # Store defender health before attack
+        starting_health = defender.health
+
+        # Process attack
+        test_cli.process_command("attack 0 1")
+
+        # Verify defender lost health
+        self.assertLess(defender.health, starting_health)
+
+    # failure
+    def test_attack_with_invalid_amount_of_arguments(self):
+        # Create test CLI
+        test_cli = CLI()
+
+        # Process attack with too few arguments
+        test_cli.process_command("attack 0")
+
+        # Verify no entities were created or changed
+        self.assertEqual(test_cli.entity_list, [])
+
+    # failure
+    def test_attack_with_no_map(self):
+        # Create test CLI
+        test_cli = CLI()
+
+        # Process attack without creating map
+        test_cli.process_command("attack 0 1")
+
+        # Verify map was not created
+        self.assertFalse(test_cli.map_created)
+
+    # failure
+    def test_attack_with_invalid_entity_ids(self):
+        # Create test CLI
+        test_cli = CLI()
+        # Clear out grid
+        test_cli.grid = Grid.reset_grid()
+        # Create Map
+        test_cli.process_command("init map 25 25")
+        # Clear out entity list
+        test_cli.reset_entity_list()
+
+        # Process attack with non-integer entity ids
+        test_cli.process_command("attack abc def")
+
+        # Verify entity list is still empty
+        self.assertEqual(test_cli.entity_list, [])
+
+    # failure
+    def test_attack_with_attacking_entity_that_does_not_exist(self):
+        # Create test CLI
+        test_cli = CLI()
+        # Clear out grid
+        test_cli.grid = Grid.reset_grid()
+        # Create Map
+        test_cli.process_command("init map 25 25")
+        # Clear out entity list
+        test_cli.reset_entity_list()
+
+        # Create defender
+        test_cli.process_command("spawn goblin 1 0")
+
+        # Get spawned defender
+        defender = test_cli.entity_list[0]
+
+        # Process attack with invalid attacking entity id
+        test_cli.process_command("attack 0 1")
+
+        # Verify only defender exists
+        self.assertEqual(len(test_cli.entity_list), 1)
+        self.assertEqual(test_cli.entity_list[0].id, defender.id)
+
+    # failure
+    def test_attack_with_defending_entity_that_does_not_exist(self):
+        # Create test CLI
+        test_cli = CLI()
+        # Clear out grid
+        test_cli.grid = Grid.reset_grid()
+        # Create Map
+        test_cli.process_command("init map 25 25")
+        # Clear out entity list
+        test_cli.reset_entity_list()
+
+        # Create attacker
+        test_cli.process_command("spawn warrior 0 0")
+
+        # Get spawned attacker
+        attacker = test_cli.entity_list[0]
+
+        # Process attack with invalid defending entity id
+        test_cli.process_command("attack 0 1")
+
+        # Verify only attacker exists
+        self.assertEqual(len(test_cli.entity_list), 1)
+        self.assertEqual(test_cli.entity_list[0].id, attacker.id)
+
+    # failure
+    def test_attack_with_defender_out_of_range(self):
+        # Create test CLI
+        test_cli = CLI()
+        # Clear out grid
+        test_cli.grid = Grid.reset_grid()
+        # Create Map
+        test_cli.process_command("init map 25 25")
+        # Clear out entity list
+        test_cli.reset_entity_list()
+
+        # Create attacker and defender
+        test_cli.process_command("spawn warrior 0 0")
+        test_cli.process_command("spawn goblin 10 10")
+
+        # Get spawned entities
+        attacker = test_cli.entity_list[0]
+        defender = test_cli.entity_list[1]
+
+        # Reset entity stats
+        reset_ent_stats(attacker, test_cli)
+        reset_ent_stats(defender, test_cli)
+
+        # Store defender health before attack
+        starting_health = defender.health
+
+        # Process attack
+        test_cli.process_command("attack 0 1")
+
+        # Verify defender did not lose health
+        self.assertEqual(defender.health, starting_health)
+
+    # success
+    def test_attack_then_heal_with_health_potion(self):
+        # Create test CLI
+        test_cli = CLI()
+        # Clear out grid
+        test_cli.grid = Grid.reset_grid()
+        # Create Map
+        test_cli.process_command("init map 25 25")
+        # Clear out entity list
+        test_cli.reset_entity_list()
+
+        # Create attacker and defender
+        test_cli.process_command("spawn warrior 0 0")
+        test_cli.process_command("spawn goblin 1 0")
+
+        # Get spawned entities
+        attacker = test_cli.entity_list[0]
+        defender = test_cli.entity_list[1]
+
+        # Reset entity stats
+        reset_ent_stats(attacker, test_cli)
+        reset_ent_stats(defender, test_cli)
+
+        # Store defender's starting health
+        starting_health = defender.health
+
+        # Attack defender
+        test_cli.process_command("attack 0 1")
+
+        # Verify defender took damage
+        self.assertLess(defender.health, starting_health)
+
+        # Store health after attack
+        damaged_health = defender.health
+
+        # Add health potion to defender
+        test_cli.process_command("give 1 smallhealthpotion")
+        test_cli.process_command("use 1 smallhealthpotion")
+
+        # Verify defender healed
+        self.assertGreater(defender.health, damaged_health)
+
+        # Verify health did not exceed maximum health
+        self.assertLessEqual(defender.health, defender.max_health)
+
+    # success
+    def test_attack_then_heal_to_max_health_with_health_potion(self):
+        # Create test CLI
+        test_cli = CLI()
+        # Clear out grid
+        test_cli.grid = Grid.reset_grid()
+        # Create Map
+        test_cli.process_command("init map 25 25")
+        # Clear out entity list
+        test_cli.reset_entity_list()
+
+        # Create attacker and defender
+        test_cli.process_command("spawn warrior 0 0")
+        test_cli.process_command("spawn goblin 1 0")
+
+        # Get spawned entities
+        attacker = test_cli.entity_list[0]
+        defender = test_cli.entity_list[1]
+
+        # Reset entity stats
+        reset_ent_stats(attacker, test_cli)
+        reset_ent_stats(defender, test_cli)
+
+        # Store maximum health
+        max_health = defender.max_health
+
+        # Attack defender
+        test_cli.process_command("attack 0 1")
+
+        # Verify defender took damage
+        self.assertLess(defender.health, max_health)
+
+        # Add health potion to defender
+        test_cli.process_command("give 1 smallhealthpotion")
+        test_cli.process_command("use 1 smallhealthpotion")
+
+        # Verify defender's health increased
+        self.assertGreater(defender.health, 0)
+
+        # Verify defender cannot exceed maximum health
+        self.assertLessEqual(defender.health, max_health)
+
+    # success
+    def test_assign_entity_from_list_first_entity(self):
+        # Create test CLI
+        test_cli = CLI()
+        # Clear out grid
+        test_cli.grid = Grid.reset_grid()
+        # Create Map
+        test_cli.process_command("init map 25 25")
+        # Clear out entity list
+        test_cli.reset_entity_list()
+
+        # Create entity
+        test_cli.process_command("spawn warrior 0 0")
+
+        # Get assigned entity
+        entity = test_cli.assign_entity_from_list(0)
+
+        # Verify correct entity was returned
+        self.assertEqual(entity.id, 0)
+        self.assertEqual(entity.e_type.capitalize(), "Warrior")
+
+    # success
+    def test_assign_entity_from_list_entity_in_middle_of_list(self):
+        # Create test CLI
+        test_cli = CLI()
+        # Clear out grid
+        test_cli.grid = Grid.reset_grid()
+        # Create Map
+        test_cli.process_command("init map 25 25")
+        # Clear out entity list
+        test_cli.reset_entity_list()
+
+        # Create entities
+        test_cli.process_command("spawn warrior 0 0")
+        test_cli.process_command("spawn goblin 1 0")
+        test_cli.process_command("spawn mage 2 0")
+
+        # Get assigned entity
+        entity = test_cli.assign_entity_from_list(1)
+
+        # Verify correct entity was returned
+        self.assertEqual(entity.id, 1)
+        self.assertEqual(entity.e_type.capitalize(), "Goblin")
+
+    # success
+    def test_assign_entity_from_list_last_entity(self):
+        # Create test CLI
+        test_cli = CLI()
+        # Clear out grid
+        test_cli.grid = Grid.reset_grid()
+        # Create Map
+        test_cli.process_command("init map 25 25")
+        # Clear out entity list
+        test_cli.reset_entity_list()
+
+        # Create entities
+        test_cli.process_command("spawn warrior 0 0")
+        test_cli.process_command("spawn goblin 1 0")
+        test_cli.process_command("spawn mage 2 0")
+
+        # Get assigned entity
+        entity = test_cli.assign_entity_from_list(2)
+
+        # Verify correct entity was returned
+        self.assertEqual(entity.id, 2)
+        self.assertEqual(entity.e_type.capitalize(), "Mage")
+
+    # success
+    def test_assign_entity_from_list_returns_same_entity_instance(self):
+        # Create test CLI
+        test_cli = CLI()
+        # Clear out grid
+        test_cli.grid = Grid.reset_grid()
+        # Create Map
+        test_cli.process_command("init map 25 25")
+        # Clear out entity list
+        test_cli.reset_entity_list()
+
+        # Create entity
+        test_cli.process_command("spawn warrior 0 0")
+
+        # Get entity from entity list
+        list_entity = test_cli.entity_list[0]
+
+        # Assign entity from list
+        assigned_entity = test_cli.assign_entity_from_list(0)
+
+        # Verify the same entity instance was returned
+        self.assertIs(assigned_entity, list_entity)
+
+    # success
+    def test_cast_offensive_spell(self):
+        # Create test CLI
+        test_cli = CLI()
+        # Clear out grid
+        test_cli.grid = Grid.reset_grid()
+        # Create Map
+        test_cli.process_command("init map 25 25")
+        # Clear out entity list
+        test_cli.reset_entity_list()
+
+        # Create caster and defender
+        test_cli.process_command("spawn mage 0 0")
+        test_cli.process_command("spawn goblin 1 0")
+
+        # Get spawned entities
+        caster = test_cli.entity_list[0]
+        defender = test_cli.entity_list[1]
+
+        # Reset entity stats
+        reset_ent_stats(caster, test_cli)
+        reset_ent_stats(defender, test_cli)
+
+        # Store defender's starting health
+        starting_health = defender.health
+
+        # Cast offensive spell
+        test_cli.process_command("cast 0 1 fireball")
+
+        print(f"STARTING: {starting_health}")
+        print(f"ENDING: {defender.health}")
+        self.assertNotEqual(defender.health, starting_health)
+
+    # success
+    def test_cast_heal_spell(self):
+        # Create test CLI
+        test_cli = CLI()
+        # Clear out grid
+        test_cli.grid = Grid.reset_grid()
+        # Create Map
+        test_cli.process_command("init map 25 25")
+        # Clear out entity list
+        test_cli.reset_entity_list()
+
+        # Create caster and target
+        test_cli.process_command("spawn mage 0 0")
+        test_cli.process_command("spawn warrior 1 0")
+
+        # Get spawned entities
+        caster = test_cli.entity_list[0]
+        target = test_cli.entity_list[1]
+
+        # Reset entity stats
+        reset_ent_stats(caster, test_cli)
+        reset_ent_stats(target, test_cli)
+
+        # Damage target before healing
+        target.health -= 20
+
+        # Store target's health before healing
+        damaged_health = target.health
+
+        # Cast healing spell
+        test_cli.process_command("cast 0 1 heal")
+
+        # Verify target healed
+        self.assertGreater(target.health, damaged_health)
+
+    # success
+    def test_attack_then_cast_heal(self):
+        # Create test CLI
+        test_cli = CLI()
+        # Clear out grid
+        test_cli.grid = Grid.reset_grid()
+        # Create Map
+        test_cli.process_command("init map 25 25")
+        # Clear out entity list
+        test_cli.reset_entity_list()
+
+        # Create attacker, caster, and target
+        test_cli.process_command("spawn warrior 0 0")
+        test_cli.process_command("spawn mage 1 1")
+        test_cli.process_command("spawn goblin 1 0")
+
+        # Get spawned entities
+        attacker = test_cli.entity_list[0]
+        caster = test_cli.entity_list[1]
+        target = test_cli.entity_list[2]
+
+        # Reset entity stats
+        reset_ent_stats(attacker, test_cli)
+        reset_ent_stats(caster, test_cli)
+        reset_ent_stats(target, test_cli)
+
+        # Store target's starting health
+        starting_health = target.health
+
+        # Attack target
+        test_cli.process_command("attack 0 2")
+
+        # Verify target took damage
+        self.assertLess(target.health, starting_health)
+
+        # Store health after attack
+        damaged_health = target.health
+
+        # Cast healing spell
+        test_cli.process_command("cast 1 2 heal")
+
+        # Verify target healed
+        self.assertGreater(target.health, damaged_health)
+
+    # failure
+    def test_cast_with_invalid_amount_of_arguments(self):
+        # Create test CLI
+        test_cli = CLI()
+
+        # Process cast with too few arguments
+        test_cli.process_command("cast 0 1")
+
+        # Verify no entities were created or changed
+        self.assertEqual(test_cli.entity_list, [])
+
+    # failure
+    def test_cast_without_map(self):
+        # Create test CLI
+        test_cli = CLI()
+
+        # Process cast without creating map
+        test_cli.process_command("cast 0 1 fireball")
+
+        # Verify map was not created
+        self.assertFalse(test_cli.map_created)
+
+    # failure
+    def test_cast_with_nonexistent_caster(self):
+        # Create test CLI
+        test_cli = CLI()
+        # Clear out grid
+        test_cli.grid = Grid.reset_grid()
+        # Create Map
+        test_cli.process_command("init map 25 25")
+        # Clear out entity list
+        test_cli.reset_entity_list()
+
+        # Create target
+        test_cli.process_command("spawn goblin 1 0")
+
+        # Process cast with nonexistent caster
+        test_cli.process_command("cast 0 1 fireball")
+
+        # Verify only target exists
+        self.assertEqual(len(test_cli.entity_list), 1)
+        self.assertEqual(test_cli.entity_list[0].id, 0)
+
+    # failure
+    def test_cast_with_nonexistent_target(self):
+        # Create test CLI
+        test_cli = CLI()
+        # Clear out grid
+        test_cli.grid = Grid.reset_grid()
+        # Create Map
+        test_cli.process_command("init map 25 25")
+        # Clear out entity list
+        test_cli.reset_entity_list()
+
+        # Create caster
+        test_cli.process_command("spawn mage 0 0")
+
+        # Process cast with nonexistent target
+        test_cli.process_command("cast 0 1 fireball")
+
+        # Verify only caster exists
+        self.assertEqual(len(test_cli.entity_list), 1)
+        self.assertEqual(test_cli.entity_list[0].id, 0)
+
+    # failure
+    def test_cast_with_nonexistent_spell(self):
+        # Create test CLI
+        test_cli = CLI()
+        # Clear out grid
+        test_cli.grid = Grid.reset_grid()
+        # Create Map
+        test_cli.process_command("init map 25 25")
+        # Clear out entity list
+        test_cli.reset_entity_list()
+
+        # Create caster and target
+        test_cli.process_command("spawn mage 0 0")
+        test_cli.process_command("spawn goblin 1 0")
+
+        # Get target
+        target = test_cli.entity_list[1]
+
+        # Store target's starting health
+        starting_health = target.health
+
+        # Process cast with nonexistent spell
+        test_cli.process_command("cast 0 1 notaspell")
+
+        # Verify target was not damaged
+        self.assertEqual(target.health, starting_health)
+
+    # failure
+    def test_cast_with_non_mage_caster(self):
+        # Create test CLI
+        test_cli = CLI()
+        # Clear out grid
+        test_cli.grid = Grid.reset_grid()
+        # Create Map
+        test_cli.process_command("init map 25 25")
+        # Clear out entity list
+        test_cli.reset_entity_list()
+
+        # Create non-Mage caster and target
+        test_cli.process_command("spawn warrior 0 0")
+        test_cli.process_command("spawn goblin 1 0")
+
+        # Get target
+        target = test_cli.entity_list[1]
+
+        # Store target's starting health
+        starting_health = target.health
+
+        # Process cast with Warrior as caster
+        test_cli.process_command("cast 0 1 fireball")
+
+        # Verify target was not damaged
+        self.assertEqual(target.health, starting_health)
+
+    # failure
+    def test_cast_with_target_out_of_range(self):
+        # Create test CLI
+        test_cli = CLI()
+        # Clear out grid
+        test_cli.grid = Grid.reset_grid()
+        # Create Map
+        test_cli.process_command("init map 25 25")
+        # Clear out entity list
+        test_cli.reset_entity_list()
+
+        # Create caster and target
+        test_cli.process_command("spawn mage 0 0")
+        test_cli.process_command("spawn goblin 20 20")
+
+        # Get target
+        target = test_cli.entity_list[1]
+
+        # Store target's starting health
+        starting_health = target.health
+
+        # Process cast with target outside spell range
+        test_cli.process_command("cast 0 1 fireball")
+
+        # Verify target was not damaged
+        self.assertEqual(target.health, starting_health)
+
+    # success
+    def test_cast_spell_with_over_time_effect(self):
+        # Create test CLI
+        test_cli = CLI()
+        # Clear out grid
+        test_cli.grid = Grid.reset_grid()
+        # Create Map
+        test_cli.process_command("init map 25 25")
+        # Clear out entity list
+        test_cli.reset_entity_list()
+
+        # Create caster and target
+        test_cli.process_command("spawn mage 0 0")
+        test_cli.process_command("spawn goblin 1 0")
+
+        # Get spawned entities
+        caster = test_cli.entity_list[0]
+        target = test_cli.entity_list[1]
+
+        # Reset entity stats
+        reset_ent_stats(caster, test_cli)
+        reset_ent_stats(target, test_cli)
+
+        # Cast spell with an over-time effect
+        test_cli.process_command("cast 0 1 frostbolt")
+
+        # Verify target received a temporary buff
+        self.assertGreater(len(target.temp_buffs), 0)
+
+        # Verify the spell effect was added
+        self.assertEqual(target.temp_buffs[0]["Name"], "Frostbolt")
+
+    # success
+    def test_cast_heal_does_not_exceed_max_health(self):
+        # Create test CLI
+        test_cli = CLI()
+        # Clear out grid
+        test_cli.grid = Grid.reset_grid()
+        # Create Map
+        test_cli.process_command("init map 25 25")
+        # Clear out entity list
+        test_cli.reset_entity_list()
+
+        # Create caster and target
+        test_cli.process_command("spawn mage 0 0")
+        test_cli.process_command("spawn warrior 1 0")
+
+        # Get spawned entities
+        caster = test_cli.entity_list[0]
+        target = test_cli.entity_list[1]
+
+        # Reset entity stats
+        reset_ent_stats(caster, test_cli)
+        reset_ent_stats(target, test_cli)
+
+        # Damage target
+        target.health -= 20
+
+        # Cast healing spell
+        test_cli.process_command("cast 0 1 heal")
+
+        # Verify health was restored
+        self.assertGreater(target.health, 0)
+
+        # Verify health did not exceed maximum health
+        self.assertLessEqual(target.health, target.max_health)
 
 
 # reset cli stats

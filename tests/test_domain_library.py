@@ -330,3 +330,109 @@ class TestDomainLibrary(unittest.TestCase):
     def test_is_valid_entity_invalid(self):
 
         self.assertFalse(dl.is_valid_entity("invalid"))
+
+    # Tests for attack types
+    def test_attack_types(self):
+
+        self.assertEqual(
+            tuple(attack_type.value for attack_type in dl.AttackTypes),
+            ("Melee", "Ranged"),
+        )
+
+    # Tests for melee attack range
+    def test_melee_range(self):
+
+        self.assertEqual(
+            dl.MELEE_RANGE,
+            1,
+        )
+
+    # Tests for ranged attack range
+    def test_ranged_range(self):
+
+        self.assertEqual(
+            dl.RANGED_RANGE,
+            3,
+        )
+
+    # success
+    def test_spell_names_fireball(self):
+        # Verify Fireball spell name
+        self.assertEqual(dl.SpellNames.FIREBALL.value, "Fireball")
+
+    # success
+    def test_spell_names_heal(self):
+        # Verify Heal spell name
+        self.assertEqual(dl.SpellNames.HEAL.value, "Heal")
+
+    # success
+    def test_spell_names_frostbolt(self):
+        # Verify Frostbolt spell name
+        self.assertEqual(dl.SpellNames.FROSTBOLT.value, "Frostbolt")
+
+    # success
+    def test_spell_names_contains_all_spells(self):
+        # Verify all spell names exist
+        self.assertEqual(
+            len(dl.SpellNames),
+            3,
+        )
+
+        # Verify Fireball exists
+        self.assertIn(dl.SpellNames.FIREBALL, dl.SpellNames)
+
+        # Verify Heal exists
+        self.assertIn(dl.SpellNames.HEAL, dl.SpellNames)
+
+        # Verify Frostbolt exists
+        self.assertIn(dl.SpellNames.FROSTBOLT, dl.SpellNames)
+
+    # success
+    def test_spell_types_offensive(self):
+        # Verify Offensive spell type
+        self.assertEqual(
+            dl.SpellTypes.OFFENSIVE.value,
+            "Offensive",
+        )
+
+    # success
+    def test_spell_types_support(self):
+        # Verify Support spell type
+        self.assertEqual(
+            dl.SpellTypes.SUPPORT.value,
+            "Support",
+        )
+
+    # success
+    def test_spell_types_control(self):
+        # Verify Control spell type
+        self.assertEqual(
+            dl.SpellTypes.CONTROL.value,
+            "Control",
+        )
+
+    # success
+    def test_spell_types_contains_all_types(self):
+        # Verify all spell types exist
+        self.assertEqual(
+            len(dl.SpellTypes),
+            3,
+        )
+
+        # Verify Offensive exists
+        self.assertIn(
+            dl.SpellTypes.OFFENSIVE,
+            dl.SpellTypes,
+        )
+
+        # Verify Support exists
+        self.assertIn(
+            dl.SpellTypes.SUPPORT,
+            dl.SpellTypes,
+        )
+
+        # Verify Control exists
+        self.assertIn(
+            dl.SpellTypes.CONTROL,
+            dl.SpellTypes,
+        )

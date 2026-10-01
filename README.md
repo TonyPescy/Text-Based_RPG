@@ -6,17 +6,19 @@ Test-based RPG where a grid of tiles is occupied by players, monsters, and items
 Tony Pescatore
 
 ## Table of Contents
-[Entities](#Entities)
+[Entities](#entities)
 
-[Equipment](#Equipment)
+[Equipment](#equipment)
 
-[Tiles](#Tiles)
+[Tiles](#tiles)
 
-[Command Line Interface Guide](#Command-Line-Interface-Guide)
+[Spells](#spells)
 
-[Design Decisions](#Design-Decisions)
+[Command Line Interface Guide](#command-line-interface-guide)
 
-[Game Commands](#Game-Commands)
+[Design Decisions](#design-decisions)
+
+[Game Commands](#game-commands)
 
 ## Entities
 [Table of Contents](#table-of-contents)
@@ -51,13 +53,21 @@ Tony Pescatore
 ## Tiles
 [Table of Contents](#table-of-contents)
 
-
 | Tiles         | Desciption |
 | ------------- |:-------------:|
 | Floor         | Standard tile |
 | Wall      |  An impassable tile     |
 | ShallowWater      | Tile that imposes a speed debuff of -2 on the player |
 | Forest        | Tile that grants the entity +5 defence and a debuff of -2 |
+
+## Spells
+[Table of Contents](#table-of-contents)
+
+| Spells         | Desciption |
+| ------------- |:-------------:|
+| Fireball         | Deals high damage |
+| Heal      |  Heals the targets health    |
+| Frostbolt      | Deals lower damage and applies -2 speed debuff |
 
 ## Command Line Interface Guide
 [Table of Contents](#table-of-contents)
@@ -151,6 +161,20 @@ Tony Pescatore
 
 **Contraints:** id must be an integer within the current entity list and the x,y must correspond to a valid grid position for the entity to occupy.
 
+### Attack
+**Description:** First entity will attack the second entity with damage being calculated as attack vs defence. When an defender's health reaches zero they will die (DEATH HAS NOT BEEN IMPLEMENTED YET).
+
+**Called as:** attack attacker_id defender_id
+
+**Contraints:** ids must be an integer within the current entity list and the defender must be within the attack range of the attacker.
+
+### Cast
+**Description:** First entity will cast a spell on the other entity. This can do damage using the spell power and the spell damage modifier against the targets defence, it can heal them, and it can apply an effect on them. When a targets health reaches zero they will die (DEATH HAS NOT BEEN IMPLEMENTED YET).
+
+**Called as:** cast caster_id target_id spell_name
+
+**Contraints:** ids must be an integer within the current entity list and the defender must be within the spell range of the caster. The spell must also exist in the valid spell list
+
 ## Design Decisions
 [Table of Contents](#table-of-contents)
 
@@ -174,6 +198,13 @@ Tony Pescatore
     - **Wall Tiles:** Impassable tiles that will be used to enforce spatial boundaries and colision. 
     - **ShallowWater Tiles:** Passable tiles that apply a negative modifier that will impede the movement of its occupant(s).
     - **Forest Tiles:** Passable tiles that apply positive modifier to entity defence as well as impeding their movement slightly.
+
+### Spells
+- Spells are their own class each with their own spell attack ranges, spell damage modifiers, and spell effects.
+- Three types of spells exist
+    - **Offensive:** Purely damage based magic
+    - **Support:** Supports the targetted entity with healing
+    - **Control:** Deals lower damage but applies debuffs to targets
 
 ### Entities
 - Entities include both player and monster classes which use base stats and conditional modifiers to get their final stat values. Entities have the following stats: id, type, position, health, attack, defence, speed, inventory, and active_modifiers. These can be added to in some cases, such as with the player Mage class which adds mana and spell power. 

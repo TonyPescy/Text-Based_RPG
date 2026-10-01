@@ -99,6 +99,8 @@ class Entity:
     # Params: CLI - cli instance - Current active game objects/features
     # Return: None
     def update_stats(self, cli):  # UPDATE TEST
+        # starting health - used to set health after reset
+        # starting_health = self.health
         # Clear active modifiers to avoid double counting of modifiers
         self.active_modifiers["Flat_modifiers"] = {}
         self.active_modifiers["Percent_modifiers"] = {}
@@ -400,6 +402,22 @@ class Entity:
         """
         self.backpack.remove(item)
 
+    # Attack Entity
+    # Current entity attacks given entity
+    # Called after all variables and entities have been validated
+    # Params:   self - Entity - One who is attacking
+    #           target - Entity - One being attacked
+    # Return:   damage - int - damage dealt to the defender
+    def attack_entity(self, target):
+        # Get damage dealt
+        damage = max(1, (self.attack - target.defence))
+        # Subtract health from defender with max at 0 - prevents underflow
+        target.health = max(0, (target.health - damage))
+        # Handle target death DEATH NOT IMPLEMENTED YET!!!
+        # HANDLE A KILL HERE
+        # return damage for success message
+        return damage
+
 
 # Warrior Class extend from Entity class
 # Uses all functions without any changes
@@ -615,6 +633,10 @@ class Mage(Entity):
     # Params: CLI - cli instance - Current active game objects/features
     # Return: None
     def update_stats(self, cli):  # UPDATE TESTS
+        # starting health - used to set health after reset
+        # starting_health = self.health
+        # starting mana - used to set mana after reset
+        # starting_mana = self.mana
         # Clear active modifiers to avoid double counting of modifiers
         self.active_modifiers["Flat_modifiers"] = {}
         self.active_modifiers["Percent_modifiers"] = {}
@@ -697,15 +719,18 @@ class Mage(Entity):
 # Params: e_type - String - Type of entity to create
 #       x,y - int - Coordinates to spawn entity at
 #       e_id - int - id generated for entity based on current entity ID counter
+# Returns: Entity instance of the specified type
 def create_entity(e_type, x, y, e_id):
     # ensure correct typing
     try:
+        # Convert to enum
+        e_type = dl.EntityType(str(e_type).capitalize())
         x = int(x)
         y = int(y)
     except:
         print(f"error: spawn_failed x ({x}) and/or y ({y}) are not integers!")
 
-    match e_type.capitalize():  # MATCH WITH ENUMS UPON THAT UPDATE
+    match e_type:  # MATCH WITH ENUMS UPON THAT UPDATE
         case dl.EntityType.WARRIOR:
             return Warrior(e_id, [x, y])
 
@@ -717,10 +742,3 @@ def create_entity(e_type, x, y, e_id):
 
         case dl.EntityType.GOBLIN:
             return Goblin(e_id, [x, y])
-
-        case _:  # error no matching entity type found - May be redundant
-            print(
-                f"error: Invalid entity type '{e_type}'. "
-                f"Expected one of: "
-                f"{[entity.value for entity in dl.EntityType]}."
-            )
