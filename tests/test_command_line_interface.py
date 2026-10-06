@@ -6,7 +6,7 @@ Due Date: Multiple Due Dates
 Course: CPSC 520
 Professor: Dr. Schwesinger
 Assignment: Text Based RPG
-Filename: test_cml.py
+Filename: test_command_line_interface.py
 Purpose: Utilizes unittest to test all of the fron facing functions to insure there are no catastrohpic errors that make it into the game.
 """
 
@@ -22,71 +22,136 @@ from entity import Entity
 
 class TestCLI(unittest.TestCase):
 
+    # Repeated Test Functions
+
+    # Create Test CLI
+    # Create a CLI instance for testing
+    # Returns:  test_cli - CLI - CLI instance used for testing
+    def create_test_cli(self):
+        return CLI()
+
+    # Reset Test Grid
+    # Reset the grid before testing a command that requires a fresh map
+    # Params:   test_cli - CLI - CLI instance used for testing
+    # Returns:  None
+    def reset_test_grid(self, test_cli):
+        test_cli.grid = Grid.reset_grid()
+
+    # Reset Test Entities
+    # Reset the entity list before testing a command that requires no entities
+    # Params:   test_cli - CLI - CLI instance used for testing
+    # Returns:  None
+    def reset_test_entities(self, test_cli):
+        test_cli.reset_entity_list()
+
+    # Create Test Map
+    # Create a map for tests that require an initialized grid
+    # Params:   test_cli - CLI - CLI instance used for testing
+    #           width - int - map width
+    #           height - int - map height
+    # Returns:  None
+    def create_test_map(self, test_cli, width=25, height=25):
+        test_cli.process_command(f"init map {width} {height}")
+
+    # Capture Command Output
+    # Process a command and capture its printed output
+    # Params:   test_cli - CLI - CLI instance used for testing
+    #           command - string - command to process
+    # Returns:  output - string - printed command output
+    def process_command_and_get_output(self, test_cli, command):
+        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
+            test_cli.process_command(command)
+        return mock_stdout.getvalue()
+
+    # Capture Function Output
+    # Call a CLI function and capture its printed output
+    # Params:   function - callable - function to call
+    # Returns:  output - string - printed function output
+    def capture_function_output(self, function):
+        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
+            function()
+        return mock_stdout.getvalue()
+
+    # reset cli stats
+    # Resets necessary cli stats for use in tests
+    # Params:   cli - CLI - cli to reset
+    # Returns: None
+    def reset_cli_stats(self, cli):
+        cli.grid = Grid.reset_grid()
+        cli.entity_list.clear()
+        cli.entity_ids_issued = 0
+        cli.map_created = False
+
+    # Reset Base Inventory
+    # Reset the default inventory before inventory/equipment tests
+    # Returns:  None
+    def reset_base_inventory(self):
+        dl.BASE_INVENTORY = [
+            dl.create_equipment("none_wep"),
+            dl.create_equipment("none_armor"),
+            dl.create_equipment("none_acc"),
+        ]
+
     # Unknown Commands Start
     def test_unknown_command(self):
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
         command = "Not a command"
         # Process command
-        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.process_command(command)
+        output = self.process_command_and_get_output(test_cli, command)
         # Get print output to comapre
-        output = mock_stdout.getvalue()
+        # Output was captured by the helper
         # check output
         self.assertEqual(output, "error: Unknown command!\n")
 
     # Init Commands Start
     def test_init_map_incorrect_command_pieces(self):
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
         command = "init cap 6 6"
         # Process command
-        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.process_command(command)
+        output = self.process_command_and_get_output(test_cli, command)
         # Get print output to comapre
-        output = mock_stdout.getvalue()
+        # Output was captured by the helper
         # check output
         self.assertEqual(output, "error: map_init_failed due to invalid arguments.\n")
 
     def test_init_map_incorrect_number_of_command_pieces(self):
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
         command = "init cap 6"
         # Process command
-        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.process_command(command)
+        output = self.process_command_and_get_output(test_cli, command)
         # Get print output to comapre
-        output = mock_stdout.getvalue()
+        # Output was captured by the helper
         # check output
         self.assertEqual(output, "error: map_init_failed due to invalid arguments.\n")
 
     def test_init_map_with_map_created(self):
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
         # Clear out grid
-        test_cli.grid = Grid.reset_grid()
+        self.reset_test_grid(test_cli)
         # Create map
-        test_cli.process_command("init map 10 10")
+        self.create_test_map(test_cli, 10, 10)
         command = "init map 6 6"
         # Process command
-        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.process_command(command)
+        output = self.process_command_and_get_output(test_cli, command)
         # Get print output to comapre
-        output = mock_stdout.getvalue()
+        # Output was captured by the helper
         # check output
         self.assertEqual(output, "error: map_init_failed - Map is already created!\n")
 
     def test_init_map_with_invalid_width_int(self):
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
         # Clear out grid
-        test_cli.grid = Grid.reset_grid()
+        self.reset_test_grid(test_cli)
         command = "init map dozen 6"
         # Process command
-        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.process_command(command)
+        output = self.process_command_and_get_output(test_cli, command)
         # Get print output to comapre
-        output = mock_stdout.getvalue()
+        # Output was captured by the helper
         # check output
         self.assertEqual(
             output,
@@ -95,15 +160,14 @@ class TestCLI(unittest.TestCase):
 
     def test_init_map_with_invalid_height_int(self):
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
         # Clear out grid
-        test_cli.grid = Grid.reset_grid()
+        self.reset_test_grid(test_cli)
         command = "init map 12 dozen"
         # Process command
-        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.process_command(command)
+        output = self.process_command_and_get_output(test_cli, command)
         # Get print output to comapre
-        output = mock_stdout.getvalue()
+        # Output was captured by the helper
         # check output
         self.assertEqual(
             output,
@@ -112,15 +176,14 @@ class TestCLI(unittest.TestCase):
 
     def test_init_map_with_both_bounds_higher_than_max(self):
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
         # Clear out grid
-        test_cli.grid = Grid.reset_grid()
+        self.reset_test_grid(test_cli)
         command = "init map 60 60"
         # Process command
-        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.process_command(command)
+        output = self.process_command_and_get_output(test_cli, command)
         # Get print output to comapre
-        output = mock_stdout.getvalue()
+        # Output was captured by the helper
         # check output
         self.assertEqual(
             output,
@@ -129,15 +192,14 @@ class TestCLI(unittest.TestCase):
 
     def test_init_map_with_width_bounds_higher_than_max(self):
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
         # Clear out grid
-        test_cli.grid = Grid.reset_grid()
+        self.reset_test_grid(test_cli)
         command = "init map 60 30"
         # Process command
-        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.process_command(command)
+        output = self.process_command_and_get_output(test_cli, command)
         # Get print output to comapre
-        output = mock_stdout.getvalue()
+        # Output was captured by the helper
         # check output
         self.assertEqual(
             output,
@@ -146,15 +208,14 @@ class TestCLI(unittest.TestCase):
 
     def test_init_map_with_height_bounds_higher_than_max(self):
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
         # Clear out grid
-        test_cli.grid = Grid.reset_grid()
+        self.reset_test_grid(test_cli)
         command = "init map 30 51"
         # Process command
-        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.process_command(command)
+        output = self.process_command_and_get_output(test_cli, command)
         # Get print output to comapre
-        output = mock_stdout.getvalue()
+        # Output was captured by the helper
         # check output
         self.assertEqual(
             output,
@@ -163,15 +224,14 @@ class TestCLI(unittest.TestCase):
 
     def test_init_map_with_both_bounds_lower_than_min(self):
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
         # Clear out grid
-        test_cli.grid = Grid.reset_grid()
+        self.reset_test_grid(test_cli)
         command = "init map 4 4"
         # Process command
-        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.process_command(command)
+        output = self.process_command_and_get_output(test_cli, command)
         # Get print output to comapre
-        output = mock_stdout.getvalue()
+        # Output was captured by the helper
         # check output
         self.assertEqual(
             output,
@@ -180,15 +240,14 @@ class TestCLI(unittest.TestCase):
 
     def test_init_map_with_width_bounds_lower_than_min(self):
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
         # Clear out grid
-        test_cli.grid = Grid.reset_grid()
+        self.reset_test_grid(test_cli)
         command = "init map 4 30"
         # Process command
-        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.process_command(command)
+        output = self.process_command_and_get_output(test_cli, command)
         # Get print output to comapre
-        output = mock_stdout.getvalue()
+        # Output was captured by the helper
         # check output
         self.assertEqual(
             output,
@@ -197,15 +256,14 @@ class TestCLI(unittest.TestCase):
 
     def test_init_map_with_height_bounds_lower_than_min(self):
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
         # Clear out grid
-        test_cli.grid = Grid.reset_grid()
+        self.reset_test_grid(test_cli)
         command = "init map 30 4"
         # Process command
-        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.process_command(command)
+        output = self.process_command_and_get_output(test_cli, command)
         # Get print output to comapre
-        output = mock_stdout.getvalue()
+        # Output was captured by the helper
         # check output
         self.assertEqual(
             output,
@@ -214,15 +272,14 @@ class TestCLI(unittest.TestCase):
 
     def test_init_map_with_width_bounds_lower_than_min_and_height_higher_than_max(self):
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
         # Clear out grid
-        test_cli.grid = Grid.reset_grid()
+        self.reset_test_grid(test_cli)
         command = "init map 4 51"
         # Process command
-        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.process_command(command)
+        output = self.process_command_and_get_output(test_cli, command)
         # Get print output to comapre
-        output = mock_stdout.getvalue()
+        # Output was captured by the helper
         # check output
         self.assertEqual(
             output,
@@ -231,15 +288,14 @@ class TestCLI(unittest.TestCase):
 
     def test_init_map_with_height_bounds_lower_than_min_and_width_higher_than_max(self):
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
         # Clear out grid
-        test_cli.grid = Grid.reset_grid()
+        self.reset_test_grid(test_cli)
         command = "init map 51 4"
         # Process command
-        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.process_command(command)
+        output = self.process_command_and_get_output(test_cli, command)
         # Get print output to comapre
-        output = mock_stdout.getvalue()
+        # Output was captured by the helper
         # check output
         self.assertEqual(
             output,
@@ -248,15 +304,14 @@ class TestCLI(unittest.TestCase):
 
     def test_init_map_with_max_bounds(self):
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
         # Clear out grid
-        test_cli.grid = Grid.reset_grid()
+        self.reset_test_grid(test_cli)
         command = "init map 50 50"
         # Process command
-        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.process_command(command)
+        output = self.process_command_and_get_output(test_cli, command)
         # Get print output to comapre
-        output = mock_stdout.getvalue()
+        # Output was captured by the helper
         # check output
         self.assertEqual(
             output,
@@ -265,15 +320,14 @@ class TestCLI(unittest.TestCase):
 
     def test_init_map_with_min_bounds(self):
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
         # Clear out grid
-        test_cli.grid = Grid.reset_grid()
+        self.reset_test_grid(test_cli)
         command = "init map 5 5"
         # Process command
-        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.process_command(command)
+        output = self.process_command_and_get_output(test_cli, command)
         # Get print output to comapre
-        output = mock_stdout.getvalue()
+        # Output was captured by the helper
         # check output
         self.assertEqual(
             output,
@@ -283,15 +337,14 @@ class TestCLI(unittest.TestCase):
     # Success for init map
     def test_init_map_success(self):
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
         # Clear out grid
-        test_cli.grid = Grid.reset_grid()
+        self.reset_test_grid(test_cli)
         command = "init map 30 30"
         # Process command
-        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.process_command(command)
+        output = self.process_command_and_get_output(test_cli, command)
         # Get print output to comapre
-        output = mock_stdout.getvalue()
+        # Output was captured by the helper
         # check output
         self.assertEqual(
             output,
@@ -301,43 +354,40 @@ class TestCLI(unittest.TestCase):
     # Set Cases
     def test_set_tile_incorrect_number_of_command_pieces(self):
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
         # Clear out grid
-        test_cli.grid = Grid.reset_grid()
+        self.reset_test_grid(test_cli)
         command = "set tile 6 6"
         # Process command
-        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.process_command(command)
+        output = self.process_command_and_get_output(test_cli, command)
         # Get print output to comapre
-        output = mock_stdout.getvalue()
+        # Output was captured by the helper
         # check output
         self.assertEqual(output, "error: set_tile_failed - Invalid arguments!\n")
 
     def test_set_tile_with_wrong_command(self):
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
         # Clear out grid
-        test_cli.grid = Grid.reset_grid()
+        self.reset_test_grid(test_cli)
         command = "set type 10 10 floor"
         # Process command
-        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.process_command(command)
+        output = self.process_command_and_get_output(test_cli, command)
         # Get print output to comapre
-        output = mock_stdout.getvalue()
+        # Output was captured by the helper
         # check output
         self.assertEqual(output, "error: set_tile_failed - Invalid arguments!\n")
 
     def test_set_tile_without_map_created(self):
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
         # Clear out grid
-        test_cli.grid = Grid.reset_grid()
+        self.reset_test_grid(test_cli)
         command = "set tile 10 10 wall"
         # Process command
-        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.process_command(command)
+        output = self.process_command_and_get_output(test_cli, command)
         # Get print output to comapre
-        output = mock_stdout.getvalue()
+        # Output was captured by the helper
         # check output
         self.assertEqual(
             output,
@@ -346,17 +396,16 @@ class TestCLI(unittest.TestCase):
 
     def test_set_tile_without_valid_x_int(self):
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
         # Clear out grid
-        test_cli.grid = Grid.reset_grid()
+        self.reset_test_grid(test_cli)
         # Create Map
-        test_cli.process_command("init map 25 25")
+        self.create_test_map(test_cli)
         command = "set tile dozen 10 wall"
         # Process command
-        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.process_command(command)
+        output = self.process_command_and_get_output(test_cli, command)
         # Get print output to comapre
-        output = mock_stdout.getvalue()
+        # Output was captured by the helper
         # check output
         self.assertEqual(
             output,
@@ -365,17 +414,16 @@ class TestCLI(unittest.TestCase):
 
     def test_set_tile_without_valid_y_int(self):
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
         # Clear out grid
-        test_cli.grid = Grid.reset_grid()
+        self.reset_test_grid(test_cli)
         # Create Map
-        test_cli.process_command("init map 25 25")
+        self.create_test_map(test_cli)
         command = "set tile 10 dozen wall"
         # Process command
-        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.process_command(command)
+        output = self.process_command_and_get_output(test_cli, command)
         # Get print output to comapre
-        output = mock_stdout.getvalue()
+        # Output was captured by the helper
         # check output
         self.assertEqual(
             output,
@@ -384,17 +432,16 @@ class TestCLI(unittest.TestCase):
 
     def test_set_tile_with_x_bounds_higher_than_grid_max(self):
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
         # Clear out grid
-        test_cli.grid = Grid.reset_grid()
+        self.reset_test_grid(test_cli)
         # Create Map
-        test_cli.process_command("init map 25 25")
+        self.create_test_map(test_cli)
         command = "set tile 26 10 wall"
         # Process command
-        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.process_command(command)
+        output = self.process_command_and_get_output(test_cli, command)
         # Get print output to comapre
-        output = mock_stdout.getvalue()
+        # Output was captured by the helper
         # check output
         self.assertEqual(
             output,
@@ -403,17 +450,16 @@ class TestCLI(unittest.TestCase):
 
     def test_set_tile_with_y_bounds_higher_than_grid_max(self):
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
         # Clear out grid
-        test_cli.grid = Grid.reset_grid()
+        self.reset_test_grid(test_cli)
         # Create Map
-        test_cli.process_command("init map 25 25")
+        self.create_test_map(test_cli)
         command = "set tile 20 26 wall"
         # Process command
-        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.process_command(command)
+        output = self.process_command_and_get_output(test_cli, command)
         # Get print output to comapre
-        output = mock_stdout.getvalue()
+        # Output was captured by the helper
         # check output
         self.assertEqual(
             output,
@@ -422,17 +468,16 @@ class TestCLI(unittest.TestCase):
 
     def test_set_tile_with_y_bounds_lower_than_grid_min(self):
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
         # Clear out grid
-        test_cli.grid = Grid.reset_grid()
+        self.reset_test_grid(test_cli)
         # Create Map
-        test_cli.process_command("init map 25 25")
+        self.create_test_map(test_cli)
         command = "set tile 20 -1 wall"
         # Process command
-        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.process_command(command)
+        output = self.process_command_and_get_output(test_cli, command)
         # Get print output to comapre
-        output = mock_stdout.getvalue()
+        # Output was captured by the helper
         # check output
         self.assertEqual(
             output,
@@ -441,17 +486,16 @@ class TestCLI(unittest.TestCase):
 
     def test_set_tile_with_x_bounds_lower_than_grid_min(self):
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
         # Clear out grid
-        test_cli.grid = Grid.reset_grid()
+        self.reset_test_grid(test_cli)
         # Create Map
-        test_cli.process_command("init map 25 25")
+        self.create_test_map(test_cli)
         command = "set tile -1 20 wall"
         # Process command
-        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.process_command(command)
+        output = self.process_command_and_get_output(test_cli, command)
         # Get print output to comapre
-        output = mock_stdout.getvalue()
+        # Output was captured by the helper
         # check output
         self.assertEqual(
             output,
@@ -461,17 +505,16 @@ class TestCLI(unittest.TestCase):
     # zero indexed so 25x25 = 0-24
     def test_set_tile_with_x_y_on_lower_boundary(self):
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
         # Clear out grid
-        test_cli.grid = Grid.reset_grid()
+        self.reset_test_grid(test_cli)
         # Create Map
-        test_cli.process_command("init map 25 25")
+        self.create_test_map(test_cli)
         command = "set tile 0 0 wall"
         # Process command
-        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.process_command(command)
+        output = self.process_command_and_get_output(test_cli, command)
         # Get print output to comapre
-        output = mock_stdout.getvalue()
+        # Output was captured by the helper
         # check output
         self.assertEqual(
             output,
@@ -481,17 +524,16 @@ class TestCLI(unittest.TestCase):
     # zero indexed so 25x25 = 0-24
     def test_set_tile_with_x_y_on_higher_boundary(self):
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
         # Clear out grid
-        test_cli.grid = Grid.reset_grid()
+        self.reset_test_grid(test_cli)
         # Create Map
-        test_cli.process_command("init map 25 25")
+        self.create_test_map(test_cli)
         command = "set tile 24 24 wall"
         # Process command
-        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.process_command(command)
+        output = self.process_command_and_get_output(test_cli, command)
         # Get print output to comapre
-        output = mock_stdout.getvalue()
+        # Output was captured by the helper
         # check output
         self.assertEqual(
             output,
@@ -500,17 +542,16 @@ class TestCLI(unittest.TestCase):
 
     def test_set_tile_with_invalid_tile_type(self):
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
         # Clear out grid
-        test_cli.grid = Grid.reset_grid()
+        self.reset_test_grid(test_cli)
         # Create Map
-        test_cli.process_command("init map 25 25")
+        self.create_test_map(test_cli)
         command = "set tile 24 24 NOTATYPE"
         # Process command
-        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.process_command(command)
+        output = self.process_command_and_get_output(test_cli, command)
         # Get print output to comapre
-        output = mock_stdout.getvalue()
+        # Output was captured by the helper
         # check output
         self.assertEqual(
             output,
@@ -519,17 +560,16 @@ class TestCLI(unittest.TestCase):
 
     def test_set_tile_success(self):
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
         # Clear out grid
-        test_cli.grid = Grid.reset_grid()
+        self.reset_test_grid(test_cli)
         # Create Map
-        test_cli.process_command("init map 25 25")
+        self.create_test_map(test_cli)
         command = "set TILE 24 24 WalL"
         # Process command
-        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.process_command(command)
+        output = self.process_command_and_get_output(test_cli, command)
         # Get print output to comapre
-        output = mock_stdout.getvalue()
+        # Output was captured by the helper
         # check output
         self.assertEqual(
             output,
@@ -539,15 +579,14 @@ class TestCLI(unittest.TestCase):
     # Spawn cases
     def test_spawn_entity_invalid_command_length(self):
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
         # Clear out grid
-        test_cli.grid = Grid.reset_grid()
+        self.reset_test_grid(test_cli)
         command = "spawn"
         # Process command
-        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.process_command(command)
+        output = self.process_command_and_get_output(test_cli, command)
         # Get print output to comapre
-        output = mock_stdout.getvalue()
+        # Output was captured by the helper
         # check output
         self.assertEqual(
             output,
@@ -556,17 +595,16 @@ class TestCLI(unittest.TestCase):
 
     def test_spawn_entity_invalid_command_arguments(self):
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
         # Clear out grid
-        test_cli.grid = Grid.reset_grid()
+        self.reset_test_grid(test_cli)
         # Create Map
-        test_cli.process_command("init map 25 25")
+        self.create_test_map(test_cli)
         command = "spawn NOTENTITYTYPE 10 10"
         # Process command
-        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.process_command(command)
+        output = self.process_command_and_get_output(test_cli, command)
         # Get print output to comapre
-        output = mock_stdout.getvalue()
+        # Output was captured by the helper
         # check output
         self.assertEqual(
             output,
@@ -575,15 +613,14 @@ class TestCLI(unittest.TestCase):
 
     def test_spawn_entity_map_not_created(self):
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
         # Clear out grid
-        test_cli.grid = Grid.reset_grid()
+        self.reset_test_grid(test_cli)
         command = "spawn warrior 10 10"
         # Process command
-        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.process_command(command)
+        output = self.process_command_and_get_output(test_cli, command)
         # Get print output to comapre
-        output = mock_stdout.getvalue()
+        # Output was captured by the helper
         # check output
         self.assertEqual(
             output,
@@ -592,17 +629,16 @@ class TestCLI(unittest.TestCase):
 
     def test_spawn_entity_invalid_x_value(self):
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
         # Clear out grid
-        test_cli.grid = Grid.reset_grid()
+        self.reset_test_grid(test_cli)
         # Create Map
-        test_cli.process_command("init map 25 25")
+        self.create_test_map(test_cli)
         command = "spawn warrior nineT 10"
         # Process command
-        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.process_command(command)
+        output = self.process_command_and_get_output(test_cli, command)
         # Get print output to comapre
-        output = mock_stdout.getvalue()
+        # Output was captured by the helper
         # check output
         self.assertEqual(
             output,
@@ -611,17 +647,16 @@ class TestCLI(unittest.TestCase):
 
     def test_spawn_entity_invalid_y_value(self):
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
         # Clear out grid
-        test_cli.grid = Grid.reset_grid()
+        self.reset_test_grid(test_cli)
         # Create Map
-        test_cli.process_command("init map 25 25")
+        self.create_test_map(test_cli)
         command = "spawn warrior 10 nineT"
         # Process command
-        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.process_command(command)
+        output = self.process_command_and_get_output(test_cli, command)
         # Get print output to comapre
-        output = mock_stdout.getvalue()
+        # Output was captured by the helper
         # check output
         self.assertEqual(
             output,
@@ -630,17 +665,16 @@ class TestCLI(unittest.TestCase):
 
     def test_spawn_entity_y_position_higher_than_height(self):
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
         # Clear out grid
-        test_cli.grid = Grid.reset_grid()
+        self.reset_test_grid(test_cli)
         # Create Map
-        test_cli.process_command("init map 25 25")
+        self.create_test_map(test_cli)
         command = "spawn warrior 10 25"
         # Process command
-        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.process_command(command)
+        output = self.process_command_and_get_output(test_cli, command)
         # Get print output to comapre
-        output = mock_stdout.getvalue()
+        # Output was captured by the helper
         # check output
         self.assertEqual(
             output,
@@ -649,17 +683,16 @@ class TestCLI(unittest.TestCase):
 
     def test_spawn_entity_y_position_lower_than_height(self):
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
         # Clear out grid
-        test_cli.grid = Grid.reset_grid()
+        self.reset_test_grid(test_cli)
         # Create Map
-        test_cli.process_command("init map 25 25")
+        self.create_test_map(test_cli)
         command = "spawn warrior 10 -1"
         # Process command
-        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.process_command(command)
+        output = self.process_command_and_get_output(test_cli, command)
         # Get print output to comapre
-        output = mock_stdout.getvalue()
+        # Output was captured by the helper
         # check output
         self.assertEqual(
             output,
@@ -669,17 +702,16 @@ class TestCLI(unittest.TestCase):
     # Entity will be generated and will be 0 as it is the first one created
     def test_spawn_entity_y_position_on_min_height_boundary(self):
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
         # Clear out grid
-        test_cli.grid = Grid.reset_grid()
+        self.reset_test_grid(test_cli)
         # Create Map
-        test_cli.process_command("init map 25 25")
+        self.create_test_map(test_cli)
         command = "spawn warrior 10 0"
         # Process command
-        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.process_command(command)
+        output = self.process_command_and_get_output(test_cli, command)
         # Get print output to comapre
-        output = mock_stdout.getvalue()
+        # Output was captured by the helper
         # check output
         self.assertEqual(
             output,
@@ -689,17 +721,16 @@ class TestCLI(unittest.TestCase):
     # Entity will be generated and will be 0 as it is the first one created
     def test_spawn_entity_y_position_on_max_height_boundary(self):
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
         # Clear out grid
-        test_cli.grid = Grid.reset_grid()
+        self.reset_test_grid(test_cli)
         # Create Map
-        test_cli.process_command("init map 25 25")
+        self.create_test_map(test_cli)
         command = "spawn warrior 10 24"
         # Process command
-        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.process_command(command)
+        output = self.process_command_and_get_output(test_cli, command)
         # Get print output to comapre
-        output = mock_stdout.getvalue()
+        # Output was captured by the helper
         # check output
         self.assertEqual(
             output,
@@ -708,17 +739,16 @@ class TestCLI(unittest.TestCase):
 
     def test_spawn_entity_x_position_higher_than_width(self):
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
         # Clear out grid
-        test_cli.grid = Grid.reset_grid()
+        self.reset_test_grid(test_cli)
         # Create Map
-        test_cli.process_command("init map 25 25")
+        self.create_test_map(test_cli)
         command = "spawn warrior 25 10"
         # Process command
-        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.process_command(command)
+        output = self.process_command_and_get_output(test_cli, command)
         # Get print output to comapre
-        output = mock_stdout.getvalue()
+        # Output was captured by the helper
         # check output
         self.assertEqual(
             output,
@@ -727,17 +757,16 @@ class TestCLI(unittest.TestCase):
 
     def test_spawn_entity_x_position_lower_than_width(self):
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
         # Clear out grid
-        test_cli.grid = Grid.reset_grid()
+        self.reset_test_grid(test_cli)
         # Create Map
-        test_cli.process_command("init map 25 25")
+        self.create_test_map(test_cli)
         command = "spawn warrior -1 10"
         # Process command
-        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.process_command(command)
+        output = self.process_command_and_get_output(test_cli, command)
         # Get print output to comapre
-        output = mock_stdout.getvalue()
+        # Output was captured by the helper
         # check output
         self.assertEqual(
             output,
@@ -747,17 +776,16 @@ class TestCLI(unittest.TestCase):
     # Entity will be generated and will be 0 as it is the first one created
     def test_spawn_entity_x_position_on_min_width_boundary(self):
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
         # Clear out grid
-        test_cli.grid = Grid.reset_grid()
+        self.reset_test_grid(test_cli)
         # Create Map
-        test_cli.process_command("init map 25 25")
+        self.create_test_map(test_cli)
         command = "spawn warrior 0 10"
         # Process command
-        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.process_command(command)
+        output = self.process_command_and_get_output(test_cli, command)
         # Get print output to comapre
-        output = mock_stdout.getvalue()
+        # Output was captured by the helper
         # check output
         self.assertEqual(
             output,
@@ -767,17 +795,16 @@ class TestCLI(unittest.TestCase):
     # Entity will be generated and will be 0 as it is the first one created
     def test_spawn_entity_x_position_on_max_width_boundary(self):
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
         # Clear out grid
-        test_cli.grid = Grid.reset_grid()
+        self.reset_test_grid(test_cli)
         # Create Map
-        test_cli.process_command("init map 25 25")
+        self.create_test_map(test_cli)
         command = "spawn warrior 24 10"
         # Process command
-        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.process_command(command)
+        output = self.process_command_and_get_output(test_cli, command)
         # Get print output to comapre
-        output = mock_stdout.getvalue()
+        # Output was captured by the helper
         # check output
         self.assertEqual(
             output,
@@ -786,19 +813,18 @@ class TestCLI(unittest.TestCase):
 
     def test_spawn_entity_on_existing_entity(self):
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
         # Clear out grid
-        test_cli.grid = Grid.reset_grid()
+        self.reset_test_grid(test_cli)
         # Create Map
-        test_cli.process_command("init map 25 25")
+        self.create_test_map(test_cli)
         # spawn warrior at 10 10
         test_cli.process_command("spawn warrior 10 10")
         command = "spawn goblin 10 10"
         # Process command
-        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.process_command(command)
+        output = self.process_command_and_get_output(test_cli, command)
         # Get print output to comapre
-        output = mock_stdout.getvalue()
+        # Output was captured by the helper
         # check output
         self.assertEqual(
             output,
@@ -807,19 +833,18 @@ class TestCLI(unittest.TestCase):
 
     def test_spawn_entity_with_mage_entity_type(self):
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
         # Clear out grid
-        test_cli.grid = Grid.reset_grid()
+        self.reset_test_grid(test_cli)
         test_cli.entity_list.clear()
         # Create Map
-        test_cli.process_command("init map 25 25")
+        self.create_test_map(test_cli)
         command = "spawn mage 10 10"
 
         # Process command
-        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.process_command(command)
+        output = self.process_command_and_get_output(test_cli, command)
         # Get print output to comapre
-        output = mock_stdout.getvalue()
+        # Output was captured by the helper
         # check output
         self.assertEqual(
             output,
@@ -836,17 +861,16 @@ class TestCLI(unittest.TestCase):
     # Standard = types that do not require inheritance (warrior, goblin, skeleton, etc)
     def test_spawn_entity_with_standard_entity_type(self):
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
         # Clear out grid
-        test_cli.grid = Grid.reset_grid()
+        self.reset_test_grid(test_cli)
         # Create Map
-        test_cli.process_command("init map 25 25")
+        self.create_test_map(test_cli)
         command = "spawn warrior 10 10"
         # Process command
-        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.process_command(command)
+        output = self.process_command_and_get_output(test_cli, command)
         # Get print output to comapre
-        output = mock_stdout.getvalue()
+        # Output was captured by the helper
         # check output
         self.assertEqual(
             output,
@@ -861,11 +885,11 @@ class TestCLI(unittest.TestCase):
     # Only sends back the last entity spawned id: 3 (0, 1, 2, X)
     def test_spawn_all_entities(self):
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
         # Clear out grid
-        test_cli.grid = Grid.reset_grid()
+        self.reset_test_grid(test_cli)
         # Create Map
-        test_cli.process_command("init map 25 25")
+        self.create_test_map(test_cli)
 
         # Create entities
         test_cli.process_command("spawn warrior 10 11")
@@ -873,10 +897,9 @@ class TestCLI(unittest.TestCase):
         test_cli.process_command("spawn goblin 11 11")
         command = "spawn skeleton 12 12"
         # Process command
-        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.process_command(command)
+        output = self.process_command_and_get_output(test_cli, command)
         # Get print output to comapre
-        output = mock_stdout.getvalue()
+        # Output was captured by the helper
         # check output
         self.assertEqual(
             output,
@@ -885,10 +908,10 @@ class TestCLI(unittest.TestCase):
 
     def test_spawn_multiple_entities_max_stats(self):
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
 
         # Create map
-        test_cli.process_command("init map 25 25")
+        self.create_test_map(test_cli)
 
         # Spawn warrior
         test_cli.process_command("spawn warrior 10 10")
@@ -912,10 +935,10 @@ class TestCLI(unittest.TestCase):
 
     def test_spawn_increments_entity_id(self):
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
 
         # Create map
-        test_cli.process_command("init map 25 25")
+        self.create_test_map(test_cli)
 
         # Spawn first entity
         test_cli.process_command("spawn warrior 10 10")
@@ -933,11 +956,11 @@ class TestCLI(unittest.TestCase):
     # Only sends back the last entity spawned id: 8 (0, 1, 2, 3, 4, 5, 6, X)
     def test_spawn_multiple_of_all_entities(self):
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
         # Clear out grid
-        test_cli.grid = Grid.reset_grid()
+        self.reset_test_grid(test_cli)
         # Create Map
-        test_cli.process_command("init map 25 25")
+        self.create_test_map(test_cli)
         # create entities
         test_cli.process_command("spawn warrior 10 11")
         test_cli.process_command("spawn warrior 11 10")
@@ -948,10 +971,9 @@ class TestCLI(unittest.TestCase):
         test_cli.process_command("spawn skeleton 13 12")
         command = "spawn skeleton 12 13"
         # Process command
-        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.process_command(command)
+        output = self.process_command_and_get_output(test_cli, command)
         # Get print output to comapre
-        output = mock_stdout.getvalue()
+        # Output was captured by the helper
         # check output
         self.assertEqual(
             output,
@@ -961,21 +983,20 @@ class TestCLI(unittest.TestCase):
     # Equip Cases
     def test_equip_with_incomplete_command(self):
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
         # Clear out grid
-        test_cli.grid = Grid.reset_grid()
+        self.reset_test_grid(test_cli)
         # Create Map
-        test_cli.process_command("init map 25 25")
+        self.create_test_map(test_cli)
         # clear out entity list
-        test_cli.reset_entity_list()
+        self.reset_test_entities(test_cli)
         # create entity to be "player"
         test_cli.process_command("spawn warrior 10 10")
         command = "swap this command is too long"
         # Process command
-        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.process_command(command)
+        output = self.process_command_and_get_output(test_cli, command)
         # Get print output to comapre
-        output = mock_stdout.getvalue()
+        # Output was captured by the helper
         # check output
         self.assertEqual(
             output,
@@ -984,21 +1005,20 @@ class TestCLI(unittest.TestCase):
 
     def test_equip_with_correct_equipment_and_invalid_slot(self):
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
         # Clear out grid
-        test_cli.grid = Grid.reset_grid()
+        self.reset_test_grid(test_cli)
         # Create Map
-        test_cli.process_command("init map 25 25")
+        self.create_test_map(test_cli)
         # clear out entity list
-        test_cli.reset_entity_list()
+        self.reset_test_entities(test_cli)
         # create entity to be "player"
         test_cli.process_command("spawn warrior 10 10")
         command = "equip ironsword primary"
         # Process command
-        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.process_command(command)
+        output = self.process_command_and_get_output(test_cli, command)
         # Get print output to comapre
-        output = mock_stdout.getvalue()
+        # Output was captured by the helper
         # check output
         self.assertEqual(
             output,
@@ -1007,21 +1027,20 @@ class TestCLI(unittest.TestCase):
 
     def test_equip_with_correct_slot_and_invalid_equipment(self):
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
         # Clear out grid
-        test_cli.grid = Grid.reset_grid()
+        self.reset_test_grid(test_cli)
         # Create Map
-        test_cli.process_command("init map 25 25")
+        self.create_test_map(test_cli)
         # clear out entity list
-        test_cli.reset_entity_list()
+        self.reset_test_entities(test_cli)
         # create entity to be "player"
         test_cli.process_command("spawn warrior 10 10")
         command = "equip MoonDaggerThatDoesNotExist weapon"
         # Process command
-        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.process_command(command)
+        output = self.process_command_and_get_output(test_cli, command)
         # Get print output to comapre
-        output = mock_stdout.getvalue()
+        # Output was captured by the helper
         # check output
         self.assertEqual(
             output,
@@ -1030,21 +1049,20 @@ class TestCLI(unittest.TestCase):
 
     def test_equip_invalid_equipment_and_no_slot(self):
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
         # Clear out grid
-        test_cli.grid = Grid.reset_grid()
+        self.reset_test_grid(test_cli)
         # Create Map
-        test_cli.process_command("init map 25 25")
+        self.create_test_map(test_cli)
         # clear out entity list
-        test_cli.reset_entity_list()
+        self.reset_test_entities(test_cli)
         # create entity to be "player"
         test_cli.process_command("spawn warrior 10 10")
         command = "equip MoonDaggerThatDoesNotExist"
         # Process command
-        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.process_command(command)
+        output = self.process_command_and_get_output(test_cli, command)
         # Get print output to comapre
-        output = mock_stdout.getvalue()
+        # Output was captured by the helper
         # check output
         self.assertEqual(
             output,
@@ -1053,19 +1071,18 @@ class TestCLI(unittest.TestCase):
 
     def test_equip_with_no_player_entity_created(self):
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
         # Clear out grid
-        test_cli.grid = Grid.reset_grid()
+        self.reset_test_grid(test_cli)
         # Create Map
-        test_cli.process_command("init map 25 25")
+        self.create_test_map(test_cli)
         # clear out entity list
-        test_cli.reset_entity_list()
+        self.reset_test_entities(test_cli)
         command = "swap 1 weapon IronSWORD"
         # Process command
-        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.process_command(command)
+        output = self.process_command_and_get_output(test_cli, command)
         # Get print output to comapre
-        output = mock_stdout.getvalue()
+        # Output was captured by the helper
         # check output
         self.assertEqual(
             output,
@@ -1074,13 +1091,13 @@ class TestCLI(unittest.TestCase):
 
     def test_equip_with_valid_weapon_but_incorrect_slot(self):
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
         # Clear out grid
-        test_cli.grid = Grid.reset_grid()
+        self.reset_test_grid(test_cli)
         # Create Map
-        test_cli.process_command("init map 25 25")
+        self.create_test_map(test_cli)
         # clear out entity list
-        test_cli.reset_entity_list()
+        self.reset_test_entities(test_cli)
         # create entity to be "player"
         test_cli.process_command("spawn warrior 10 10")
         # backpack fix
@@ -1088,10 +1105,9 @@ class TestCLI(unittest.TestCase):
         entity.add_item_to_backpack(dl.create_equipment("ironsword"))
         command = "swap 1 armor IronSWORD"
         # Process command
-        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.process_command(command)
+        output = self.process_command_and_get_output(test_cli, command)
         # Get print output to comapre
-        output = mock_stdout.getvalue()
+        # Output was captured by the helper
         # check output
         self.assertEqual(
             output,
@@ -1101,19 +1117,15 @@ class TestCLI(unittest.TestCase):
     # success
     def test_equip_with_valid_weapon_and_slot(self):
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
         # Clear out grid
-        test_cli.grid = Grid.reset_grid()
+        self.reset_test_grid(test_cli)
         # Create Map
-        test_cli.process_command("init map 25 25")
+        self.create_test_map(test_cli)
         # clear out entity list
-        test_cli.reset_entity_list()
+        self.reset_test_entities(test_cli)
         # reset
-        dl.BASE_INVENTORY = [
-            dl.create_equipment("none_wep"),
-            dl.create_equipment("none_armor"),
-            dl.create_equipment("none_acc"),
-        ]
+        self.reset_base_inventory()
 
         # create entity to be "player"
         test_cli.process_command("spawn warrior 10 10")
@@ -1122,10 +1134,9 @@ class TestCLI(unittest.TestCase):
         entity.add_item_to_backpack(dl.create_equipment("ironsword"))
         command = "swap 1 weapon ironsword"
         # Process command
-        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.process_command(command)
+        output = self.process_command_and_get_output(test_cli, command)
         # Get print output to comapre
-        output = mock_stdout.getvalue()
+        # Output was captured by the helper
         # print(f"FAILED OUTPUT: {output}")
         # check output
         self.assertEqual(
@@ -1138,21 +1149,20 @@ class TestCLI(unittest.TestCase):
     # inventory cases
     def test_inventory_with_invalid_command(self):
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
         # Clear out grid
-        test_cli.grid = Grid.reset_grid()
+        self.reset_test_grid(test_cli)
         # Create Map
-        test_cli.process_command("init map 25 25")
+        self.create_test_map(test_cli)
         # clear out entity list
-        test_cli.reset_entity_list()
+        self.reset_test_entities(test_cli)
         # create entity to be "player"
         test_cli.process_command("spawn warrior 10 10")
         command = "inventory display please!"
         # Process command
-        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.process_command(command)
+        output = self.process_command_and_get_output(test_cli, command)
         # Get print output to comapre
-        output = mock_stdout.getvalue()
+        # Output was captured by the helper
         # check output
         self.assertEqual(
             output,
@@ -1161,19 +1171,18 @@ class TestCLI(unittest.TestCase):
 
     def test_inventory_with_no_player(self):
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
         # Clear out grid
-        test_cli.grid = Grid.reset_grid()
+        self.reset_test_grid(test_cli)
         # Create Map
-        test_cli.process_command("init map 25 25")
+        self.create_test_map(test_cli)
         # clear out entity list
-        test_cli.reset_entity_list()
+        self.reset_test_entities(test_cli)
         command = "inventory 99"
         # Process command
-        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.process_command(command)
+        output = self.process_command_and_get_output(test_cli, command)
         # Get print output to comapre
-        output = mock_stdout.getvalue()
+        # Output was captured by the helper
         # check output
         self.assertEqual(
             output,
@@ -1182,19 +1191,18 @@ class TestCLI(unittest.TestCase):
 
     def test_inventory_with_no_map(self):
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
         # Clear out grid
-        test_cli.grid = Grid.reset_grid()
+        self.reset_test_grid(test_cli)
         # clear out entity list
-        test_cli.reset_entity_list()
+        self.reset_test_entities(test_cli)
         # create entity to be "player"
         test_cli.process_command("spawn warrior 10 10")
         command = "inventory 99"
         # Process command
-        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.process_command(command)
+        output = self.process_command_and_get_output(test_cli, command)
         # Get print output to comapre
-        output = mock_stdout.getvalue()
+        # Output was captured by the helper
         # check output
         self.assertEqual(
             output,
@@ -1204,26 +1212,21 @@ class TestCLI(unittest.TestCase):
     # Success
     def test_inventory_success(self):
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
         # Clear out grid
-        test_cli.grid = Grid.reset_grid()
+        self.reset_test_grid(test_cli)
         # clear out entity list
-        test_cli.reset_entity_list()
+        self.reset_test_entities(test_cli)
         # Create Map
-        test_cli.process_command("init map 25 25")
+        self.create_test_map(test_cli)
         # Reset
-        dl.BASE_INVENTORY = [
-            dl.create_equipment("none_wep"),
-            dl.create_equipment("none_armor"),
-            dl.create_equipment("none_acc"),
-        ]
+        self.reset_base_inventory()
         test_cli.process_command("spawn warrior 10 10")
         command = "inventory 1"
         # Process command
-        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.process_command(command)
+        output = self.process_command_and_get_output(test_cli, command)
         # Get print output to comapre
-        output = mock_stdout.getvalue()
+        # Output was captured by the helper
         # check output
         self.assertEqual(
             output,
@@ -1242,20 +1245,16 @@ class TestCLI(unittest.TestCase):
     # Success
     def test_inventory_success_with_equips(self):
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
         # Clear out grid
-        test_cli.grid = Grid.reset_grid()
+        self.reset_test_grid(test_cli)
         # clear out entity list
-        test_cli.reset_entity_list()
+        self.reset_test_entities(test_cli)
         # Create Map
-        test_cli.process_command("init map 25 25")
+        self.create_test_map(test_cli)
         # spawn warrior
         # Reset
-        dl.BASE_INVENTORY = [
-            dl.create_equipment("none_wep"),
-            dl.create_equipment("none_armor"),
-            dl.create_equipment("none_acc"),
-        ]
+        self.reset_base_inventory()
         test_cli.process_command("spawn warrior 10 10")
         # backpack fix
         entity = test_cli.entity_list[0]
@@ -1268,10 +1267,9 @@ class TestCLI(unittest.TestCase):
         test_cli.process_command("swap 1 weapon ironsword")
         command = "inventory 1"
         # Process command
-        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.process_command(command)
+        output = self.process_command_and_get_output(test_cli, command)
         # Get print output to comapre
-        output = mock_stdout.getvalue()
+        # Output was captured by the helper
         # check output
         self.assertEqual(
             output,
@@ -1296,24 +1294,20 @@ class TestCLI(unittest.TestCase):
     def test_inventory_success_with_equips_mage(self):
 
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
 
         # Clear out grid
-        test_cli.grid = Grid.reset_grid()
+        self.reset_test_grid(test_cli)
 
         # clear out entity list
-        test_cli.reset_entity_list()
+        self.reset_test_entities(test_cli)
 
         # Create Map
-        test_cli.process_command("init map 25 25")
+        self.create_test_map(test_cli)
 
         # spawn mage
         # Reset
-        dl.BASE_INVENTORY = [
-            dl.create_equipment("none_wep"),
-            dl.create_equipment("none_armor"),
-            dl.create_equipment("none_acc"),
-        ]
+        self.reset_base_inventory()
 
         test_cli.process_command("spawn mage 10 10")
 
@@ -1332,11 +1326,9 @@ class TestCLI(unittest.TestCase):
         command = "inventory 1"
 
         # Process command
-        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.process_command(command)
-
+        output = self.process_command_and_get_output(test_cli, command)
         # Get print output to compare
-        output = mock_stdout.getvalue()
+        # Output was captured by the helper
 
         # check output
         self.assertEqual(
@@ -1368,17 +1360,16 @@ class TestCLI(unittest.TestCase):
     # Inspect Cases
     def test_inspect_with_invalid_command(self):
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
         # Clear out grid
-        test_cli.grid = Grid.reset_grid()
+        self.reset_test_grid(test_cli)
         # clear out entity list
-        test_cli.reset_entity_list()
+        self.reset_test_entities(test_cli)
         command = "inspect nothing really"
         # Process command
-        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.process_command(command)
+        output = self.process_command_and_get_output(test_cli, command)
         # Get print output to comapre
-        output = mock_stdout.getvalue()
+        # Output was captured by the helper
         # check output
         self.assertEqual(
             output,
@@ -1387,17 +1378,16 @@ class TestCLI(unittest.TestCase):
 
     def test_inspect_with_invalid_command_less_than_2_pieces(self):
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
         # Clear out grid
-        test_cli.grid = Grid.reset_grid()
+        self.reset_test_grid(test_cli)
         # clear out entity list
-        test_cli.reset_entity_list()
+        self.reset_test_entities(test_cli)
         command = "inspect"
         # Process command
-        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.process_command(command)
+        output = self.process_command_and_get_output(test_cli, command)
         # Get print output to comapre
-        output = mock_stdout.getvalue()
+        # Output was captured by the helper
         # check output
         self.assertEqual(
             output,
@@ -1406,19 +1396,18 @@ class TestCLI(unittest.TestCase):
 
     def test_inspect_with_no_player(self):
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
         # Clear out grid
-        test_cli.grid = Grid.reset_grid()
+        self.reset_test_grid(test_cli)
         # clear out entity list
-        test_cli.reset_entity_list()
+        self.reset_test_entities(test_cli)
         # Create Map
-        test_cli.process_command("init map 25 25")
+        self.create_test_map(test_cli)
         command = "inspect 1"
         # Process command
-        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.process_command(command)
+        output = self.process_command_and_get_output(test_cli, command)
         # Get print output to comapre
-        output = mock_stdout.getvalue()
+        # Output was captured by the helper
         # check output
         self.assertEqual(
             output,
@@ -1427,19 +1416,18 @@ class TestCLI(unittest.TestCase):
 
     def test_inspect_with_no_map(self):
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
         # Clear out grid
-        test_cli.grid = Grid.reset_grid()
+        self.reset_test_grid(test_cli)
         # clear out entity list
-        test_cli.reset_entity_list()
+        self.reset_test_entities(test_cli)
         # spawn warrior
         test_cli.process_command("spawn warrior 10 10")
         command = "inspect 1"
         # Process command
-        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.process_command(command)
+        output = self.process_command_and_get_output(test_cli, command)
         # Get print output to comapre
-        output = mock_stdout.getvalue()
+        # Output was captured by the helper
         # check output
         self.assertEqual(
             output,
@@ -1448,21 +1436,20 @@ class TestCLI(unittest.TestCase):
 
     def test_inspect_with_invalid_entity_id(self):
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
         # Clear out grid
-        test_cli.grid = Grid.reset_grid()
+        self.reset_test_grid(test_cli)
         # clear out entity list
-        test_cli.reset_entity_list()
+        self.reset_test_entities(test_cli)
         # Create Map
-        test_cli.process_command("init map 25 25")
+        self.create_test_map(test_cli)
         # spawn warrior
         test_cli.process_command("spawn warrior 10 10")
         command = "inspect zip"
         # Process command
-        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.process_command(command)
+        output = self.process_command_and_get_output(test_cli, command)
         # Get print output to comapre
-        output = mock_stdout.getvalue()
+        # Output was captured by the helper
         # check output
         self.assertEqual(
             output,
@@ -1471,21 +1458,20 @@ class TestCLI(unittest.TestCase):
 
     def test_inspect_with_no_entity_matching_id_number(self):
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
         # Clear out grid
-        test_cli.grid = Grid.reset_grid()
+        self.reset_test_grid(test_cli)
         # clear out entity list
-        test_cli.reset_entity_list()
+        self.reset_test_entities(test_cli)
         # Create Map
-        test_cli.process_command("init map 25 25")
+        self.create_test_map(test_cli)
         # spawn warrior
         test_cli.process_command("spawn warrior 10 10")
         command = "inspect 100"
         # Process command
-        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.process_command(command)
+        output = self.process_command_and_get_output(test_cli, command)
         # Get print output to comapre
-        output = mock_stdout.getvalue()
+        # Output was captured by the helper
         # check output
         self.assertEqual(
             output,
@@ -1495,27 +1481,22 @@ class TestCLI(unittest.TestCase):
     # success
     def test_inspect_success(self):
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
         # Clear out grid
-        test_cli.grid = Grid.reset_grid()
+        self.reset_test_grid(test_cli)
         # clear out entity list
-        test_cli.reset_entity_list()
+        self.reset_test_entities(test_cli)
         # Create Map
-        test_cli.process_command("init map 25 25")
+        self.create_test_map(test_cli)
         # Reset
-        dl.BASE_INVENTORY = [
-            dl.create_equipment("none_wep"),
-            dl.create_equipment("none_armor"),
-            dl.create_equipment("none_acc"),
-        ]
+        self.reset_base_inventory()
         # spawn warrior
         test_cli.process_command("spawn warrior 10 10")
         command = "inspect 1"
         # Process command
-        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.process_command(command)
+        output = self.process_command_and_get_output(test_cli, command)
         # Get print output to comapre
-        output = mock_stdout.getvalue()
+        # Output was captured by the helper
         # check output
         self.assertEqual(
             output,
@@ -1532,27 +1513,22 @@ class TestCLI(unittest.TestCase):
     # success with mage custom inventory + stat changes (both % and flat)
     def test_inspect_success_with_mage(self):
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
         # Clear out grid
-        test_cli.grid = Grid.reset_grid()
+        self.reset_test_grid(test_cli)
         # clear out entity list
-        test_cli.reset_entity_list()
+        self.reset_test_entities(test_cli)
         # Create Map
-        test_cli.process_command("init map 25 25")
+        self.create_test_map(test_cli)
         # Reset
-        dl.BASE_INVENTORY = [
-            dl.create_equipment("none_wep"),
-            dl.create_equipment("none_armor"),
-            dl.create_equipment("none_acc"),
-        ]
+        self.reset_base_inventory()
         # spawn warrior
         test_cli.process_command("spawn mage 10 10")
         command = "inspect 1"
         # Process command
-        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.process_command(command)
+        output = self.process_command_and_get_output(test_cli, command)
         # Get print output to comapre
-        output = mock_stdout.getvalue()
+        # Output was captured by the helper
         # check output
         self.assertEqual(
             output,
@@ -1570,13 +1546,13 @@ class TestCLI(unittest.TestCase):
     # success with custom inventory + stat changes (both % and flat, also -)
     def test_inspect_success_with_custom_inventory(self):
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
         # Clear out grid
-        test_cli.grid = Grid.reset_grid()
+        self.reset_test_grid(test_cli)
         # clear out entity list
-        test_cli.reset_entity_list()
+        self.reset_test_entities(test_cli)
         # Create Map
-        test_cli.process_command("init map 25 25")
+        self.create_test_map(test_cli)
         # spawn warrior
         test_cli.process_command("spawn warrior 10 10")
         # backpack fix
@@ -1590,10 +1566,9 @@ class TestCLI(unittest.TestCase):
         test_cli.process_command("swap 1 weapon ironsword")
         command = "inspect 1"
         # Process command
-        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.process_command(command)
+        output = self.process_command_and_get_output(test_cli, command)
         # Get print output to comapre
-        output = mock_stdout.getvalue()
+        # Output was captured by the helper
         # check output
         self.assertEqual(
             output,
@@ -1610,19 +1585,15 @@ class TestCLI(unittest.TestCase):
     # success with mage custom inventory + stat changes (both % and flat, also -)
     def test_inspect_success_with_mage_with_custom_inventory(self):
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
         # Clear out grid
-        test_cli.grid = Grid.reset_grid()
+        self.reset_test_grid(test_cli)
         # clear out entity list
-        test_cli.reset_entity_list()
+        self.reset_test_entities(test_cli)
         # Create Map
-        test_cli.process_command("init map 25 25")
+        self.create_test_map(test_cli)
         # Reset
-        dl.BASE_INVENTORY = [
-            dl.create_equipment("none_wep"),
-            dl.create_equipment("none_armor"),
-            dl.create_equipment("none_acc"),
-        ]
+        self.reset_base_inventory()
         # spawn warrior
         test_cli.process_command("spawn mage 10 10")
         # backpack fix
@@ -1636,10 +1607,9 @@ class TestCLI(unittest.TestCase):
         test_cli.process_command("swap 1 weapon magestaff")
         command = "inspect 1"
         # Process command
-        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.process_command(command)
+        output = self.process_command_and_get_output(test_cli, command)
         # Get print output to comapre
-        output = mock_stdout.getvalue()
+        # Output was captured by the helper
         # check output
         self.assertEqual(
             output,
@@ -1657,21 +1627,17 @@ class TestCLI(unittest.TestCase):
     # success with warrior custom inventory + stat changes (both % and flat, also -)
     def test_inspect_success_with_warrior_with_mage_specific_items(self):
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
         # Clear out grid
-        test_cli.grid = Grid.reset_grid()
+        self.reset_test_grid(test_cli)
         # clear out entity list
-        test_cli.reset_entity_list()
+        self.reset_test_entities(test_cli)
         # Create Map
-        test_cli.process_command("init map 25 25")
+        self.create_test_map(test_cli)
         # spawn warrior
         test_cli.process_command("spawn warrior 10 10")
         # Reset
-        dl.BASE_INVENTORY = [
-            dl.create_equipment("none_wep"),
-            dl.create_equipment("none_armor"),
-            dl.create_equipment("none_acc"),
-        ]
+        self.reset_base_inventory()
         # backpack fix
         entity = test_cli.entity_list[0]
         entity.add_item_to_backpack(dl.create_equipment("ironchestplate"))
@@ -1683,10 +1649,9 @@ class TestCLI(unittest.TestCase):
         test_cli.process_command("swap 1 weapon magestaff")
         command = "inspect 1"
         # Process command
-        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.process_command(command)
+        output = self.process_command_and_get_output(test_cli, command)
         # Get print output to comapre
-        output = mock_stdout.getvalue()
+        # Output was captured by the helper
         # check output
         self.assertEqual(
             output,
@@ -1705,20 +1670,16 @@ class TestCLI(unittest.TestCase):
         self,
     ):
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
         # Clear out grid
-        test_cli.grid = Grid.reset_grid()
+        self.reset_test_grid(test_cli)
         # clear out entity list
-        test_cli.reset_entity_list()
+        self.reset_test_entities(test_cli)
         # Create Map
-        test_cli.process_command("init map 25 25")
+        self.create_test_map(test_cli)
         # set tile at 10, 10
         test_cli.grid.set_tile(10, 10, "shallowwater")
-        dl.BASE_INVENTORY = [
-            dl.create_equipment("none_wep"),
-            dl.create_equipment("none_armor"),
-            dl.create_equipment("none_acc"),
-        ]
+        self.reset_base_inventory()
         # spawn warrior
         test_cli.process_command("spawn warrior 10 10")
         # backpack fix
@@ -1732,10 +1693,9 @@ class TestCLI(unittest.TestCase):
         test_cli.process_command("swap 1 weapon ironsword")
         command = "inspect 1"
         # Process command
-        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.process_command(command)
+        output = self.process_command_and_get_output(test_cli, command)
         # Get print output to comapre
-        output = mock_stdout.getvalue()
+        # Output was captured by the helper
         # check output
         self.assertEqual(
             output,
@@ -1754,13 +1714,13 @@ class TestCLI(unittest.TestCase):
         self,
     ):
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
         # Clear out grid
-        test_cli.grid = Grid.reset_grid()
+        self.reset_test_grid(test_cli)
         # clear out entity list
-        test_cli.reset_entity_list()
+        self.reset_test_entities(test_cli)
         # Create Map
-        test_cli.process_command("init map 25 25")
+        self.create_test_map(test_cli)
         # spawn warrior
         test_cli.process_command("spawn warrior 10 10")
         # set tile at 10, 10
@@ -1776,10 +1736,9 @@ class TestCLI(unittest.TestCase):
         test_cli.process_command("swap 1 weapon ironsword")
         command = "inspect 1"
         # Process command
-        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.process_command(command)
+        output = self.process_command_and_get_output(test_cli, command)
         # Get print output to comapre
-        output = mock_stdout.getvalue()
+        # Output was captured by the helper
         # check output
         self.assertEqual(
             output,
@@ -1796,17 +1755,16 @@ class TestCLI(unittest.TestCase):
     # tile cases
     def test_tile_with_invalid_command(self):
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
         # Clear out grid
-        test_cli.grid = Grid.reset_grid()
+        self.reset_test_grid(test_cli)
         # clear out entity list
-        test_cli.reset_entity_list()
+        self.reset_test_entities(test_cli)
         command = "tile nothing really lol"
         # Process command
-        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.process_command(command)
+        output = self.process_command_and_get_output(test_cli, command)
         # Get print output to comapre
-        output = mock_stdout.getvalue()
+        # Output was captured by the helper
         # check output
         self.assertEqual(
             output,
@@ -1815,17 +1773,16 @@ class TestCLI(unittest.TestCase):
 
     def test_tile_with_short_command(self):
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
         # Clear out grid
-        test_cli.grid = Grid.reset_grid()
+        self.reset_test_grid(test_cli)
         # clear out entity list
-        test_cli.reset_entity_list()
+        self.reset_test_entities(test_cli)
         command = "tile"
         # Process command
-        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.process_command(command)
+        output = self.process_command_and_get_output(test_cli, command)
         # Get print output to comapre
-        output = mock_stdout.getvalue()
+        # Output was captured by the helper
         # check output
         self.assertEqual(
             output,
@@ -1834,19 +1791,18 @@ class TestCLI(unittest.TestCase):
 
     def test_tile_with_invalid_x_value(self):
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
         # Clear out grid
-        test_cli.grid = Grid.reset_grid()
+        self.reset_test_grid(test_cli)
         # Create Map
-        test_cli.process_command("init map 25 25")
+        self.create_test_map(test_cli)
         # clear out entity list
-        test_cli.reset_entity_list()
+        self.reset_test_entities(test_cli)
         command = "tile nineT 10"
         # Process command
-        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.process_command(command)
+        output = self.process_command_and_get_output(test_cli, command)
         # Get print output to comapre
-        output = mock_stdout.getvalue()
+        # Output was captured by the helper
         # check output
         self.assertEqual(
             output,
@@ -1855,17 +1811,16 @@ class TestCLI(unittest.TestCase):
 
     def test_tile_with_invalid_y_value(self):
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
         # Clear out grid
-        test_cli.grid = Grid.reset_grid()
+        self.reset_test_grid(test_cli)
         # Create Map
-        test_cli.process_command("init map 25 25")
+        self.create_test_map(test_cli)
         command = "tile 10 fortyy"
         # Process command
-        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.process_command(command)
+        output = self.process_command_and_get_output(test_cli, command)
         # Get print output to comapre
-        output = mock_stdout.getvalue()
+        # Output was captured by the helper
         # check output
         self.assertEqual(
             output,
@@ -1874,14 +1829,13 @@ class TestCLI(unittest.TestCase):
 
     def test_tile_without_map(self):
         # Create test CLI
-        test_cli = CLI()
-        test_cli.grid = Grid.reset_grid()
+        test_cli = self.create_test_cli()
+        self.reset_test_grid(test_cli)
         command = "tile 10 10"
         # Process command
-        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.process_command(command)
+        output = self.process_command_and_get_output(test_cli, command)
         # Get print output to comapre
-        output = mock_stdout.getvalue()
+        # Output was captured by the helper
         # check output
         self.assertEqual(
             output,
@@ -1892,17 +1846,16 @@ class TestCLI(unittest.TestCase):
 
     def test_tile_with_x_bounds_higher_than_grid_max(self):
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
         # Clear out grid
-        test_cli.grid = Grid.reset_grid()
+        self.reset_test_grid(test_cli)
         # Create Map
-        test_cli.process_command("init map 25 25")
+        self.create_test_map(test_cli)
         command = "tile 26 10"
         # Process command
-        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.process_command(command)
+        output = self.process_command_and_get_output(test_cli, command)
         # Get print output to comapre
-        output = mock_stdout.getvalue()
+        # Output was captured by the helper
         # check output
         self.assertEqual(
             output,
@@ -1911,17 +1864,16 @@ class TestCLI(unittest.TestCase):
 
     def test_tile_with_y_bounds_higher_than_grid_max(self):
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
         # Clear out grid
-        test_cli.grid = Grid.reset_grid()
+        self.reset_test_grid(test_cli)
         # Create Map
-        test_cli.process_command("init map 25 25")
+        self.create_test_map(test_cli)
         command = "tile 10 26"
         # Process command
-        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.process_command(command)
+        output = self.process_command_and_get_output(test_cli, command)
         # Get print output to comapre
-        output = mock_stdout.getvalue()
+        # Output was captured by the helper
         # check output
         self.assertEqual(
             output,
@@ -1930,17 +1882,16 @@ class TestCLI(unittest.TestCase):
 
     def test_tile_with_y_bounds_lower_than_grid_min(self):
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
         # Clear out grid
-        test_cli.grid = Grid.reset_grid()
+        self.reset_test_grid(test_cli)
         # Create Map
-        test_cli.process_command("init map 25 25")
+        self.create_test_map(test_cli)
         command = "tile 10 -1"
         # Process command
-        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.process_command(command)
+        output = self.process_command_and_get_output(test_cli, command)
         # Get print output to comapre
-        output = mock_stdout.getvalue()
+        # Output was captured by the helper
         # check output
         self.assertEqual(
             output,
@@ -1949,17 +1900,16 @@ class TestCLI(unittest.TestCase):
 
     def test_tile_with_x_bounds_lower_than_grid_min(self):
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
         # Clear out grid
-        test_cli.grid = Grid.reset_grid()
+        self.reset_test_grid(test_cli)
         # Create Map
-        test_cli.process_command("init map 25 25")
+        self.create_test_map(test_cli)
         command = "tile -1 20"
         # Process command
-        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.process_command(command)
+        output = self.process_command_and_get_output(test_cli, command)
         # Get print output to comapre
-        output = mock_stdout.getvalue()
+        # Output was captured by the helper
         # check output
         self.assertEqual(
             output,
@@ -1969,19 +1919,18 @@ class TestCLI(unittest.TestCase):
     # zero indexed so 25x25 = 0-24 - Success
     def test_tile_with_x_y_on_lower_boundary(self):
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
         # Clear out grid
-        test_cli.grid = Grid.reset_grid()
+        self.reset_test_grid(test_cli)
         # Create Map
-        test_cli.process_command("init map 25 25")
+        self.create_test_map(test_cli)
         # set tile to wall
         test_cli.grid.set_tile(0, 0, "wall")
         command = "tile 0 0"
         # Process command
-        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.process_command(command)
+        output = self.process_command_and_get_output(test_cli, command)
         # Get print output to comapre
-        output = mock_stdout.getvalue()
+        # Output was captured by the helper
         # check output
         self.assertEqual(
             output,
@@ -1991,19 +1940,18 @@ class TestCLI(unittest.TestCase):
     # zero indexed so 25x25 = 0-24 - Success
     def test_tile_with_x_y_on_higher_boundary(self):
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
         # Clear out grid
-        test_cli.grid = Grid.reset_grid()
+        self.reset_test_grid(test_cli)
         # Create Map
-        test_cli.process_command("init map 25 25")
+        self.create_test_map(test_cli)
         # set tile to wall
         test_cli.grid.set_tile(24, 24, "wall")
         command = "tile 24 24"
         # Process command
-        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.process_command(command)
+        output = self.process_command_and_get_output(test_cli, command)
         # Get print output to comapre
-        output = mock_stdout.getvalue()
+        # Output was captured by the helper
         # check output
         self.assertEqual(
             output,
@@ -2013,22 +1961,22 @@ class TestCLI(unittest.TestCase):
             "Occupants: None\n",
         )
 
+    # 1 THIRD
     # success
     def test_tile_success(self):
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
         # Clear out grid
-        test_cli.grid = Grid.reset_grid()
+        self.reset_test_grid(test_cli)
         # Create Map
-        test_cli.process_command("init map 25 25")
+        self.create_test_map(test_cli)
         # set tile to wall
         test_cli.grid.set_tile(10, 10, "shallowwater")
         command = "tile 10 10"
         # Process command
-        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.process_command(command)
+        output = self.process_command_and_get_output(test_cli, command)
         # Get print output to comapre
-        output = mock_stdout.getvalue()
+        # Output was captured by the helper
         # check output
         self.assertEqual(
             output,
@@ -2041,21 +1989,20 @@ class TestCLI(unittest.TestCase):
     # success with occupant
     def test_tile_success_with_occupant(self):
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
         # Clear out grid
-        test_cli.grid = Grid.reset_grid()
+        self.reset_test_grid(test_cli)
         # Create Map
-        test_cli.process_command("init map 25 25")
+        self.create_test_map(test_cli)
         # set tile to wall
         test_cli.grid.set_tile(10, 10, "shallowwater")
         # spawn entity
         test_cli.process_command("spawn warrior 10 10")
         command = "tile 10 10"
         # Process command
-        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.process_command(command)
+        output = self.process_command_and_get_output(test_cli, command)
         # Get print output to comapre
-        output = mock_stdout.getvalue()
+        # Output was captured by the helper
         # check output
         self.assertEqual(
             output,
@@ -2069,14 +2016,14 @@ class TestCLI(unittest.TestCase):
     def test_pickup_item_invalid_command_too_few_arguments(self):
 
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
 
         # Process command
-        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.process_pickup_item_command(["pickup", "0"])
+        output = self.capture_function_output(
+            lambda: test_cli.process_pickup_item_command(["pickup", "0"])
+        )
 
         # Get print output
-        output = mock_stdout.getvalue()
 
         # Check output
         self.assertEqual(
@@ -2088,14 +2035,16 @@ class TestCLI(unittest.TestCase):
     def test_pickup_item_invalid_command_too_many_arguments(self):
 
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
 
         # Process command
-        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.process_pickup_item_command(["pickup", "1", "IronSword", "extra"])
+        output = self.capture_function_output(
+            lambda: test_cli.process_pickup_item_command(
+                ["pickup", "1", "IronSword", "extra"]
+            )
+        )
 
         # Get print output
-        output = mock_stdout.getvalue()
 
         # Check output
         self.assertEqual(
@@ -2107,14 +2056,14 @@ class TestCLI(unittest.TestCase):
     def test_pickup_item_no_map(self):
 
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
 
         # Process command
-        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.process_pickup_item_command(["pickup", "1", "IronSword"])
+        output = self.capture_function_output(
+            lambda: test_cli.process_pickup_item_command(["pickup", "1", "IronSword"])
+        )
 
         # Get print output
-        output = mock_stdout.getvalue()
 
         # Check output
         self.assertEqual(
@@ -2126,17 +2075,17 @@ class TestCLI(unittest.TestCase):
     def test_pickup_item_invalid_entity_id(self):
 
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
 
         # Create map
-        test_cli.process_command("init map 25 25")
+        self.create_test_map(test_cli)
 
         # Process command
-        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.process_pickup_item_command(["pickup", "-1", "IronSword"])
+        output = self.capture_function_output(
+            lambda: test_cli.process_pickup_item_command(["pickup", "-1", "IronSword"])
+        )
 
         # Get print output
-        output = mock_stdout.getvalue()
 
         # Check output
         self.assertEqual(
@@ -2148,17 +2097,19 @@ class TestCLI(unittest.TestCase):
     def test_pickup_item_nonexistent_entity(self):
 
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
 
         # Create map
-        test_cli.process_command("init map 25 25")
+        self.create_test_map(test_cli)
 
         # Process command
-        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.process_pickup_item_command(["pickup", "9999", "IronSword"])
+        output = self.capture_function_output(
+            lambda: test_cli.process_pickup_item_command(
+                ["pickup", "9999", "IronSword"]
+            )
+        )
 
         # Get print output
-        output = mock_stdout.getvalue()
 
         # Check output
         self.assertEqual(
@@ -2170,20 +2121,20 @@ class TestCLI(unittest.TestCase):
     def test_pickup_item_invalid_item_name(self):
 
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
 
         # Create map
-        test_cli.process_command("init map 25 25")
+        self.create_test_map(test_cli)
 
         # Spawn entity
         test_cli.process_command("spawn warrior 10 10")
 
         # Process command
-        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.process_pickup_item_command(["pickup", "1", "NotAnItem"])
+        output = self.capture_function_output(
+            lambda: test_cli.process_pickup_item_command(["pickup", "1", "NotAnItem"])
+        )
 
         # Get print output
-        output = mock_stdout.getvalue()
 
         # Check output
         self.assertEqual(
@@ -2195,16 +2146,16 @@ class TestCLI(unittest.TestCase):
     def test_pickup_item_case_insensitive(self):
 
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
 
         # Clear out grid
-        test_cli.grid = Grid.reset_grid()
+        self.reset_test_grid(test_cli)
 
         # Clear out entity list
         test_cli.entity_list.clear()
 
         # Create map
-        test_cli.process_command("init map 25 25")
+        self.create_test_map(test_cli)
 
         # Spawn entity
         test_cli.process_command("spawn warrior 10 10")
@@ -2223,13 +2174,13 @@ class TestCLI(unittest.TestCase):
         entity.backpack.append("Existing Item")
 
         # Process command using uppercase item name
-        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.process_pickup_item_command(
+        output = self.capture_function_output(
+            lambda: test_cli.process_pickup_item_command(
                 ["pickup", str(entity.id), item_name.upper()]
             )
+        )
 
         # Get print output
-        output = mock_stdout.getvalue()
 
         # Check output
         self.assertEqual(output, "ok: picked_up IronSword into backpack!\n")
@@ -2252,16 +2203,16 @@ class TestCLI(unittest.TestCase):
     def test_pickup_item_backpack_full(self):
 
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
 
         # Clear out grid
-        test_cli.grid = Grid.reset_grid()
+        self.reset_test_grid(test_cli)
 
         # Clear out entity list
         test_cli.entity_list.clear()
 
         # Create map
-        test_cli.process_command("init map 25 25")
+        self.create_test_map(test_cli)
 
         # Spawn entity
         test_cli.process_command("spawn warrior 10 10")
@@ -2286,11 +2237,13 @@ class TestCLI(unittest.TestCase):
         test_cli.grid.grid[10][10].item_list.append(item)
 
         # Process command
-        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.process_pickup_item_command(["pickup", str(entity.id), item_name])
+        output = self.capture_function_output(
+            lambda: test_cli.process_pickup_item_command(
+                ["pickup", str(entity.id), item_name]
+            )
+        )
 
         # Get print output
-        output = mock_stdout.getvalue()
 
         # Check output
         self.assertEqual(
@@ -2308,16 +2261,16 @@ class TestCLI(unittest.TestCase):
     def test_pickup_item_not_on_tile(self):
 
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
 
         # Clear out grid
-        test_cli.grid = Grid.reset_grid()
+        self.reset_test_grid(test_cli)
 
         # Clear out entity list
         test_cli.entity_list.clear()
 
         # Create map
-        test_cli.process_command("init map 25 25")
+        self.create_test_map(test_cli)
 
         # Spawn entity
         test_cli.process_command("spawn warrior 10 10")
@@ -2330,11 +2283,13 @@ class TestCLI(unittest.TestCase):
         item = dl.EQUIPMENT_TYPES[item_name]
 
         # Process command without placing item on tile
-        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.process_pickup_item_command(["pickup", str(entity.id), item_name])
+        output = self.capture_function_output(
+            lambda: test_cli.process_pickup_item_command(
+                ["pickup", str(entity.id), item_name]
+            )
+        )
 
         # Get print output
-        output = mock_stdout.getvalue()
 
         # Check output
         self.assertEqual(
@@ -2349,16 +2304,16 @@ class TestCLI(unittest.TestCase):
     def test_pickup_item_on_different_tile(self):
 
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
 
         # Clear out grid
-        test_cli.grid = Grid.reset_grid()
+        self.reset_test_grid(test_cli)
 
         # Clear out entity list
         test_cli.entity_list.clear()
 
         # Create map
-        test_cli.process_command("init map 25 25")
+        self.create_test_map(test_cli)
 
         # Spawn entity
         test_cli.process_command("spawn warrior 10 10")
@@ -2374,11 +2329,13 @@ class TestCLI(unittest.TestCase):
         test_cli.grid.grid[11][10].item_list.append(item)
 
         # Process command
-        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.process_pickup_item_command(["pickup", str(entity.id), item_name])
+        output = self.capture_function_output(
+            lambda: test_cli.process_pickup_item_command(
+                ["pickup", str(entity.id), item_name]
+            )
+        )
 
         # Get print output
-        output = mock_stdout.getvalue()
 
         # Check output
         self.assertEqual(
@@ -2393,16 +2350,16 @@ class TestCLI(unittest.TestCase):
     def test_pickup_item_with_existing_backpack_items(self):
 
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
 
         # Clear out grid
-        test_cli.grid = Grid.reset_grid()
+        self.reset_test_grid(test_cli)
 
         # Clear out entity list
         test_cli.entity_list.clear()
 
         # Create map
-        test_cli.process_command("init map 25 25")
+        self.create_test_map(test_cli)
 
         # Spawn entity
         test_cli.process_command("spawn warrior 10 10")
@@ -2421,11 +2378,13 @@ class TestCLI(unittest.TestCase):
         test_cli.grid.grid[10][10].item_list.append(item)
 
         # Process command
-        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.process_pickup_item_command(["pickup", str(entity.id), item_name])
+        output = self.capture_function_output(
+            lambda: test_cli.process_pickup_item_command(
+                ["pickup", str(entity.id), item_name]
+            )
+        )
 
         # Get print output
-        output = mock_stdout.getvalue()
 
         # Check output
         self.assertEqual(output, "ok: picked_up IronSword into backpack!\n")
@@ -2446,16 +2405,16 @@ class TestCLI(unittest.TestCase):
     def test_pickup_item_preserves_other_tile_items(self):
 
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
 
         # Clear out grid
-        test_cli.grid = Grid.reset_grid()
+        self.reset_test_grid(test_cli)
 
         # Clear out entity list
         test_cli.entity_list.clear()
 
         # Create map
-        test_cli.process_command("init map 25 25")
+        self.create_test_map(test_cli)
 
         # Spawn entity
         test_cli.process_command("spawn warrior 10 10")
@@ -2477,11 +2436,13 @@ class TestCLI(unittest.TestCase):
         test_cli.grid.grid[10][10].item_list.append(other_item)
 
         # Process command
-        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.process_pickup_item_command(["pickup", str(entity.id), item_name])
+        output = self.capture_function_output(
+            lambda: test_cli.process_pickup_item_command(
+                ["pickup", str(entity.id), item_name]
+            )
+        )
 
         # Get print output
-        output = mock_stdout.getvalue()
 
         # Check output
         self.assertEqual(output, "ok: picked_up IronSword into backpack!\n")
@@ -2502,16 +2463,16 @@ class TestCLI(unittest.TestCase):
     def test_give_item_success(self):
 
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
 
         # Clear out grid
-        test_cli.grid = Grid.reset_grid()
+        self.reset_test_grid(test_cli)
 
         # Clear out entity list
         test_cli.entity_list.clear()
 
         # Create map
-        test_cli.process_command("init map 25 25")
+        self.create_test_map(test_cli)
 
         # Spawn entity
         test_cli.process_command("spawn warrior 10 10")
@@ -2524,11 +2485,13 @@ class TestCLI(unittest.TestCase):
         item = dl.create_equipment(item_name)
 
         # Process command
-        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.process_give_item_command(["give", str(entity.id), item_name])
+        output = self.capture_function_output(
+            lambda: test_cli.process_give_item_command(
+                ["give", str(entity.id), item_name]
+            )
+        )
 
         # Get print output
-        output = mock_stdout.getvalue()
 
         # Check output
         self.assertEqual(
@@ -2548,14 +2511,14 @@ class TestCLI(unittest.TestCase):
     def test_give_item_invalid_command_too_few_arguments(self):
 
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
 
         # Process command
-        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.process_give_item_command(["give", "0"])
+        output = self.capture_function_output(
+            lambda: test_cli.process_give_item_command(["give", "0"])
+        )
 
         # Get print output
-        output = mock_stdout.getvalue()
 
         # Check output
         self.assertEqual(
@@ -2567,14 +2530,16 @@ class TestCLI(unittest.TestCase):
     def test_give_item_invalid_command_too_many_arguments(self):
 
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
 
         # Process command
-        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.process_give_item_command(["give", "0", "IronSword", "extra"])
+        output = self.capture_function_output(
+            lambda: test_cli.process_give_item_command(
+                ["give", "0", "IronSword", "extra"]
+            )
+        )
 
         # Get print output
-        output = mock_stdout.getvalue()
 
         # Check output
         self.assertEqual(
@@ -2586,14 +2551,14 @@ class TestCLI(unittest.TestCase):
     def test_give_item_no_map(self):
 
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
 
         # Process command
-        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.process_give_item_command(["give", "0", "IronSword"])
+        output = self.capture_function_output(
+            lambda: test_cli.process_give_item_command(["give", "0", "IronSword"])
+        )
 
         # Get print output
-        output = mock_stdout.getvalue()
 
         # Check output
         self.assertEqual(
@@ -2605,17 +2570,17 @@ class TestCLI(unittest.TestCase):
     def test_give_item_invalid_entity_id(self):
 
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
 
         # Create map
-        test_cli.process_command("init map 25 25")
+        self.create_test_map(test_cli)
 
         # Process command
-        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.process_give_item_command(["give", "-1", "IronSword"])
+        output = self.capture_function_output(
+            lambda: test_cli.process_give_item_command(["give", "-1", "IronSword"])
+        )
 
         # Get print output
-        output = mock_stdout.getvalue()
 
         # Check output
         self.assertEqual(
@@ -2627,17 +2592,17 @@ class TestCLI(unittest.TestCase):
     def test_give_item_nonexistent_entity(self):
 
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
 
         # Create map
-        test_cli.process_command("init map 25 25")
+        self.create_test_map(test_cli)
 
         # Process command
-        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.process_give_item_command(["give", "9999", "IronSword"])
+        output = self.capture_function_output(
+            lambda: test_cli.process_give_item_command(["give", "9999", "IronSword"])
+        )
 
         # Get print output
-        output = mock_stdout.getvalue()
 
         # Check output
         self.assertEqual(
@@ -2649,10 +2614,10 @@ class TestCLI(unittest.TestCase):
     def test_give_item_invalid_item_name(self):
 
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
 
         # Create map
-        test_cli.process_command("init map 25 25")
+        self.create_test_map(test_cli)
 
         # Spawn entity
         test_cli.process_command("spawn warrior 10 10")
@@ -2661,11 +2626,13 @@ class TestCLI(unittest.TestCase):
         entity = test_cli.entity_list[0]
 
         # Process command
-        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.process_give_item_command(["give", str(entity.id), "NotAnItem"])
+        output = self.capture_function_output(
+            lambda: test_cli.process_give_item_command(
+                ["give", str(entity.id), "NotAnItem"]
+            )
+        )
 
         # Get print output
-        output = mock_stdout.getvalue()
 
         # Check output
         self.assertEqual(
@@ -2677,16 +2644,16 @@ class TestCLI(unittest.TestCase):
     def test_give_item_case_insensitive(self):
 
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
 
         # Clear out grid
-        test_cli.grid = Grid.reset_grid()
+        self.reset_test_grid(test_cli)
 
         # Clear out entity list
         test_cli.entity_list.clear()
 
         # Create map
-        test_cli.process_command("init map 25 25")
+        self.create_test_map(test_cli)
 
         # Spawn entity
         test_cli.process_command("spawn warrior 10 10")
@@ -2699,13 +2666,13 @@ class TestCLI(unittest.TestCase):
         item = dl.create_equipment(item_name)
 
         # Process command using uppercase item name
-        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.process_give_item_command(
+        output = self.capture_function_output(
+            lambda: test_cli.process_give_item_command(
                 ["give", str(entity.id), item_name.upper()]
             )
+        )
 
         # Get print output
-        output = mock_stdout.getvalue()
 
         # Check output
         self.assertEqual(
@@ -2725,16 +2692,16 @@ class TestCLI(unittest.TestCase):
     def test_give_item_backpack_full(self):
 
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
 
         # Clear out grid
-        test_cli.grid = Grid.reset_grid()
+        self.reset_test_grid(test_cli)
 
         # Clear out entity list
         test_cli.entity_list.clear()
 
         # Create map
-        test_cli.process_command("init map 25 25")
+        self.create_test_map(test_cli)
 
         # Spawn entity
         test_cli.process_command("spawn warrior 10 10")
@@ -2750,11 +2717,13 @@ class TestCLI(unittest.TestCase):
         entity.backpack = [item for _ in range(Entity.BACKPACK_SIZE)]
 
         # Process command
-        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.process_give_item_command(["give", str(entity.id), item_name])
+        output = self.capture_function_output(
+            lambda: test_cli.process_give_item_command(
+                ["give", str(entity.id), item_name]
+            )
+        )
 
         # Get print output
-        output = mock_stdout.getvalue()
 
         # Check output
         self.assertEqual(
@@ -2772,11 +2741,11 @@ class TestCLI(unittest.TestCase):
     def test_process_drop_item_command_success(self):
 
         # Create CLI and initialize map
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
         Grid.reset_grid()
         test_cli.entity_list.clear()
 
-        test_cli.process_command("init map 25 25")
+        self.create_test_map(test_cli)
         test_cli.process_command("spawn warrior 10 10")
 
         # Get spawned entity
@@ -2786,9 +2755,11 @@ class TestCLI(unittest.TestCase):
         test_cli.process_command(f"give {entity.id} IronSword")
 
         # Drop item
-        with patch("sys.stdout", new=io.StringIO()) as fake_out:
-            test_cli.process_drop_item_command(["drop", str(entity.id), "IronSword"])
-            output = fake_out.getvalue()
+        output = self.capture_function_output(
+            lambda: test_cli.process_drop_item_command(
+                ["drop", str(entity.id), "IronSword"]
+            )
+        )
 
         # Check item was added to tile
         self.assertIn(
@@ -2806,12 +2777,12 @@ class TestCLI(unittest.TestCase):
     def test_process_drop_item_command_too_few_pieces(self):
 
         # Create CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
 
         # Run command with too few pieces
-        with patch("sys.stdout", new=io.StringIO()) as fake_out:
-            test_cli.process_drop_item_command(["drop", "1"])
-            output = fake_out.getvalue()
+        output = self.capture_function_output(
+            lambda: test_cli.process_drop_item_command(["drop", "1"])
+        )
 
         # Check error message
         self.assertEqual(output, "error: drop_failed - Invalid command!\n")
@@ -2820,12 +2791,14 @@ class TestCLI(unittest.TestCase):
     def test_process_drop_item_command_too_many_pieces(self):
 
         # Create CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
 
         # Run command with too many pieces
-        with patch("sys.stdout", new=io.StringIO()) as fake_out:
-            test_cli.process_drop_item_command(["drop", "1", "IronSword", "extra"])
-            output = fake_out.getvalue()
+        output = self.capture_function_output(
+            lambda: test_cli.process_drop_item_command(
+                ["drop", "1", "IronSword", "extra"]
+            )
+        )
 
         # Check error message
         self.assertEqual(output, "error: drop_failed - Invalid command!\n")
@@ -2834,14 +2807,14 @@ class TestCLI(unittest.TestCase):
     def test_process_drop_item_command_no_map(self):
 
         # Create CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
         Grid.reset_grid()
         test_cli.entity_list.clear()
 
         # Run command without creating a map
-        with patch("sys.stdout", new=io.StringIO()) as fake_out:
-            test_cli.process_drop_item_command(["drop", "1", "IronSword"])
-            output = fake_out.getvalue()
+        output = self.capture_function_output(
+            lambda: test_cli.process_drop_item_command(["drop", "1", "IronSword"])
+        )
 
         # Check error message
         self.assertEqual(output, "error: drop_failed - Map does not exist!\n")
@@ -2850,16 +2823,16 @@ class TestCLI(unittest.TestCase):
     def test_process_drop_item_command_entity_not_found(self):
 
         # Create CLI and initialize map
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
         Grid.reset_grid()
         test_cli.entity_list.clear()
 
-        test_cli.process_command("init map 25 25")
+        self.create_test_map(test_cli)
 
         # Run command with invalid entity ID
-        with patch("sys.stdout", new=io.StringIO()) as fake_out:
-            test_cli.process_drop_item_command(["drop", "999", "IronSword"])
-            output = fake_out.getvalue()
+        output = self.capture_function_output(
+            lambda: test_cli.process_drop_item_command(["drop", "999", "IronSword"])
+        )
 
         # Check error message
         self.assertEqual(output, "error: drop_failed - Entity does not exist!\n")
@@ -2868,20 +2841,22 @@ class TestCLI(unittest.TestCase):
     def test_process_drop_item_command_invalid_item(self):
 
         # Create CLI and initialize map
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
         Grid.reset_grid()
         test_cli.entity_list.clear()
 
-        test_cli.process_command("init map 25 25")
+        self.create_test_map(test_cli)
         test_cli.process_command("spawn warrior 10 10")
 
         # Get spawned entity
         entity = test_cli.entity_list[0]
 
         # Run command with invalid item name
-        with patch("sys.stdout", new=io.StringIO()) as fake_out:
-            test_cli.process_drop_item_command(["drop", str(entity.id), "InvalidItem"])
-            output = fake_out.getvalue()
+        output = self.capture_function_output(
+            lambda: test_cli.process_drop_item_command(
+                ["drop", str(entity.id), "InvalidItem"]
+            )
+        )
 
         # Check error message
         self.assertEqual(output, "error: drop_failed - Item name not found!\n")
@@ -2890,11 +2865,11 @@ class TestCLI(unittest.TestCase):
     def test_process_drop_item_command_case_insensitive(self):
 
         # Create CLI and initialize map
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
         Grid.reset_grid()
         test_cli.entity_list.clear()
 
-        test_cli.process_command("init map 25 25")
+        self.create_test_map(test_cli)
         test_cli.process_command("spawn warrior 10 10")
 
         # Get spawned entity
@@ -2904,9 +2879,11 @@ class TestCLI(unittest.TestCase):
         test_cli.process_command(f"give {entity.id} IronSword")
 
         # Drop item using lowercase name
-        with patch("sys.stdout", new=io.StringIO()) as fake_out:
-            test_cli.process_drop_item_command(["drop", str(entity.id), "ironsword"])
-            output = fake_out.getvalue()
+        output = self.capture_function_output(
+            lambda: test_cli.process_drop_item_command(
+                ["drop", str(entity.id), "ironsword"]
+            )
+        )
 
         # Check item was added to tile
         self.assertIn(
@@ -2924,20 +2901,22 @@ class TestCLI(unittest.TestCase):
     def test_process_drop_item_command_item_not_in_backpack(self):
 
         # Create CLI and initialize map
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
         Grid.reset_grid()
         test_cli.entity_list.clear()
 
-        test_cli.process_command("init map 25 25")
+        self.create_test_map(test_cli)
         test_cli.process_command("spawn warrior 10 10")
 
         # Get spawned entity
         entity = test_cli.entity_list[0]
 
         # Run command without giving the entity the item
-        with patch("sys.stdout", new=io.StringIO()) as fake_out:
-            test_cli.process_drop_item_command(["drop", str(entity.id), "IronSword"])
-            output = fake_out.getvalue()
+        output = self.capture_function_output(
+            lambda: test_cli.process_drop_item_command(
+                ["drop", str(entity.id), "IronSword"]
+            )
+        )
 
         # Check item was not added to the tile
         self.assertNotIn("IronSword", test_cli.grid.grid[10][10].item_list)
@@ -2947,11 +2926,11 @@ class TestCLI(unittest.TestCase):
     def test_process_swap_item_command_success_weapon(self):
 
         # Create CLI and initialize map
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
         Grid.reset_grid()
         test_cli.entity_list.clear()
 
-        test_cli.process_command("init map 25 25")
+        self.create_test_map(test_cli)
         test_cli.process_command("spawn warrior 10 10")
 
         # Get spawned entity
@@ -2966,11 +2945,11 @@ class TestCLI(unittest.TestCase):
         test_cli.process_command(f"give {entity.id} IronSword")
 
         # Swap weapon
-        with patch("sys.stdout", new=io.StringIO()) as fake_out:
-            test_cli.process_swap_item_command(
+        output = self.capture_function_output(
+            lambda: test_cli.process_swap_item_command(
                 ["swap", str(entity.id), "Weapon", "IronSword"]
             )
-            output = fake_out.getvalue()
+        )
 
         # Check weapon was equipped
         self.assertEqual(
@@ -2990,11 +2969,11 @@ class TestCLI(unittest.TestCase):
     def test_process_swap_item_command_success_armor(self):
 
         # Create CLI and initialize map
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
         Grid.reset_grid()
         test_cli.entity_list.clear()
 
-        test_cli.process_command("init map 25 25")
+        self.create_test_map(test_cli)
         test_cli.process_command("spawn warrior 10 10")
 
         # Get spawned entity
@@ -3009,11 +2988,11 @@ class TestCLI(unittest.TestCase):
         test_cli.process_command(f"give {entity.id} IronChestplate")
 
         # Swap armor
-        with patch("sys.stdout", new=io.StringIO()) as fake_out:
-            test_cli.process_swap_item_command(
+        output = self.capture_function_output(
+            lambda: test_cli.process_swap_item_command(
                 ["swap", str(entity.id), "Armor", "IronChestplate"]
             )
-            output = fake_out.getvalue()
+        )
 
         # Check armor was equipped
         self.assertEqual(
@@ -3032,11 +3011,11 @@ class TestCLI(unittest.TestCase):
     def test_process_swap_item_command_success_accessory(self):
 
         # Create CLI and initialize map
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
         Grid.reset_grid()
         test_cli.entity_list.clear()
 
-        test_cli.process_command("init map 25 25")
+        self.create_test_map(test_cli)
         test_cli.process_command("spawn warrior 10 10")
 
         # Get spawned entity
@@ -3051,11 +3030,11 @@ class TestCLI(unittest.TestCase):
         test_cli.process_command(f"give {entity.id} RingOfHaste")
 
         # Swap accessory
-        with patch("sys.stdout", new=io.StringIO()) as fake_out:
-            test_cli.process_swap_item_command(
+        output = self.capture_function_output(
+            lambda: test_cli.process_swap_item_command(
                 ["swap", str(entity.id), "Accessory", "RingOfHaste"]
             )
-            output = fake_out.getvalue()
+        )
 
         # Check accessory was equipped
         self.assertEqual(
@@ -3075,12 +3054,12 @@ class TestCLI(unittest.TestCase):
     def test_process_swap_item_command_too_few_pieces(self):
 
         # Create CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
 
         # Run command with too few pieces
-        with patch("sys.stdout", new=io.StringIO()) as fake_out:
-            test_cli.process_swap_item_command(["swap", "1", "Weapon"])
-            output = fake_out.getvalue()
+        output = self.capture_function_output(
+            lambda: test_cli.process_swap_item_command(["swap", "1", "Weapon"])
+        )
 
         # Check error message
         self.assertEqual(output, "error: swap_failed - Invalid command!\n")
@@ -3089,14 +3068,14 @@ class TestCLI(unittest.TestCase):
     def test_process_swap_item_command_too_many_pieces(self):
 
         # Create CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
 
         # Run command with too many pieces
-        with patch("sys.stdout", new=io.StringIO()) as fake_out:
-            test_cli.process_swap_item_command(
+        output = self.capture_function_output(
+            lambda: test_cli.process_swap_item_command(
                 ["swap", "1", "Weapon", "IronSword", "extra"]
             )
-            output = fake_out.getvalue()
+        )
 
         # Check error message
         self.assertEqual(output, "error: swap_failed - Invalid command!\n")
@@ -3105,14 +3084,16 @@ class TestCLI(unittest.TestCase):
     def test_process_swap_item_command_no_map(self):
 
         # Create CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
         Grid.reset_grid()
         test_cli.entity_list.clear()
 
         # Run command without creating a map
-        with patch("sys.stdout", new=io.StringIO()) as fake_out:
-            test_cli.process_swap_item_command(["swap", "1", "Weapon", "IronSword"])
-            output = fake_out.getvalue()
+        output = self.capture_function_output(
+            lambda: test_cli.process_swap_item_command(
+                ["swap", "1", "Weapon", "IronSword"]
+            )
+        )
 
         # Check error message
         self.assertEqual(output, "error: swap_failed - Map does not exist!\n")
@@ -3121,16 +3102,18 @@ class TestCLI(unittest.TestCase):
     def test_process_swap_item_command_entity_not_found(self):
 
         # Create CLI and initialize map
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
         Grid.reset_grid()
         test_cli.entity_list.clear()
 
-        test_cli.process_command("init map 25 25")
+        self.create_test_map(test_cli)
 
         # Run command with invalid entity ID
-        with patch("sys.stdout", new=io.StringIO()) as fake_out:
-            test_cli.process_swap_item_command(["swap", "999", "Weapon", "IronSword"])
-            output = fake_out.getvalue()
+        output = self.capture_function_output(
+            lambda: test_cli.process_swap_item_command(
+                ["swap", "999", "Weapon", "IronSword"]
+            )
+        )
 
         # Check error message
         self.assertEqual(output, "error: swap_failed - Entity does not exist!\n")
@@ -3139,11 +3122,11 @@ class TestCLI(unittest.TestCase):
     def test_process_swap_item_command_invalid_item(self):
 
         # Create CLI and initialize map
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
         Grid.reset_grid()
         test_cli.entity_list.clear()
 
-        test_cli.process_command("init map 25 25")
+        self.create_test_map(test_cli)
         test_cli.process_command("spawn warrior 10 10")
 
         # Get spawned entity
@@ -3156,11 +3139,11 @@ class TestCLI(unittest.TestCase):
         ]
 
         # Run command with invalid item name
-        with patch("sys.stdout", new=io.StringIO()) as fake_out:
-            test_cli.process_swap_item_command(
+        output = self.capture_function_output(
+            lambda: test_cli.process_swap_item_command(
                 ["swap", str(entity.id), "Weapon", "InvalidItem"]
             )
-            output = fake_out.getvalue()
+        )
 
         # Check error message
         self.assertEqual(output, "error: swap_failed - Item name not found!\n")
@@ -3169,11 +3152,11 @@ class TestCLI(unittest.TestCase):
     def test_process_swap_item_command_invalid_slot(self):
 
         # Create CLI and initialize map
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
         Grid.reset_grid()
         test_cli.entity_list.clear()
 
-        test_cli.process_command("init map 25 25")
+        self.create_test_map(test_cli)
         test_cli.process_command("spawn warrior 10 10")
 
         # Get spawned entity
@@ -3186,11 +3169,11 @@ class TestCLI(unittest.TestCase):
         ]
 
         # Run command with invalid slot
-        with patch("sys.stdout", new=io.StringIO()) as fake_out:
-            test_cli.process_swap_item_command(
+        output = self.capture_function_output(
+            lambda: test_cli.process_swap_item_command(
                 ["swap", str(entity.id), "Helmet", "IronSword"]
             )
-            output = fake_out.getvalue()
+        )
 
         # Check error message
         self.assertEqual(
@@ -3201,22 +3184,22 @@ class TestCLI(unittest.TestCase):
     def test_process_swap_item_command_incorrect_item_slot(self):
 
         # Create CLI and initialize map
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
         Grid.reset_grid()
         test_cli.entity_list.clear()
 
-        test_cli.process_command("init map 25 25")
+        self.create_test_map(test_cli)
         test_cli.process_command("spawn warrior 10 10")
 
         # Get spawned entity
         entity = test_cli.entity_list[0]
 
         # Try to equip armor in weapon slot
-        with patch("sys.stdout", new=io.StringIO()) as fake_out:
-            test_cli.process_swap_item_command(
+        output = self.capture_function_output(
+            lambda: test_cli.process_swap_item_command(
                 ["swap", str(entity.id), "Weapon", "IronChestplate"]
             )
-            output = fake_out.getvalue()
+        )
 
         # Check error message
         self.assertEqual(output, "error: swap_failed - Slot inccorect for item type!\n")
@@ -3225,11 +3208,11 @@ class TestCLI(unittest.TestCase):
     def test_process_swap_item_command_case_insensitive(self):
 
         # Create CLI and initialize map
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
         Grid.reset_grid()
         test_cli.entity_list.clear()
 
-        test_cli.process_command("init map 25 25")
+        self.create_test_map(test_cli)
         test_cli.process_command("spawn warrior 10 10")
 
         # Get spawned entity
@@ -3244,11 +3227,11 @@ class TestCLI(unittest.TestCase):
         test_cli.process_command(f"give {entity.id} IronSword")
 
         # Swap using lowercase slot and item name
-        with patch("sys.stdout", new=io.StringIO()) as fake_out:
-            test_cli.process_swap_item_command(
+        output = self.capture_function_output(
+            lambda: test_cli.process_swap_item_command(
                 ["swap", str(entity.id), "weapon", "ironsword"]
             )
-            output = fake_out.getvalue()
+        )
 
         # Check weapon was equipped
         self.assertEqual(
@@ -3267,11 +3250,11 @@ class TestCLI(unittest.TestCase):
     def test_process_swap_item_command_consumable(self):
 
         # Create CLI and initialize map
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
         Grid.reset_grid()
         test_cli.entity_list.clear()
 
-        test_cli.process_command("init map 25 25")
+        self.create_test_map(test_cli)
         test_cli.process_command("spawn warrior 10 10")
 
         # Get spawned entity
@@ -3284,11 +3267,11 @@ class TestCLI(unittest.TestCase):
         ]
 
         # Attempt to equip a consumable item
-        with patch("sys.stdout", new=io.StringIO()) as fake_out:
-            test_cli.process_swap_item_command(
+        output = self.capture_function_output(
+            lambda: test_cli.process_swap_item_command(
                 ["swap", str(entity.id), "Consumable", "smallhealthpotion"]
             )
-            output = fake_out.getvalue()
+        )
 
         # Check error message
         self.assertEqual(
@@ -3302,11 +3285,11 @@ class TestCLI(unittest.TestCase):
     def test_process_swap_item_command_armor_stats(self):
 
         # Create CLI and initialize map
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
         Grid.reset_grid()
         test_cli.entity_list.clear()
 
-        test_cli.process_command("init map 25 25")
+        self.create_test_map(test_cli)
         test_cli.process_command("spawn warrior 10 10")
 
         # Get spawned entity
@@ -3349,11 +3332,11 @@ class TestCLI(unittest.TestCase):
     def test_process_swap_item_command_item_not_in_backpack(self):
 
         # Create CLI and initialize map
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
         Grid.reset_grid()
         test_cli.entity_list.clear()
 
-        test_cli.process_command("init map 25 25")
+        self.create_test_map(test_cli)
         test_cli.process_command("spawn warrior 10 10")
 
         # Get spawned entity
@@ -3369,11 +3352,11 @@ class TestCLI(unittest.TestCase):
         entity.backpack = []
 
         # Attempt to swap to IronChestplate
-        with patch("sys.stdout", new=io.StringIO()) as fake_out:
-            test_cli.process_swap_item_command(
+        output = self.capture_function_output(
+            lambda: test_cli.process_swap_item_command(
                 ["swap", str(entity.id), "Armor", "IronChestplate"]
             )
-            output = fake_out.getvalue()
+        )
 
         # Check error message
         self.assertEqual(output.strip(), "error: swap_failed - Item not in backpack!")
@@ -3385,7 +3368,7 @@ class TestCLI(unittest.TestCase):
     def test_cli_init(self):
 
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
 
         # Check grid is initialized to None
         self.assertIsNone(test_cli.grid)
@@ -3394,7 +3377,7 @@ class TestCLI(unittest.TestCase):
         self.assertEqual(test_cli.entity_list, [])
 
         # Check entity IDs issued is initialized to 0
-        self.assertEqual(test_cli.entity_ids_issued, 0)
+        self.assertEqual(test_cli.entity_ids_issued, 1)
 
         # Check map created is initialized to False
         self.assertFalse(test_cli.map_created)
@@ -3404,16 +3387,14 @@ class TestCLI(unittest.TestCase):
     # Test an incorrect number of command pieces
     def test_use_item_incorrect_number_of_command_pieces(self):
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
 
         command = "use 1"
 
         # Process command
-        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.process_command(command)
-
+        output = self.process_command_and_get_output(test_cli, command)
         # Get print output to compare
-        output = mock_stdout.getvalue()
+        # Output was captured by the helper
 
         # Check output
         self.assertEqual(
@@ -3424,16 +3405,14 @@ class TestCLI(unittest.TestCase):
     # Test too many command pieces
     def test_use_item_too_many_command_pieces(self):
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
 
         command = "use 1 SmallHealthPotion extra"
 
         # Process command
-        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.process_command(command)
-
+        output = self.process_command_and_get_output(test_cli, command)
         # Get print output to compare
-        output = mock_stdout.getvalue()
+        # Output was captured by the helper
 
         # Check output
         self.assertEqual(
@@ -3444,16 +3423,14 @@ class TestCLI(unittest.TestCase):
     # Test using an entity that does not exist
     def test_use_item_entity_does_not_exist(self):
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
 
         command = "use 999 SmallHealthPotion"
 
         # Process command
-        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.process_command(command)
-
+        output = self.process_command_and_get_output(test_cli, command)
         # Get print output to compare
-        output = mock_stdout.getvalue()
+        # Output was captured by the helper
 
         # Check output
         self.assertEqual(
@@ -3464,20 +3441,18 @@ class TestCLI(unittest.TestCase):
     # Test using an invalid item name
     def test_use_item_invalid_item_name(self):
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
 
         # Create map and entity
-        test_cli.process_command("init map 10 10")
+        self.create_test_map(test_cli, 10, 10)
         test_cli.process_command("spawn Warrior 1 1")
 
         command = "use 1 NotARealItem"
 
         # Process command
-        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.process_command(command)
-
+        output = self.process_command_and_get_output(test_cli, command)
         # Get print output to compare
-        output = mock_stdout.getvalue()
+        # Output was captured by the helper
 
         # Check output
         self.assertEqual(
@@ -3488,20 +3463,18 @@ class TestCLI(unittest.TestCase):
     # Test using a valid item that is not in the entity's backpack
     def test_use_item_not_in_backpack(self):
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
 
         # Create map and entity
-        test_cli.process_command("init map 10 10")
+        self.create_test_map(test_cli, 10, 10)
         test_cli.process_command("spawn Warrior 1 1")
 
         command = "use 1 SmallHealthPotion"
 
         # Process command
-        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.process_command(command)
-
+        output = self.process_command_and_get_output(test_cli, command)
         # Get print output to compare
-        output = mock_stdout.getvalue()
+        # Output was captured by the helper
 
         # Check output
         self.assertEqual(
@@ -3512,10 +3485,10 @@ class TestCLI(unittest.TestCase):
     # Test using an item that is not a consumable
     def test_use_item_not_a_consumable(self):
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
 
         # Create map and entity
-        test_cli.process_command("init map 10 10")
+        self.create_test_map(test_cli, 10, 10)
         test_cli.process_command("spawn Warrior 1 1")
 
         # Get entity
@@ -3528,11 +3501,9 @@ class TestCLI(unittest.TestCase):
         command = "use 1 IronSword"
 
         # Process command
-        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.process_command(command)
-
+        output = self.process_command_and_get_output(test_cli, command)
         # Get print output to compare
-        output = mock_stdout.getvalue()
+        # Output was captured by the helper
 
         # Check output
         self.assertEqual(
@@ -3546,10 +3517,10 @@ class TestCLI(unittest.TestCase):
     # Test using a Small Health Potion
     def test_use_small_health_potion(self):
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
 
         # Create map and entity
-        test_cli.process_command("init map 10 10")
+        self.create_test_map(test_cli, 10, 10)
         test_cli.process_command("spawn Warrior 1 1")
 
         # Get entity
@@ -3565,11 +3536,9 @@ class TestCLI(unittest.TestCase):
         command = "use 1 SmallHealthPotion"
 
         # Process command
-        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.process_command(command)
-
+        output = self.process_command_and_get_output(test_cli, command)
         # Get print output to compare
-        output = mock_stdout.getvalue()
+        # Output was captured by the helper
 
         # Check output
         self.assertEqual(output, "ok: used SmallHealthPotion!\n")
@@ -3583,10 +3552,10 @@ class TestCLI(unittest.TestCase):
     # Test using a Greater Health Potion
     def test_use_greater_health_potion(self):
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
 
         # Create map and entity
-        test_cli.process_command("init map 10 10")
+        self.create_test_map(test_cli, 10, 10)
         test_cli.process_command("spawn Warrior 1 1")
 
         # Get entity
@@ -3600,11 +3569,9 @@ class TestCLI(unittest.TestCase):
         command = "use 1 GreaterHealthPotion"
 
         # Process command
-        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.process_command(command)
-
+        output = self.process_command_and_get_output(test_cli, command)
         # Get print output to compare
-        output = mock_stdout.getvalue()
+        # Output was captured by the helper
 
         # Check output
         self.assertEqual(output, "ok: used GreaterHealthPotion!\n")
@@ -3615,13 +3582,13 @@ class TestCLI(unittest.TestCase):
         # Check that potion was removed
         self.assertNotIn(item, entity.backpack)
 
-    # Test using a Superior Health Potion
+    # Test using a Superior Health Potion - HALF OF FILE
     def test_use_superior_health_potion(self):
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
 
         # Create map and entity
-        test_cli.process_command("init map 10 10")
+        self.create_test_map(test_cli, 10, 10)
         test_cli.process_command("spawn warrior 1 1")
 
         # Get entity
@@ -3635,11 +3602,9 @@ class TestCLI(unittest.TestCase):
         command = "use 1 SuperiorHealthPotion"
 
         # Process command
-        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.process_command(command)
-
+        output = self.process_command_and_get_output(test_cli, command)
         # Get print output to compare
-        output = mock_stdout.getvalue()
+        # Output was captured by the helper
 
         # Check output
         self.assertEqual(output, "ok: used SuperiorHealthPotion!\n")
@@ -3653,10 +3618,10 @@ class TestCLI(unittest.TestCase):
     # Test using a Superior Health Potion with overflow
     def test_use_superior_health_potion_overflow(self):
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
 
         # Create map and entity
-        test_cli.process_command("init map 10 10")
+        self.create_test_map(test_cli, 10, 10)
         test_cli.process_command("spawn warrior 1 1")
 
         # Get entity
@@ -3670,11 +3635,9 @@ class TestCLI(unittest.TestCase):
         command = "use 1 SuperiorHealthPotion"
 
         # Process command
-        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.process_command(command)
-
+        output = self.process_command_and_get_output(test_cli, command)
         # Get print output to compare
-        output = mock_stdout.getvalue()
+        # Output was captured by the helper
 
         # Check output
         self.assertEqual(output, "ok: used SuperiorHealthPotion!\n")
@@ -3690,10 +3653,10 @@ class TestCLI(unittest.TestCase):
     # Test using a Mana Potion
     def test_use_mana_potion(self):
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
 
         # Create map and Mage
-        test_cli.process_command("init map 10 10")
+        self.create_test_map(test_cli, 10, 10)
         test_cli.process_command("spawn Mage 1 1")
 
         # Get entity
@@ -3707,11 +3670,9 @@ class TestCLI(unittest.TestCase):
         command = "use 1 ManaPotion"
 
         # Process command
-        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.process_command(command)
-
+        output = self.process_command_and_get_output(test_cli, command)
         # Get print output to compare
-        output = mock_stdout.getvalue()
+        # Output was captured by the helper
 
         # Check output
         self.assertEqual(output, "ok: used ManaPotion!\n")
@@ -3725,10 +3686,10 @@ class TestCLI(unittest.TestCase):
     # Test using a Mana Potion with overflow
     def test_use_mana_potion_overlfow(self):
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
 
         # Create map and Mage
-        test_cli.process_command("init map 10 10")
+        self.create_test_map(test_cli, 10, 10)
         test_cli.process_command("spawn Mage 1 1")
 
         # Get entity
@@ -3742,11 +3703,9 @@ class TestCLI(unittest.TestCase):
         command = "use 1 ManaPotion"
 
         # Process command
-        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.process_command(command)
-
+        output = self.process_command_and_get_output(test_cli, command)
         # Get print output to compare
-        output = mock_stdout.getvalue()
+        # Output was captured by the helper
 
         # Check output
         self.assertEqual(output, "ok: used ManaPotion!\n")
@@ -3762,10 +3721,10 @@ class TestCLI(unittest.TestCase):
     # Test using a Turtle Master Potion
     def test_use_turtle_master_potion(self):
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
 
         # Create map and Warrior
-        test_cli.process_command("init map 10 10")
+        self.create_test_map(test_cli, 10, 10)
         test_cli.process_command("spawn Warrior 1 1")
 
         # Get entity
@@ -3779,11 +3738,9 @@ class TestCLI(unittest.TestCase):
         command = "use 1 TurtleMasterPotion"
 
         # Process command
-        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.process_command(command)
-
+        output = self.process_command_and_get_output(test_cli, command)
         # Get print output to compare
-        output = mock_stdout.getvalue()
+        # Output was captured by the helper
 
         # Check output
         self.assertEqual(output, "ok: used TurtleMasterPotion!\n")
@@ -3800,10 +3757,10 @@ class TestCLI(unittest.TestCase):
     # Test that item names are case-insensitive
     def test_use_item_name_case_insensitive(self):
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
 
         # Create map and entity
-        test_cli.process_command("init map 10 10")
+        self.create_test_map(test_cli, 10, 10)
         test_cli.process_command("spawn Warrior 1 1")
 
         # Get entity
@@ -3818,11 +3775,9 @@ class TestCLI(unittest.TestCase):
         command = "use 1 smallhealthpotion"
 
         # Process command
-        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.process_command(command)
-
+        output = self.process_command_and_get_output(test_cli, command)
         # Get print output to compare
-        output = mock_stdout.getvalue()
+        # Output was captured by the helper
 
         # Check output
         self.assertEqual(output, "ok: used SmallHealthPotion!\n")
@@ -3836,10 +3791,10 @@ class TestCLI(unittest.TestCase):
     # Test that using one item does not remove other items
     def test_use_item_keeps_other_backpack_items(self):
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
 
         # Create map and entity
-        test_cli.process_command("init map 10 10")
+        self.create_test_map(test_cli, 10, 10)
         test_cli.process_command("spawn Warrior 1 1")
 
         # Get entity
@@ -3856,11 +3811,9 @@ class TestCLI(unittest.TestCase):
         command = "use 1 SmallHealthPotion"
 
         # Process command
-        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.process_command(command)
-
+        output = self.process_command_and_get_output(test_cli, command)
         # Get print output to compare
-        output = mock_stdout.getvalue()
+        # Output was captured by the helper
 
         # Check output
         self.assertEqual(output, "ok: used SmallHealthPotion!\n")
@@ -3877,10 +3830,10 @@ class TestCLI(unittest.TestCase):
     # Test that an item belonging to another entity cannot be used
     def test_use_item_from_another_entity_backpack(self):
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
 
         # Create map and two entities
-        test_cli.process_command("init map 10 10")
+        self.create_test_map(test_cli, 10, 10)
         test_cli.process_command("spawn Warrior 1 1")
         test_cli.process_command("spawn Warrior 2 2")
 
@@ -3897,11 +3850,9 @@ class TestCLI(unittest.TestCase):
         command = f"use {entity_1.id} SmallHealthPotion"
 
         # Process command
-        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.process_command(command)
-
+        output = self.process_command_and_get_output(test_cli, command)
         # Get print output to compare
-        output = mock_stdout.getvalue()
+        # Output was captured by the helper
 
         # Check output
         self.assertEqual(
@@ -3920,19 +3871,17 @@ class TestCLI(unittest.TestCase):
     # Test an incorrect number of command pieces
     def test_spawn_loot_incorrect_number_of_command_pieces(self):
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
 
         # Create map
-        test_cli.process_command("init map 10 10")
+        self.create_test_map(test_cli, 10, 10)
 
         command = "spawn loot IronSword 2"
 
         # Process command
-        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.process_command(command)
-
+        output = self.process_command_and_get_output(test_cli, command)
         # Get print output to compare
-        output = mock_stdout.getvalue()
+        # Output was captured by the helper
 
         # Check output
         self.assertEqual(
@@ -3943,19 +3892,17 @@ class TestCLI(unittest.TestCase):
     # Test too many command pieces
     def test_spawn_loot_too_many_command_pieces(self):
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
 
         # Create map
-        test_cli.process_command("init map 10 10")
+        self.create_test_map(test_cli, 10, 10)
 
         command = "spawn loot IronSword 2 3 extra"
 
         # Process command
-        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.process_command(command)
-
+        output = self.process_command_and_get_output(test_cli, command)
         # Get print output to compare
-        output = mock_stdout.getvalue()
+        # Output was captured by the helper
 
         # Check output
         self.assertEqual(
@@ -3966,19 +3913,17 @@ class TestCLI(unittest.TestCase):
     # Test an incorrect command type
     def test_spawn_loot_incorrect_command_type(self):
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
 
         # Create map
-        test_cli.process_command("init map 10 10")
+        self.create_test_map(test_cli, 10, 10)
 
         command = "spawn item IronSword 2 3"
 
         # Process command
-        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.process_command(command)
-
+        output = self.process_command_and_get_output(test_cli, command)
         # Get print output to compare
-        output = mock_stdout.getvalue()
+        # Output was captured by the helper
 
         # Check output
         self.assertEqual(
@@ -3989,16 +3934,14 @@ class TestCLI(unittest.TestCase):
     # Test spawning loot when a map does not exist
     def test_spawn_loot_map_does_not_exist(self):
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
 
         command = "spawn loot IronSword 2 3"
 
         # Process command
-        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.process_command(command)
-
+        output = self.process_command_and_get_output(test_cli, command)
         # Get print output to compare
-        output = mock_stdout.getvalue()
+        # Output was captured by the helper
 
         # Check output
         self.assertEqual(
@@ -4009,19 +3952,17 @@ class TestCLI(unittest.TestCase):
     # Test an invalid x coordinate
     def test_spawn_loot_invalid_x_coordinate(self):
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
 
         # Create map
-        test_cli.process_command("init map 10 10")
+        self.create_test_map(test_cli, 10, 10)
 
         command = "spawn loot IronSword abc 3"
 
         # Process command
-        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.process_command(command)
-
+        output = self.process_command_and_get_output(test_cli, command)
         # Get print output to compare
-        output = mock_stdout.getvalue()
+        # Output was captured by the helper
 
         # Check output
         self.assertEqual(
@@ -4032,19 +3973,17 @@ class TestCLI(unittest.TestCase):
     # Test an invalid y coordinate
     def test_spawn_loot_invalid_y_coordinate(self):
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
 
         # Create map
-        test_cli.process_command("init map 10 10")
+        self.create_test_map(test_cli, 10, 10)
 
         command = "spawn loot IronSword 2 abc"
 
         # Process command
-        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.process_command(command)
-
+        output = self.process_command_and_get_output(test_cli, command)
         # Get print output to compare
-        output = mock_stdout.getvalue()
+        # Output was captured by the helper
 
         # Check output
         self.assertEqual(
@@ -4055,19 +3994,17 @@ class TestCLI(unittest.TestCase):
     # Test coordinates outside the grid
     def test_spawn_loot_coordinates_outside_grid(self):
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
 
         # Create map
-        test_cli.process_command("init map 10 10")
+        self.create_test_map(test_cli, 10, 10)
 
         command = "spawn loot IronSword 100 100"
 
         # Process command
-        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.process_command(command)
-
+        output = self.process_command_and_get_output(test_cli, command)
         # Get print output to compare
-        output = mock_stdout.getvalue()
+        # Output was captured by the helper
 
         # Check output
         self.assertEqual(
@@ -4078,19 +4015,17 @@ class TestCLI(unittest.TestCase):
     # Test a negative coordinate
     def test_spawn_loot_negative_coordinates(self):
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
 
         # Create map
-        test_cli.process_command("init map 10 10")
+        self.create_test_map(test_cli, 10, 10)
 
         command = "spawn loot IronSword -1 3"
 
         # Process command
-        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.process_command(command)
-
+        output = self.process_command_and_get_output(test_cli, command)
         # Get print output to compare
-        output = mock_stdout.getvalue()
+        # Output was captured by the helper
 
         # Check output
         self.assertEqual(
@@ -4101,19 +4036,17 @@ class TestCLI(unittest.TestCase):
     # Test an invalid item name
     def test_spawn_loot_invalid_item_name(self):
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
 
         # Create map
-        test_cli.process_command("init map 10 10")
+        self.create_test_map(test_cli, 10, 10)
 
         command = "spawn loot NotARealItem 2 3"
 
         # Process command
-        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.process_command(command)
-
+        output = self.process_command_and_get_output(test_cli, command)
         # Get print output to compare
-        output = mock_stdout.getvalue()
+        # Output was captured by the helper
 
         # Check output
         self.assertEqual(
@@ -4124,19 +4057,17 @@ class TestCLI(unittest.TestCase):
     # Test successfully spawning an Iron Sword
     def test_spawn_loot_iron_sword(self):
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
 
         # Create map
-        test_cli.process_command("init map 10 10")
+        self.create_test_map(test_cli, 10, 10)
 
         command = "spawn loot IronSword 2 3"
 
         # Process command
-        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.process_command(command)
-
+        output = self.process_command_and_get_output(test_cli, command)
         # Get print output to compare
-        output = mock_stdout.getvalue()
+        # Output was captured by the helper
 
         # Check output
         self.assertEqual(
@@ -4159,19 +4090,17 @@ class TestCLI(unittest.TestCase):
     # Test successfully spawning a health potion
     def test_spawn_loot_health_potion(self):
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
 
         # Create map
-        test_cli.process_command("init map 10 10")
+        self.create_test_map(test_cli, 10, 10)
 
         command = "spawn loot SmallHealthPotion 2 3"
 
         # Process command
-        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.process_command(command)
-
+        output = self.process_command_and_get_output(test_cli, command)
         # Get print output to compare
-        output = mock_stdout.getvalue()
+        # Output was captured by the helper
 
         # Check output
         self.assertEqual(
@@ -4194,19 +4123,17 @@ class TestCLI(unittest.TestCase):
     # Test that item names are case-insensitive
     def test_spawn_loot_item_name_case_insensitive(self):
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
 
         # Create map
-        test_cli.process_command("init map 10 10")
+        self.create_test_map(test_cli, 10, 10)
 
         command = "spawn loot ironsword 2 3"
 
         # Process command
-        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.process_command(command)
-
+        output = self.process_command_and_get_output(test_cli, command)
         # Get print output to compare
-        output = mock_stdout.getvalue()
+        # Output was captured by the helper
 
         # Check output
         self.assertEqual(
@@ -4229,10 +4156,10 @@ class TestCLI(unittest.TestCase):
     # Test that multiple items can be spawned on the same tile
     def test_spawn_multiple_loot_on_same_tile(self):
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
 
         # Create map
-        test_cli.process_command("init map 10 10")
+        self.create_test_map(test_cli, 10, 10)
 
         # Spawn first item
         test_cli.process_command("spawn loot IronSword 2 3")
@@ -4241,11 +4168,9 @@ class TestCLI(unittest.TestCase):
         command = "spawn loot SmallHealthPotion 2 3"
 
         # Process command
-        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.process_command(command)
-
+        output = self.process_command_and_get_output(test_cli, command)
         # Get print output to compare
-        output = mock_stdout.getvalue()
+        # Output was captured by the helper
 
         # Check output
         self.assertEqual(
@@ -4273,19 +4198,17 @@ class TestCLI(unittest.TestCase):
     # Test that spawning loot does not affect another tile
     def test_spawn_loot_does_not_affect_other_tile(self):
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
 
         # Create map
-        test_cli.process_command("init map 10 10")
+        self.create_test_map(test_cli, 10, 10)
 
         command = "spawn loot IronSword 2 3"
 
         # Process command
-        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.process_command(command)
-
+        output = self.process_command_and_get_output(test_cli, command)
         # Get print output to compare
-        output = mock_stdout.getvalue()
+        # Output was captured by the helper
 
         # Check output
         self.assertEqual(
@@ -4308,14 +4231,14 @@ class TestCLI(unittest.TestCase):
     # Test spawning an entity when a map does not exist
     def test_spawn_entity_no_map(self):
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
 
         # Process command
-        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.spawn_entity_for_cli(2, 3, "Warrior")
+        output = self.capture_function_output(
+            lambda: test_cli.spawn_entity_for_cli(2, 3, "Warrior")
+        )
 
         # Get print output to compare
-        output = mock_stdout.getvalue()
 
         # Check output
         self.assertEqual(
@@ -4329,17 +4252,17 @@ class TestCLI(unittest.TestCase):
     # Test spawning an entity with an invalid x coordinate
     def test_spawn_entity_invalid_x(self):
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
 
         # Create map
-        test_cli.process_command("init map 10 10")
+        self.create_test_map(test_cli, 10, 10)
 
         # Process command
-        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.spawn_entity_for_cli("abc", 3, "Warrior")
+        output = self.capture_function_output(
+            lambda: test_cli.spawn_entity_for_cli("abc", 3, "Warrior")
+        )
 
         # Get print output to compare
-        output = mock_stdout.getvalue()
 
         # Check output
         self.assertEqual(
@@ -4353,17 +4276,17 @@ class TestCLI(unittest.TestCase):
     # Test spawning an entity with an invalid y coordinate
     def test_spawn_entity_invalid_y(self):
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
 
         # Create map
-        test_cli.process_command("init map 10 10")
+        self.create_test_map(test_cli, 10, 10)
 
         # Process command
-        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.spawn_entity_for_cli(2, "abc", "Warrior")
+        output = self.capture_function_output(
+            lambda: test_cli.spawn_entity_for_cli(2, "abc", "Warrior")
+        )
 
         # Get print output to compare
-        output = mock_stdout.getvalue()
 
         # Check output
         self.assertEqual(
@@ -4377,17 +4300,17 @@ class TestCLI(unittest.TestCase):
     # Test spawning an entity outside the grid
     def test_spawn_entity_outside_grid(self):
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
 
         # Create map
-        test_cli.process_command("init map 10 10")
+        self.create_test_map(test_cli, 10, 10)
 
         # Process command
-        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.spawn_entity_for_cli(100, 100, "Warrior")
+        output = self.capture_function_output(
+            lambda: test_cli.spawn_entity_for_cli(100, 100, "Warrior")
+        )
 
         # Get print output to compare
-        output = mock_stdout.getvalue()
 
         # Check output
         self.assertEqual(
@@ -4401,17 +4324,17 @@ class TestCLI(unittest.TestCase):
     # Test spawning an entity at a negative coordinate
     def test_spawn_entity_negative_coordinates(self):
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
 
         # Create map
-        test_cli.process_command("init map 10 10")
+        self.create_test_map(test_cli, 10, 10)
 
         # Process command
-        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.spawn_entity_for_cli(-1, 3, "Warrior")
+        output = self.capture_function_output(
+            lambda: test_cli.spawn_entity_for_cli(-1, 3, "Warrior")
+        )
 
         # Get print output to compare
-        output = mock_stdout.getvalue()
 
         # Check output
         self.assertEqual(
@@ -4425,20 +4348,20 @@ class TestCLI(unittest.TestCase):
     # Test spawning an entity at an occupied location
     def test_spawn_entity_occupied_location(self):
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
 
         # Create map
-        test_cli.process_command("init map 10 10")
+        self.create_test_map(test_cli, 10, 10)
 
         # Spawn first entity
         test_cli.spawn_entity_for_cli(2, 3, "Warrior")
 
         # Attempt to spawn another entity at the same location
-        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.spawn_entity_for_cli(2, 3, "Mage")
+        output = self.capture_function_output(
+            lambda: test_cli.spawn_entity_for_cli(2, 3, "Mage")
+        )
 
         # Get print output to compare
-        output = mock_stdout.getvalue()
 
         # Check output
         self.assertEqual(
@@ -4455,17 +4378,17 @@ class TestCLI(unittest.TestCase):
     # Test spawning an invalid entity type
     def test_spawn_entity_invalid_type(self):
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
 
         # Create map
-        test_cli.process_command("init map 10 10")
+        self.create_test_map(test_cli, 10, 10)
 
         # Process command
-        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.spawn_entity_for_cli(2, 3, "Dragon")
+        output = self.capture_function_output(
+            lambda: test_cli.spawn_entity_for_cli(2, 3, "Dragon")
+        )
 
         # Get print output to compare
-        output = mock_stdout.getvalue()
 
         # Check output
         self.assertEqual(
@@ -4482,17 +4405,17 @@ class TestCLI(unittest.TestCase):
     # Test successfully spawning a Warrior
     def test_spawn_entity_warrior(self):
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
 
         # Create map
-        test_cli.process_command("init map 10 10")
+        self.create_test_map(test_cli, 10, 10)
 
         # Process command
-        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.spawn_entity_for_cli(2, 3, "Warrior")
+        output = self.capture_function_output(
+            lambda: test_cli.spawn_entity_for_cli(2, 3, "Warrior")
+        )
 
         # Get print output to compare
-        output = mock_stdout.getvalue()
 
         # Check output
         self.assertEqual(
@@ -4525,19 +4448,19 @@ class TestCLI(unittest.TestCase):
     # Test successfully spawning a Mage
     def test_spawn_entity_mage(self):
         # Create test CLI
-        test_cli = CLI()
-        test_cli.reset_entity_list()
+        test_cli = self.create_test_cli()
+        self.reset_test_entities(test_cli)
         test_cli.reset_id_issuer_tracker()
 
         # Create map
-        test_cli.process_command("init map 10 10")
+        self.create_test_map(test_cli, 10, 10)
 
         # Process command
-        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.spawn_entity_for_cli(2, 3, "Mage")
+        output = self.capture_function_output(
+            lambda: test_cli.spawn_entity_for_cli(2, 3, "Mage")
+        )
 
         # Get print output to compare
-        output = mock_stdout.getvalue()
 
         # Check output
         self.assertEqual(
@@ -4571,20 +4494,20 @@ class TestCLI(unittest.TestCase):
     # Test that entity IDs increment when spawning multiple entities
     def test_spawn_multiple_entities(self):
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
 
         # Create map
-        test_cli.process_command("init map 10 10")
+        self.create_test_map(test_cli, 10, 10)
 
         # Spawn first entity
         test_cli.spawn_entity_for_cli(2, 3, "Warrior")
 
         # Spawn second entity
-        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.spawn_entity_for_cli(4, 5, "Mage")
+        output = self.capture_function_output(
+            lambda: test_cli.spawn_entity_for_cli(4, 5, "Mage")
+        )
 
         # Get print output to compare
-        output = mock_stdout.getvalue()
 
         # Check output
         self.assertEqual(
@@ -4611,14 +4534,14 @@ class TestCLI(unittest.TestCase):
     # Test spawning loot when a map does not exist
     def test_spawn_loot_for_cli_no_map(self):
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
 
         # Process command
-        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.spawn_loot_for_cli("IronSword", 2, 3)
+        output = self.capture_function_output(
+            lambda: test_cli.spawn_loot_for_cli("IronSword", 2, 3)
+        )
 
         # Get print output to compare
-        output = mock_stdout.getvalue()
 
         # Check output
         self.assertEqual(
@@ -4629,17 +4552,17 @@ class TestCLI(unittest.TestCase):
     # Test spawning loot with an invalid x coordinate
     def test_spawn_loot_for_cli_invalid_x(self):
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
 
         # Create map
-        test_cli.process_command("init map 10 10")
+        self.create_test_map(test_cli, 10, 10)
 
         # Process command
-        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.spawn_loot_for_cli("IronSword", "abc", 3)
+        output = self.capture_function_output(
+            lambda: test_cli.spawn_loot_for_cli("IronSword", "abc", 3)
+        )
 
         # Get print output to compare
-        output = mock_stdout.getvalue()
 
         # Check output
         self.assertEqual(
@@ -4650,17 +4573,17 @@ class TestCLI(unittest.TestCase):
     # Test spawning loot with an invalid y coordinate
     def test_spawn_loot_for_cli_invalid_y(self):
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
 
         # Create map
-        test_cli.process_command("init map 10 10")
+        self.create_test_map(test_cli, 10, 10)
 
         # Process command
-        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.spawn_loot_for_cli("IronSword", 2, "abc")
+        output = self.capture_function_output(
+            lambda: test_cli.spawn_loot_for_cli("IronSword", 2, "abc")
+        )
 
         # Get print output to compare
-        output = mock_stdout.getvalue()
 
         # Check output
         self.assertEqual(
@@ -4671,17 +4594,17 @@ class TestCLI(unittest.TestCase):
     # Test spawning loot outside the grid
     def test_spawn_loot_for_cli_outside_grid(self):
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
 
         # Create map
-        test_cli.process_command("init map 10 10")
+        self.create_test_map(test_cli, 10, 10)
 
         # Process command
-        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.spawn_loot_for_cli("IronSword", 100, 100)
+        output = self.capture_function_output(
+            lambda: test_cli.spawn_loot_for_cli("IronSword", 100, 100)
+        )
 
         # Get print output to compare
-        output = mock_stdout.getvalue()
 
         # Check output
         self.assertEqual(
@@ -4692,17 +4615,17 @@ class TestCLI(unittest.TestCase):
     # Test spawning loot with an invalid item name
     def test_spawn_loot_for_cli_invalid_item(self):
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
 
         # Create map
-        test_cli.process_command("init map 10 10")
+        self.create_test_map(test_cli, 10, 10)
 
         # Process command
-        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.spawn_loot_for_cli("NotARealItem", 2, 3)
+        output = self.capture_function_output(
+            lambda: test_cli.spawn_loot_for_cli("NotARealItem", 2, 3)
+        )
 
         # Get print output to compare
-        output = mock_stdout.getvalue()
 
         # Check output
         self.assertEqual(
@@ -4713,17 +4636,17 @@ class TestCLI(unittest.TestCase):
     # Test successfully spawning an Iron Sword
     def test_spawn_loot_for_cli_iron_sword(self):
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
 
         # Create map
-        test_cli.process_command("init map 10 10")
+        self.create_test_map(test_cli, 10, 10)
 
         # Process command
-        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.spawn_loot_for_cli("IronSword", 2, 3)
+        output = self.capture_function_output(
+            lambda: test_cli.spawn_loot_for_cli("IronSword", 2, 3)
+        )
 
         # Get print output to compare
-        output = mock_stdout.getvalue()
 
         # Check output
         self.assertEqual(
@@ -4746,17 +4669,17 @@ class TestCLI(unittest.TestCase):
     # Test successfully spawning a health potion
     def test_spawn_loot_for_cli_health_potion(self):
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
 
         # Create map
-        test_cli.process_command("init map 10 10")
+        self.create_test_map(test_cli, 10, 10)
 
         # Process command
-        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.spawn_loot_for_cli("SmallHealthPotion", 2, 3)
+        output = self.capture_function_output(
+            lambda: test_cli.spawn_loot_for_cli("SmallHealthPotion", 2, 3)
+        )
 
         # Get print output to compare
-        output = mock_stdout.getvalue()
 
         # Check output
         self.assertEqual(
@@ -4779,17 +4702,17 @@ class TestCLI(unittest.TestCase):
     # Test that item names are case-insensitive
     def test_spawn_loot_for_cli_case_insensitive(self):
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
 
         # Create map
-        test_cli.process_command("init map 10 10")
+        self.create_test_map(test_cli, 10, 10)
 
         # Process command
-        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.spawn_loot_for_cli("ironsword", 2, 3)
+        output = self.capture_function_output(
+            lambda: test_cli.spawn_loot_for_cli("ironsword", 2, 3)
+        )
 
         # Get print output to compare
-        output = mock_stdout.getvalue()
 
         # Check output
         self.assertEqual(
@@ -4812,20 +4735,20 @@ class TestCLI(unittest.TestCase):
     # Test that multiple items can be spawned on the same tile
     def test_spawn_multiple_loot_for_cli(self):
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
 
         # Create map
-        test_cli.process_command("init map 10 10")
+        self.create_test_map(test_cli, 10, 10)
 
         # Spawn first item
         test_cli.spawn_loot_for_cli("IronSword", 2, 3)
 
         # Spawn second item
-        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.spawn_loot_for_cli("SmallHealthPotion", 2, 3)
+        output = self.capture_function_output(
+            lambda: test_cli.spawn_loot_for_cli("SmallHealthPotion", 2, 3)
+        )
 
         # Get print output to compare
-        output = mock_stdout.getvalue()
 
         # Check output
         self.assertEqual(
@@ -4853,17 +4776,17 @@ class TestCLI(unittest.TestCase):
     # Test that spawning loot does not affect another tile
     def test_spawn_loot_for_cli_does_not_affect_other_tile(self):
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
 
         # Create map
-        test_cli.process_command("init map 10 10")
+        self.create_test_map(test_cli, 10, 10)
 
         # Process command
-        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.spawn_loot_for_cli("IronSword", 2, 3)
+        output = self.capture_function_output(
+            lambda: test_cli.spawn_loot_for_cli("IronSword", 2, 3)
+        )
 
         # Get print output to compare
-        output = mock_stdout.getvalue()
 
         # Check output
         self.assertEqual(
@@ -4885,22 +4808,20 @@ class TestCLI(unittest.TestCase):
     def test_move_invalid_command(self):
 
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
 
         # reset
-        reset_cli_stats(test_cli)
+        self.reset_cli_stats(test_cli)
 
         # Create map
-        test_cli.process_command("init map 25 25")
+        self.create_test_map(test_cli)
 
         command = "move 1 2"
 
         # Process command
-        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.process_command(command)
-
+        output = self.process_command_and_get_output(test_cli, command)
         # Get print output to compare
-        output = mock_stdout.getvalue()
+        # Output was captured by the helper
 
         # Check output
         self.assertEqual(output, "error: move_failed - Invalid command!\n")
@@ -4909,22 +4830,20 @@ class TestCLI(unittest.TestCase):
     def test_move_invalid_command(self):
 
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
 
         # reset
-        reset_cli_stats(test_cli)
+        self.reset_cli_stats(test_cli)
 
         # Create map
-        test_cli.process_command("init map 25 25")
+        self.create_test_map(test_cli)
 
         command = "move 1 2"
 
         # Process command
-        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.process_command(command)
-
+        output = self.process_command_and_get_output(test_cli, command)
         # Get print output to compare
-        output = mock_stdout.getvalue()
+        # Output was captured by the helper
 
         # Check output
         self.assertEqual(output, "error: move_failed - Invalid command!\n")
@@ -4933,22 +4852,20 @@ class TestCLI(unittest.TestCase):
     def test_move_invalid_command(self):
 
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
 
         # reset
-        reset_cli_stats(test_cli)
+        self.reset_cli_stats(test_cli)
 
         # Create map
-        test_cli.process_command("init map 25 25")
+        self.create_test_map(test_cli)
 
         command = "move 1 2"
 
         # Process command
-        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.process_command(command)
-
+        output = self.process_command_and_get_output(test_cli, command)
         # Get print output to compare
-        output = mock_stdout.getvalue()
+        # Output was captured by the helper
 
         # Check output
         self.assertEqual(output, "error: move_failed - Invalid command!\n")
@@ -4957,22 +4874,20 @@ class TestCLI(unittest.TestCase):
     def test_move_invalid_command(self):
 
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
 
         # reset
-        reset_cli_stats(test_cli)
+        self.reset_cli_stats(test_cli)
 
         # Create map
-        test_cli.process_command("init map 25 25")
+        self.create_test_map(test_cli)
 
         command = "move 1 2"
 
         # Process command
-        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.process_command(command)
-
+        output = self.process_command_and_get_output(test_cli, command)
         # Get print output to compare
-        output = mock_stdout.getvalue()
+        # Output was captured by the helper
 
         # Check output
         self.assertEqual(output, "error: move_failed - Invalid command!\n")
@@ -4981,21 +4896,19 @@ class TestCLI(unittest.TestCase):
     def test_move_invalid_command(self):
 
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
         # reset
-        reset_cli_stats(test_cli)
+        self.reset_cli_stats(test_cli)
 
         # Create map
-        test_cli.process_command("init map 25 25")
+        self.create_test_map(test_cli)
 
         command = "move 1 2"
 
         # Process command
-        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.process_command(command)
-
+        output = self.process_command_and_get_output(test_cli, command)
         # Get print output to compare
-        output = mock_stdout.getvalue()
+        # Output was captured by the helper
 
         # Check output
         self.assertEqual(output, "error: move_failed - Invalid command!\n")
@@ -5004,13 +4917,13 @@ class TestCLI(unittest.TestCase):
     def test_move_impassable_tile(self):
 
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
 
         # reset
-        reset_cli_stats(test_cli)
+        self.reset_cli_stats(test_cli)
 
         # Create map
-        test_cli.process_command("init map 25 25")
+        self.create_test_map(test_cli)
 
         # Spawn entity
         test_cli.process_command("spawn warrior 1 1")
@@ -5023,11 +4936,9 @@ class TestCLI(unittest.TestCase):
         command = "move 1 2 2"
 
         # Process command
-        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.process_command(command)
+        output = self.process_command_and_get_output(test_cli, command)
 
         # Get print output
-        output = mock_stdout.getvalue()
 
         # Check output
         self.assertEqual(
@@ -5038,22 +4949,20 @@ class TestCLI(unittest.TestCase):
     def test_move_entity_does_not_exist(self):
 
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
 
         # reset
-        reset_cli_stats(test_cli)
+        self.reset_cli_stats(test_cli)
 
         # Create map
-        test_cli.process_command("init map 25 25")
+        self.create_test_map(test_cli)
 
         command = "move 99 2 2"
 
         # Process command
-        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.process_command(command)
+        output = self.process_command_and_get_output(test_cli, command)
 
         # Get print output
-        output = mock_stdout.getvalue()
 
         # Check output
         self.assertEqual(output, "error: move_failed - Entity does not exist!\n")
@@ -5062,13 +4971,13 @@ class TestCLI(unittest.TestCase):
     def test_move_out_of_range(self):
 
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
 
         # reset
-        reset_cli_stats(test_cli)
+        self.reset_cli_stats(test_cli)
 
         # Create map
-        test_cli.process_command("init map 25 25")
+        self.create_test_map(test_cli)
 
         # Spawn entity
         test_cli.process_command("spawn warrior 1 1")
@@ -5081,11 +4990,9 @@ class TestCLI(unittest.TestCase):
         command = "move 1 20 20"
 
         # Process command
-        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.process_command(command)
+        output = self.process_command_and_get_output(test_cli, command)
 
         # Get print output
-        output = mock_stdout.getvalue()
 
         # Check output
         self.assertEqual(
@@ -5096,13 +5003,13 @@ class TestCLI(unittest.TestCase):
     def test_move_success(self):
 
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
 
         # reset
-        reset_cli_stats(test_cli)
+        self.reset_cli_stats(test_cli)
 
         # Create map
-        test_cli.process_command("init map 25 25")
+        self.create_test_map(test_cli)
 
         # Spawn entity
         test_cli.process_command("spawn warrior 1 1")
@@ -5112,11 +5019,9 @@ class TestCLI(unittest.TestCase):
 
         command = "move 1 2 1"
         # Process command
-        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.process_command(command)
+        output = self.process_command_and_get_output(test_cli, command)
 
         # Get print output
-        output = mock_stdout.getvalue()
 
         # Check output
         self.assertEqual(output, "ok: moved 1 to 2, 1!\n")
@@ -5131,13 +5036,13 @@ class TestCLI(unittest.TestCase):
     def test_move_to_shallow_water(self):
 
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
 
         # reset
-        reset_cli_stats(test_cli)
+        self.reset_cli_stats(test_cli)
 
         # Create map
-        test_cli.process_command("init map 25 25")
+        self.create_test_map(test_cli)
 
         # Spawn entity
         test_cli.process_command("spawn warrior 1 1")
@@ -5152,11 +5057,9 @@ class TestCLI(unittest.TestCase):
         self.assertEqual(entity.speed, 5)
 
         # Process command
-        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.process_command(command)
+        output = self.process_command_and_get_output(test_cli, command)
 
         # Get print output
-        output = mock_stdout.getvalue()
 
         # Check output
         self.assertEqual(output, "ok: moved 1 to 2, 1!\n")
@@ -5171,12 +5074,12 @@ class TestCLI(unittest.TestCase):
     def test_move_to_lower_boundary(self):
 
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
         # reset
-        reset_cli_stats(test_cli)
+        self.reset_cli_stats(test_cli)
 
         # Create map
-        test_cli.process_command("init map 25 25")
+        self.create_test_map(test_cli)
 
         # Spawn entity
         test_cli.process_command("spawn warrior 1 1")
@@ -5187,11 +5090,9 @@ class TestCLI(unittest.TestCase):
         command = "move 1 0 1"
 
         # Process command
-        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.process_command(command)
+        output = self.process_command_and_get_output(test_cli, command)
 
         # Get print output
-        output = mock_stdout.getvalue()
 
         # Check output
         self.assertEqual(output, "ok: moved 1 to 0, 1!\n")
@@ -5206,13 +5107,13 @@ class TestCLI(unittest.TestCase):
     def test_move_to_higher_boundary(self):
 
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
 
         # reset
-        reset_cli_stats(test_cli)
+        self.reset_cli_stats(test_cli)
 
         # Create map
-        test_cli.process_command("init map 25 25")
+        self.create_test_map(test_cli)
 
         # Spawn entity
         test_cli.process_command("spawn warrior 1 1")
@@ -5228,11 +5129,9 @@ class TestCLI(unittest.TestCase):
         command = "move 1 24 1"
 
         # Process command
-        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.process_command(command)
+        output = self.process_command_and_get_output(test_cli, command)
 
         # Get print output
-        output = mock_stdout.getvalue()
 
         # Check output
         self.assertEqual(output, "ok: moved 1 to 24, 1!\n")
@@ -5247,13 +5146,13 @@ class TestCLI(unittest.TestCase):
     def test_move_from_shallow_water_to_floor(self):
 
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
 
         # reset
-        reset_cli_stats(test_cli)
+        self.reset_cli_stats(test_cli)
 
         # Create map
-        test_cli.process_command("init map 25 25")
+        self.create_test_map(test_cli)
 
         # Set starting tile to shallow water
         test_cli.grid.set_tile(1, 1, "shallowwater")
@@ -5274,11 +5173,9 @@ class TestCLI(unittest.TestCase):
         command = "move 1 2 1"
 
         # Process command
-        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.process_command(command)
-
+        output = self.process_command_and_get_output(test_cli, command)
         # Get print output to compare
-        output = mock_stdout.getvalue()
+        # Output was captured by the helper
 
         # Check output
         self.assertEqual(output, "ok: moved 1 to 2, 1!\n")
@@ -5293,13 +5190,13 @@ class TestCLI(unittest.TestCase):
     def test_move_entity(self):
 
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
 
         # Reset CLI stats
-        reset_cli_stats(test_cli)
+        self.reset_cli_stats(test_cli)
 
         # Create map
-        test_cli.process_command("init map 25 25")
+        self.create_test_map(test_cli)
 
         # Spawn entity
         test_cli.process_command("spawn warrior 1 1")
@@ -5326,13 +5223,13 @@ class TestCLI(unittest.TestCase):
     def test_move_entity_up(self):
 
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
 
         # Reset CLI stats
-        reset_cli_stats(test_cli)
+        self.reset_cli_stats(test_cli)
 
         # Create map
-        test_cli.process_command("init map 25 25")
+        self.create_test_map(test_cli)
 
         # Spawn entity
         test_cli.process_command("spawn warrior 5 5")
@@ -5359,13 +5256,13 @@ class TestCLI(unittest.TestCase):
     def test_move_entity_down(self):
 
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
 
         # Reset CLI stats
-        reset_cli_stats(test_cli)
+        self.reset_cli_stats(test_cli)
 
         # Create map
-        test_cli.process_command("init map 25 25")
+        self.create_test_map(test_cli)
 
         # Spawn entity
         test_cli.process_command("spawn warrior 5 5")
@@ -5392,13 +5289,13 @@ class TestCLI(unittest.TestCase):
     def test_move_entity_left(self):
 
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
 
         # Reset CLI stats
-        reset_cli_stats(test_cli)
+        self.reset_cli_stats(test_cli)
 
         # Create map
-        test_cli.process_command("init map 25 25")
+        self.create_test_map(test_cli)
 
         # Spawn entity
         test_cli.process_command("spawn warrior 5 5")
@@ -5425,13 +5322,13 @@ class TestCLI(unittest.TestCase):
     def test_move_entity_right(self):
 
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
 
         # Reset CLI stats
-        reset_cli_stats(test_cli)
+        self.reset_cli_stats(test_cli)
 
         # Create map
-        test_cli.process_command("init map 25 25")
+        self.create_test_map(test_cli)
 
         # Spawn entity
         test_cli.process_command("spawn warrior 5 5")
@@ -5457,13 +5354,13 @@ class TestCLI(unittest.TestCase):
     # success
     def test_attack_with_valid_melee_attack(self):
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
         # Clear out grid
-        test_cli.grid = Grid.reset_grid()
+        self.reset_test_grid(test_cli)
         # Create Map
-        test_cli.process_command("init map 25 25")
+        self.create_test_map(test_cli)
         # Clear out entity list
-        test_cli.reset_entity_list()
+        self.reset_test_entities(test_cli)
 
         # Create attacker and defender
         test_cli.process_command("spawn warrior 0 0")
@@ -5489,13 +5386,13 @@ class TestCLI(unittest.TestCase):
     # success
     def test_attack_with_valid_ranged_attack(self):
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
         # Clear out grid
-        test_cli.grid = Grid.reset_grid()
+        self.reset_test_grid(test_cli)
         # Create Map
-        test_cli.process_command("init map 25 25")
+        self.create_test_map(test_cli)
         # Clear out entity list
-        test_cli.reset_entity_list()
+        self.reset_test_entities(test_cli)
 
         # Create attacker and defender
         test_cli.process_command("spawn skeleton 0 0")
@@ -5521,7 +5418,7 @@ class TestCLI(unittest.TestCase):
     # failure
     def test_attack_with_invalid_amount_of_arguments(self):
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
 
         # Process attack with too few arguments
         test_cli.process_command("attack 0")
@@ -5532,7 +5429,7 @@ class TestCLI(unittest.TestCase):
     # failure
     def test_attack_with_no_map(self):
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
 
         # Process attack without creating map
         test_cli.process_command("attack 1 2")
@@ -5543,13 +5440,13 @@ class TestCLI(unittest.TestCase):
     # failure
     def test_attack_with_invalid_entity_ids(self):
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
         # Clear out grid
-        test_cli.grid = Grid.reset_grid()
+        self.reset_test_grid(test_cli)
         # Create Map
-        test_cli.process_command("init map 25 25")
+        self.create_test_map(test_cli)
         # Clear out entity list
-        test_cli.reset_entity_list()
+        self.reset_test_entities(test_cli)
 
         # Process attack with non-integer entity ids
         test_cli.process_command("attack abc def")
@@ -5560,13 +5457,13 @@ class TestCLI(unittest.TestCase):
     # failure
     def test_attack_with_attacking_entity_that_does_not_exist(self):
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
         # Clear out grid
-        test_cli.grid = Grid.reset_grid()
+        self.reset_test_grid(test_cli)
         # Create Map
-        test_cli.process_command("init map 25 25")
+        self.create_test_map(test_cli)
         # Clear out entity list
-        test_cli.reset_entity_list()
+        self.reset_test_entities(test_cli)
 
         # Create defender
         test_cli.process_command("spawn goblin 1 0")
@@ -5584,13 +5481,13 @@ class TestCLI(unittest.TestCase):
     # failure
     def test_attack_with_defending_entity_that_does_not_exist(self):
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
         # Clear out grid
-        test_cli.grid = Grid.reset_grid()
+        self.reset_test_grid(test_cli)
         # Create Map
-        test_cli.process_command("init map 25 25")
+        self.create_test_map(test_cli)
         # Clear out entity list
-        test_cli.reset_entity_list()
+        self.reset_test_entities(test_cli)
 
         # Create attacker
         test_cli.process_command("spawn warrior 0 0")
@@ -5608,13 +5505,13 @@ class TestCLI(unittest.TestCase):
     # failure
     def test_attack_with_defender_out_of_range(self):
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
         # Clear out grid
-        test_cli.grid = Grid.reset_grid()
+        self.reset_test_grid(test_cli)
         # Create Map
-        test_cli.process_command("init map 25 25")
+        self.create_test_map(test_cli)
         # Clear out entity list
-        test_cli.reset_entity_list()
+        self.reset_test_entities(test_cli)
 
         # Create attacker and defender
         test_cli.process_command("spawn warrior 0 0")
@@ -5640,13 +5537,13 @@ class TestCLI(unittest.TestCase):
     # success
     def test_attack_then_heal_with_health_potion(self):
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
         # Clear out grid
-        test_cli.grid = Grid.reset_grid()
+        self.reset_test_grid(test_cli)
         # Create Map
-        test_cli.process_command("init map 25 25")
+        self.create_test_map(test_cli)
         # Clear out entity list
-        test_cli.reset_entity_list()
+        self.reset_test_entities(test_cli)
 
         # Create attacker and defender
         test_cli.process_command("spawn warrior 0 0")
@@ -5685,13 +5582,13 @@ class TestCLI(unittest.TestCase):
     # success
     def test_attack_then_heal_to_max_health_with_health_potion(self):
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
         # Clear out grid
-        test_cli.grid = Grid.reset_grid()
+        self.reset_test_grid(test_cli)
         # Create Map
-        test_cli.process_command("init map 25 25")
+        self.create_test_map(test_cli)
         # Clear out entity list
-        test_cli.reset_entity_list()
+        self.reset_test_entities(test_cli)
 
         # Create attacker and defender
         test_cli.process_command("spawn warrior 0 0")
@@ -5727,13 +5624,13 @@ class TestCLI(unittest.TestCase):
     # success
     def test_assign_entity_from_list_first_entity(self):
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
         # Clear out grid
-        test_cli.grid = Grid.reset_grid()
+        self.reset_test_grid(test_cli)
         # Create Map
-        test_cli.process_command("init map 25 25")
+        self.create_test_map(test_cli)
         # Clear out entity list
-        test_cli.reset_entity_list()
+        self.reset_test_entities(test_cli)
 
         # Create entity
         test_cli.process_command("spawn warrior 0 0")
@@ -5748,13 +5645,13 @@ class TestCLI(unittest.TestCase):
     # success
     def test_assign_entity_from_list_entity_in_middle_of_list(self):
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
         # Clear out grid
-        test_cli.grid = Grid.reset_grid()
+        self.reset_test_grid(test_cli)
         # Create Map
-        test_cli.process_command("init map 25 25")
+        self.create_test_map(test_cli)
         # Clear out entity list
-        test_cli.reset_entity_list()
+        self.reset_test_entities(test_cli)
 
         # Create entities
         test_cli.process_command("spawn warrior 0 0")
@@ -5771,13 +5668,13 @@ class TestCLI(unittest.TestCase):
     # success
     def test_assign_entity_from_list_last_entity(self):
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
         # Clear out grid
-        test_cli.grid = Grid.reset_grid()
+        self.reset_test_grid(test_cli)
         # Create Map
-        test_cli.process_command("init map 25 25")
+        self.create_test_map(test_cli)
         # Clear out entity list
-        test_cli.reset_entity_list()
+        self.reset_test_entities(test_cli)
 
         # Create entities
         test_cli.process_command("spawn warrior 0 0")
@@ -5794,13 +5691,13 @@ class TestCLI(unittest.TestCase):
     # success
     def test_assign_entity_from_list_returns_same_entity_instance(self):
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
         # Clear out grid
-        test_cli.grid = Grid.reset_grid()
+        self.reset_test_grid(test_cli)
         # Create Map
-        test_cli.process_command("init map 25 25")
+        self.create_test_map(test_cli)
         # Clear out entity list
-        test_cli.reset_entity_list()
+        self.reset_test_entities(test_cli)
 
         # Create entity
         test_cli.process_command("spawn warrior 0 0")
@@ -5817,13 +5714,13 @@ class TestCLI(unittest.TestCase):
     # success
     def test_cast_offensive_spell(self):
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
         # Clear out grid
-        test_cli.grid = Grid.reset_grid()
+        self.reset_test_grid(test_cli)
         # Create Map
-        test_cli.process_command("init map 25 25")
+        self.create_test_map(test_cli)
         # Clear out entity list
-        test_cli.reset_entity_list()
+        self.reset_test_entities(test_cli)
 
         # Create caster and defender
         test_cli.process_command("spawn mage 0 0")
@@ -5850,13 +5747,13 @@ class TestCLI(unittest.TestCase):
     # success
     def test_cast_heal_spell(self):
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
         # Clear out grid
-        test_cli.grid = Grid.reset_grid()
+        self.reset_test_grid(test_cli)
         # Create Map
-        test_cli.process_command("init map 25 25")
+        self.create_test_map(test_cli)
         # Clear out entity list
-        test_cli.reset_entity_list()
+        self.reset_test_entities(test_cli)
 
         # Create caster and target
         test_cli.process_command("spawn mage 0 0")
@@ -5885,13 +5782,13 @@ class TestCLI(unittest.TestCase):
     # success
     def test_attack_then_cast_heal(self):
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
         # Clear out grid
-        test_cli.grid = Grid.reset_grid()
+        self.reset_test_grid(test_cli)
         # Create Map
-        test_cli.process_command("init map 25 25")
+        self.create_test_map(test_cli)
         # Clear out entity list
-        test_cli.reset_entity_list()
+        self.reset_test_entities(test_cli)
 
         # Create attacker, caster, and target
         test_cli.process_command("spawn warrior 0 0")
@@ -5929,7 +5826,7 @@ class TestCLI(unittest.TestCase):
     # failure
     def test_cast_with_invalid_amount_of_arguments(self):
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
 
         # Process cast with too few arguments
         test_cli.process_command("cast 1 2")
@@ -5940,7 +5837,7 @@ class TestCLI(unittest.TestCase):
     # failure
     def test_cast_without_map(self):
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
 
         # Process cast without creating map
         test_cli.process_command("cast 1 2 fireball")
@@ -5951,13 +5848,13 @@ class TestCLI(unittest.TestCase):
     # failure
     def test_cast_with_nonexistent_caster(self):
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
         # Clear out grid
-        test_cli.grid = Grid.reset_grid()
+        self.reset_test_grid(test_cli)
         # Create Map
-        test_cli.process_command("init map 25 25")
+        self.create_test_map(test_cli)
         # Clear out entity list
-        test_cli.reset_entity_list()
+        self.reset_test_entities(test_cli)
 
         # Create target
         test_cli.process_command("spawn goblin 1 0")
@@ -5972,13 +5869,13 @@ class TestCLI(unittest.TestCase):
     # failure
     def test_cast_with_nonexistent_target(self):
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
         # Clear out grid
-        test_cli.grid = Grid.reset_grid()
+        self.reset_test_grid(test_cli)
         # Create Map
-        test_cli.process_command("init map 25 25")
+        self.create_test_map(test_cli)
         # Clear out entity list
-        test_cli.reset_entity_list()
+        self.reset_test_entities(test_cli)
 
         # Create caster
         test_cli.process_command("spawn mage 0 0")
@@ -5993,13 +5890,13 @@ class TestCLI(unittest.TestCase):
     # failure
     def test_cast_with_nonexistent_spell(self):
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
         # Clear out grid
-        test_cli.grid = Grid.reset_grid()
+        self.reset_test_grid(test_cli)
         # Create Map
-        test_cli.process_command("init map 25 25")
+        self.create_test_map(test_cli)
         # Clear out entity list
-        test_cli.reset_entity_list()
+        self.reset_test_entities(test_cli)
 
         # Create caster and target
         test_cli.process_command("spawn mage 0 0")
@@ -6020,13 +5917,13 @@ class TestCLI(unittest.TestCase):
     # failure
     def test_cast_with_non_mage_caster(self):
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
         # Clear out grid
-        test_cli.grid = Grid.reset_grid()
+        self.reset_test_grid(test_cli)
         # Create Map
-        test_cli.process_command("init map 25 25")
+        self.create_test_map(test_cli)
         # Clear out entity list
-        test_cli.reset_entity_list()
+        self.reset_test_entities(test_cli)
 
         # Create non-Mage caster and target
         test_cli.process_command("spawn warrior 0 0")
@@ -6047,13 +5944,13 @@ class TestCLI(unittest.TestCase):
     # failure
     def test_cast_with_target_out_of_range(self):
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
         # Clear out grid
-        test_cli.grid = Grid.reset_grid()
+        self.reset_test_grid(test_cli)
         # Create Map
-        test_cli.process_command("init map 25 25")
+        self.create_test_map(test_cli)
         # Clear out entity list
-        test_cli.reset_entity_list()
+        self.reset_test_entities(test_cli)
 
         # Create caster and target
         test_cli.process_command("spawn mage 0 0")
@@ -6074,13 +5971,13 @@ class TestCLI(unittest.TestCase):
     # success
     def test_cast_spell_with_over_time_effect(self):
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
         # Clear out grid
-        test_cli.grid = Grid.reset_grid()
+        self.reset_test_grid(test_cli)
         # Create Map
-        test_cli.process_command("init map 25 25")
+        self.create_test_map(test_cli)
         # Clear out entity list
-        test_cli.reset_entity_list()
+        self.reset_test_entities(test_cli)
 
         # Create caster and target
         test_cli.process_command("spawn mage 0 0")
@@ -6106,13 +6003,13 @@ class TestCLI(unittest.TestCase):
     # success
     def test_cast_heal_does_not_exceed_max_health(self):
         # Create test CLI
-        test_cli = CLI()
+        test_cli = self.create_test_cli()
         # Clear out grid
-        test_cli.grid = Grid.reset_grid()
+        self.reset_test_grid(test_cli)
         # Create Map
-        test_cli.process_command("init map 25 25")
+        self.create_test_map(test_cli)
         # Clear out entity list
-        test_cli.reset_entity_list()
+        self.reset_test_entities(test_cli)
 
         # Create caster and target
         test_cli.process_command("spawn mage 0 0")
@@ -6138,16 +6035,769 @@ class TestCLI(unittest.TestCase):
         # Verify health did not exceed maximum health
         self.assertLessEqual(target.health, target.max_health)
 
+    # Process Tick Command Start
 
-# reset cli stats
-# Resets necessary cli stats for use in tests
-# Params:   cli - CLI - cli to reset
-# Returns: None
-def reset_cli_stats(cli):
-    cli.grid = Grid.reset_grid()
-    cli.entity_list.clear()
-    cli.entity_ids_issued = 0
-    cli.map_created = False
+    # Test tick with invalid arguments
+    def test_process_tick_command_invalid_arguments(self):
+        # Create test CLI
+        test_cli = self.create_test_cli()
+        # Process command
+        output = self.process_command_and_get_output(test_cli, "tick extra")
+        # Check output
+        self.assertEqual(output, "error: tick_failed due to invalid arguments!\n")
+        # Check ticker was not changed
+        self.assertEqual(test_cli.ticker, 1)
+
+    # Test tick when map does not exist
+    def test_process_tick_command_no_map(self):
+        # Create test CLI
+        test_cli = self.create_test_cli()
+        # test_cli.grid.reset_grid()
+        # Process command
+        output = self.process_command_and_get_output(test_cli, "tick")
+        # Check output
+        self.assertEqual(output, "error: tick_failed - Map does not exist!\n")
+        # Check ticker was not changed
+        self.assertEqual(test_cli.ticker, 1)
+
+    # Test tick with no entities
+    def test_process_tick_command_no_entities(self):
+        # Create test CLI
+        test_cli = self.create_test_cli()
+        # Create map
+        self.create_test_map(test_cli)
+        # Process command
+        output = self.process_command_and_get_output(test_cli, "tick")
+        # Check output
+        self.assertEqual(output, "ok: tick processed. Ticker: 2!\n")
+        # Check ticker was increased
+        self.assertEqual(test_cli.ticker, 2)
+
+    # Test tick updates an entity turn timer
+    def test_process_tick_command_updates_entity_turn_timer(self):
+        # Create test CLI
+        test_cli = self.create_test_cli()
+        # Create map
+        self.create_test_map(test_cli)
+        # Spawn entity
+        test_cli.process_command("spawn warrior 10 10")
+        entity = test_cli.entity_list[0]
+        # Add temporary buff with a turn timer
+        entity.temp_buffs.append(
+            {
+                "Name": "TestBuff",
+                "Effects": {"Flat_modifiers": {}, "Percent_modifiers": {}},
+                "Turns": 2,
+            }
+        )
+        # Process command
+        output = self.process_command_and_get_output(test_cli, "tick")
+        # Check output
+        self.assertEqual(output, "ok: tick processed. Ticker: 2!\n")
+        # Check turn timer was decreased
+        self.assertEqual(entity.temp_buffs[0]["Turns"], 1)
+
+    # Test tick removes a dead entity from the game
+    def test_process_tick_command_removes_dead_entity(self):
+        # Create test CLI
+        test_cli = self.create_test_cli()
+        # Create map
+        self.create_test_map(test_cli)
+        # Spawn entity
+        test_cli.process_command("spawn warrior 10 10")
+        entity = test_cli.entity_list[0]
+        # Kill entity
+        entity.handle_death()
+        # Process command
+        output = self.process_command_and_get_output(test_cli, "tick")
+        output = self.process_command_and_get_output(test_cli, "tick")
+        output = self.process_command_and_get_output(test_cli, "tick")
+        # Check output
+        self.assertEqual(output, "ok: tick processed. Ticker: 4!\n")
+        # Check entity was removed from entity list and grid
+        self.assertNotIn(entity.id, test_cli.entity_list)
+        self.assertNotIn(entity.id, test_cli.grid.grid[10][10].occupants)
+
+    # Test remove entity from game clears the grid and entity list
+    def test_remove_entity_from_game(self):
+        # Create test CLI
+        test_cli = self.create_test_cli()
+        # Create map
+        self.create_test_map(test_cli)
+        # Spawn entity
+        test_cli.process_command("spawn warrior 10 10")
+        entity = test_cli.entity_list[0]
+        # Remove entity
+        output = self.capture_function_output(
+            lambda: test_cli.remove_entity_from_game(entity)
+        )
+        # Check entity was removed from entity list and grid
+        self.assertNotIn(entity, test_cli.entity_list)
+        self.assertNotIn(entity.id, test_cli.grid.grid[10][10].occupants)
+
+    # Dead Entity Command Tests Start
+
+    # Create a dead entity for command blocking tests
+    def create_dead_test_entity(self, test_cli):
+        # Create map
+        self.create_test_map(test_cli)
+        # Spawn entity
+        test_cli.process_command("spawn warrior 10 10")
+        entity = test_cli.entity_list[0]
+        # Mark entity as dead
+        entity.handle_death()
+        return entity
+
+    # Test dead entity is blocked from inventory command
+    def test_dead_entity_blocked_inventory(self):
+        # Create test CLI
+        test_cli = self.create_test_cli()
+        entity = self.create_dead_test_entity(test_cli)
+        # Process command
+        output = self.process_command_and_get_output(test_cli, "inventory 1")
+        # Check command produced output and entity remains dead
+        self.assertNotEqual(output, "")
+        self.assertIn(entity, test_cli.entity_list)
+        self.assertFalse(entity.is_alive())
+
+    # Test dead entity is blocked from inspect command
+    def test_dead_entity_blocked_inspect(self):
+        # Create test CLI
+        test_cli = self.create_test_cli()
+        entity = self.create_dead_test_entity(test_cli)
+        # Process command
+        output = self.process_command_and_get_output(test_cli, "inspect 1")
+        # Check command produced output and entity remains dead
+        self.assertNotEqual(output, "")
+        self.assertIn(entity, test_cli.entity_list)
+        self.assertFalse(entity.is_alive())
+
+    # Test dead entity is blocked from pickup command
+    def test_dead_entity_blocked_pickup(self):
+        # Create test CLI
+        test_cli = self.create_test_cli()
+        entity = self.create_dead_test_entity(test_cli)
+        # Place item on entity tile
+        item = dl.create_equipment("ironsword")
+        test_cli.grid.grid[10][10].item_list.append(item)
+        # Process command
+        output = self.process_command_and_get_output(test_cli, "pickup 1 IronSword")
+        # Check command produced output and item was not picked up
+        self.assertNotEqual(output, "")
+        self.assertIn(item, test_cli.grid.grid[10][10].item_list)
+        self.assertEqual(entity.backpack, [])
+
+    # Test dead entity is blocked from drop command
+    def test_dead_entity_blocked_drop(self):
+        # Create test CLI
+        test_cli = self.create_test_cli()
+        entity = self.create_dead_test_entity(test_cli)
+        # Add item to backpack
+        item = dl.create_equipment("ironsword")
+        entity.backpack.append(item)
+        # Process command
+        output = self.process_command_and_get_output(test_cli, "drop 1 IronSword")
+        # Check command produced output and item was not dropped
+        self.assertNotEqual(output, "")
+        self.assertIn(item, entity.backpack)
+        self.assertEqual(test_cli.grid.grid[10][10].item_list, [])
+
+    # Test dead entity is blocked from swap command
+    def test_dead_entity_blocked_swap(self):
+        # Create test CLI
+        test_cli = self.create_test_cli()
+        entity = self.create_dead_test_entity(test_cli)
+        # Add item to backpack
+        item = dl.create_equipment("ironsword")
+        entity.backpack.append(item)
+        # Process command
+        output = self.process_command_and_get_output(
+            test_cli, "swap 1 weapon IronSword"
+        )
+        # Check command produced output and item was not equipped
+        self.assertNotEqual(output, "")
+        self.assertEqual(entity.inventory[0].name, "None")
+        self.assertIn(item, entity.backpack)
+
+    # Test dead entity is blocked from use command
+    def test_dead_entity_blocked_use(self):
+        # Create test CLI
+        test_cli = self.create_test_cli()
+        entity = self.create_dead_test_entity(test_cli)
+        # Add health potion to backpack
+        item = dl.create_equipment("smallhealthpotion")
+        entity.backpack.append(item)
+        starting_health = entity.health
+        # Process command
+        output = self.process_command_and_get_output(
+            test_cli, "use 1 SmallHealthPotion"
+        )
+        # Check command produced output and potion was not used
+        self.assertNotEqual(output, "")
+        self.assertEqual(entity.health, starting_health)
+        self.assertIn(item, entity.backpack)
+
+    # Test dead entity is blocked from move command
+    def test_dead_entity_blocked_move(self):
+        # Create test CLI
+        test_cli = self.create_test_cli()
+        entity = self.create_dead_test_entity(test_cli)
+        starting_position = entity.position.copy()
+        # Process command
+        output = self.process_command_and_get_output(test_cli, "move 1 11 10")
+        # Check command produced output and entity did not move
+        self.assertNotEqual(output, "")
+        self.assertEqual(entity.position, starting_position)
+
+    # Test dead entity is blocked from attack command
+    def test_dead_entity_blocked_attack(self):
+        # Create test CLI
+        test_cli = self.create_test_cli()
+        # Create map and spawn entities
+        self.create_test_map(test_cli)
+        test_cli.process_command("spawn warrior 10 10")
+        test_cli.process_command("spawn goblin 11 10")
+        attacker = test_cli.entity_list[0]
+        defender = test_cli.entity_list[1]
+        # Kill attacker
+        attacker.handle_death()
+        starting_health = defender.health
+        # Process command
+        output = self.process_command_and_get_output(test_cli, "attack 1 2")
+        # Check command produced output and defender was not damaged
+        self.assertNotEqual(output, "")
+        self.assertEqual(defender.health, starting_health)
+
+    # Test dead entity is blocked from cast command
+    def test_dead_entity_blocked_cast(self):
+        # Create test CLI
+        test_cli = self.create_test_cli()
+        # Create map and spawn entities
+        self.create_test_map(test_cli)
+        test_cli.process_command("spawn mage 10 10")
+        test_cli.process_command("spawn warrior 11 10")
+        caster = test_cli.entity_list[0]
+        target = test_cli.entity_list[1]
+        # Kill caster
+        caster.handle_death()
+        starting_health = target.health
+        starting_mana = caster.mana
+        # Process command
+        output = self.process_command_and_get_output(test_cli, "cast 1 2 fireball")
+        # Check command produced output and neither entity was changed
+        self.assertNotEqual(output, "")
+        self.assertEqual(target.health, starting_health)
+        self.assertEqual(caster.mana, starting_mana)
+
+    # Test inventory with dead entity
+    def test_inventory_with_dead_entity(self):
+
+        # Create test CLI
+        test_cli = self.create_test_cli()
+
+        # Create map
+        self.create_test_map(test_cli)
+
+        # Spawn entity
+        test_cli.process_command("spawn warrior 10 10")
+
+        # Get entity
+        entity = test_cli.entity_list[0]
+
+        # Kill entity
+        entity.handle_death()
+
+        # Process command
+        output = self.process_command_and_get_output(
+            test_cli,
+            "inventory 1",
+        )
+
+        # Check output
+        self.assertEqual(
+            output,
+            "error: inventory_failed - Player entity is dead!\n",
+        )
+
+    # Test inspect with dead entity
+    def test_inspect_with_dead_entity(self):
+
+        # Create test CLI
+        test_cli = self.create_test_cli()
+
+        # Create map
+        self.create_test_map(test_cli)
+
+        # Spawn entity
+        test_cli.process_command("spawn warrior 10 10")
+
+        # Get entity
+        entity = test_cli.entity_list[0]
+
+        # Kill entity
+        entity.handle_death()
+
+        # Process command
+        output = self.process_command_and_get_output(
+            test_cli,
+            "inspect 1",
+        )
+
+        # Check output
+        self.assertEqual(
+            output,
+            "error: inspect_failed - Player entity is dead!\n",
+        )
+
+    # Test pickup with dead entity
+    def test_pickup_with_dead_entity(self):
+
+        # Create test CLI
+        test_cli = self.create_test_cli()
+
+        # Create map
+        self.create_test_map(test_cli)
+
+        # Spawn entity
+        test_cli.process_command("spawn warrior 10 10")
+
+        # Get entity
+        entity = test_cli.entity_list[0]
+
+        # Kill entity
+        entity.handle_death()
+
+        # Process command
+        output = self.process_command_and_get_output(
+            test_cli,
+            "pickup 1 IronSword",
+        )
+
+        # Check output
+        self.assertEqual(
+            output,
+            "error: pickup_failed - Entity is dead!\n",
+        )
+
+    # Test drop with dead entity
+    def test_drop_with_dead_entity(self):
+
+        # Create test CLI
+        test_cli = self.create_test_cli()
+
+        # Create map
+        self.create_test_map(test_cli)
+
+        # Spawn entity
+        test_cli.process_command("spawn warrior 10 10")
+
+        # Get entity
+        entity = test_cli.entity_list[0]
+
+        # Kill entity
+        entity.handle_death()
+
+        # Process command
+        output = self.process_command_and_get_output(
+            test_cli,
+            "drop 1 IronSword",
+        )
+
+        # Check output
+        self.assertEqual(
+            output,
+            "error: drop_failed - Entity is dead!\n",
+        )
+
+    # Test swap with dead entity
+    def test_swap_with_dead_entity(self):
+
+        # Create test CLI
+        test_cli = self.create_test_cli()
+
+        # Create map
+        self.create_test_map(test_cli)
+
+        # Spawn entity
+        test_cli.process_command("spawn warrior 10 10")
+
+        # Get entity
+        entity = test_cli.entity_list[0]
+
+        # Kill entity
+        entity.handle_death()
+
+        # Process command
+        output = self.process_command_and_get_output(
+            test_cli,
+            "swap 1 weapon ironsword",
+        )
+
+        # Check output
+        self.assertEqual(
+            output,
+            "error: swap_failed - Entity is dead!\n",
+        )
+
+    # Test use with dead entity
+    def test_use_with_dead_entity(self):
+
+        # Create test CLI
+        test_cli = self.create_test_cli()
+
+        # Create map
+        self.create_test_map(test_cli)
+
+        # Spawn entity
+        test_cli.process_command("spawn warrior 10 10")
+
+        # Get entity
+        entity = test_cli.entity_list[0]
+
+        # Kill entity
+        entity.handle_death()
+
+        # Process command
+        output = self.process_command_and_get_output(
+            test_cli,
+            "use 1 SmallHealthPotion",
+        )
+
+        # Check output
+        self.assertEqual(
+            output,
+            "error: use_failed - Entity is dead!\n",
+        )
+
+    # Test move with dead entity
+    def test_move_with_dead_entity(self):
+
+        # Create test CLI
+        test_cli = self.create_test_cli()
+
+        # Create map
+        self.create_test_map(test_cli)
+
+        # Spawn entity
+        test_cli.process_command("spawn warrior 10 10")
+
+        # Get entity
+        entity = test_cli.entity_list[0]
+
+        # Kill entity
+        entity.handle_death()
+
+        # Process command
+        output = self.process_command_and_get_output(
+            test_cli,
+            "move 1 11 10",
+        )
+
+        # Check output
+        self.assertEqual(
+            output,
+            "error: move_failed - Entity is dead!\n",
+        )
+
+        # Make sure entity did not move
+        self.assertEqual(entity.position, [10, 10])
+
+    # Test attack with dead attacker
+    def test_attack_with_dead_attacker(self):
+
+        # Create test CLI
+        test_cli = self.create_test_cli()
+
+        # Create map
+        self.create_test_map(test_cli)
+
+        # Spawn attacker and target
+        test_cli.process_command("spawn warrior 10 10")
+        test_cli.process_command("spawn goblin 11 10")
+
+        # Get entities
+        attacker = test_cli.entity_list[0]
+        target = test_cli.entity_list[1]
+
+        # Kill attacker
+        attacker.handle_death()
+
+        # Save target health
+        target_health = target.health
+
+        # Process attack
+        output = self.process_command_and_get_output(
+            test_cli,
+            "attack 1 2",
+        )
+
+        # Check output
+        self.assertEqual(
+            output,
+            "error: attack_failed - Attacker is dead!\n",
+        )
+
+        # Make sure target was not damaged
+        self.assertEqual(target.health, target_health)
+
+    # Test attack with dead target
+    def test_attack_with_dead_target(self):
+
+        # Create test CLI
+        test_cli = self.create_test_cli()
+
+        # Create map
+        self.create_test_map(test_cli)
+
+        # Spawn attacker and target
+        test_cli.process_command("spawn warrior 10 10")
+        test_cli.process_command("spawn goblin 11 10")
+
+        # Get entities
+        attacker = test_cli.entity_list[0]
+        target = test_cli.entity_list[1]
+
+        # Kill target
+        target.handle_death()
+
+        # Save attacker health
+        attacker_health = attacker.health
+
+        # Process attack
+        output = self.process_command_and_get_output(
+            test_cli,
+            "attack 1 2",
+        )
+
+        # Check output
+        self.assertEqual(
+            output,
+            "error: attack_failed - Defender is dead!\n",
+        )
+
+        # Make sure attacker was not damaged
+        self.assertEqual(attacker.health, attacker_health)
+
+    # Test cast with dead caster
+    def test_cast_with_dead_caster(self):
+
+        # Create test CLI
+        test_cli = self.create_test_cli()
+
+        # Create map
+        self.create_test_map(test_cli)
+
+        # Spawn caster and target
+        test_cli.process_command("spawn mage 10 10")
+        test_cli.process_command("spawn goblin 11 10")
+
+        # Get entities
+        caster = test_cli.entity_list[0]
+        target = test_cli.entity_list[1]
+
+        # Kill caster
+        caster.handle_death()
+
+        # Save target health
+        target_health = target.health
+
+        # Process cast
+        output = self.process_command_and_get_output(
+            test_cli,
+            "cast 1 2 fireball",
+        )
+
+        # Check output
+        self.assertEqual(
+            output,
+            "error: cast_failed - Caster is dead!\n",
+        )
+
+        # Make sure target was not damaged
+        self.assertEqual(target.health, target_health)
+
+    # Test cast with dead target
+    def test_cast_with_dead_target(self):
+
+        # Create test CLI
+        test_cli = self.create_test_cli()
+
+        # Create map
+        self.create_test_map(test_cli)
+
+        # Spawn caster and target
+        test_cli.process_command("spawn mage 10 10")
+        test_cli.process_command("spawn goblin 11 10")
+
+        # Get entities
+        caster = test_cli.entity_list[0]
+        target = test_cli.entity_list[1]
+
+        # Kill target
+        target.handle_death()
+
+        # Save caster health
+        caster_health = caster.health
+
+        # Process cast
+        output = self.process_command_and_get_output(
+            test_cli,
+            "cast 1 2 fireball",
+        )
+
+        # Check output
+        self.assertEqual(
+            output,
+            "error: cast_failed - Target is dead!\n",
+        )
+
+        # Make sure caster was not damaged
+        self.assertEqual(caster.health, caster_health)
+
+    # Test tick with no entities
+    def test_tick_with_no_entities(self):
+
+        # Create test CLI
+        test_cli = self.create_test_cli()
+
+        # Create map
+        self.create_test_map(test_cli)
+
+        # Process tick
+        output = self.process_command_and_get_output(
+            test_cli,
+            "tick",
+        )
+
+        # Check output
+        self.assertEqual(
+            output,
+            "ok: tick processed. Ticker: 2!\n",
+        )
+
+        # Check ticker
+        self.assertEqual(test_cli.ticker, 2)
+
+    # Test tick removes dead entity
+    def test_tick_removes_dead_entity(self):
+
+        # Create test CLI
+        test_cli = self.create_test_cli()
+
+        # Create map
+        self.create_test_map(test_cli)
+
+        # Spawn entity
+        test_cli.process_command("spawn warrior 10 10")
+
+        # Get entity
+        entity = test_cli.entity_list[0]
+
+        # Kill entity
+        entity.handle_death()
+
+        # Process tick
+        output = self.process_command_and_get_output(
+            test_cli,
+            "tick",
+        )
+        output = self.process_command_and_get_output(
+            test_cli,
+            "tick",
+        )
+        output = self.process_command_and_get_output(
+            test_cli,
+            "tick",
+        )
+
+        # Check output
+        self.assertEqual(
+            output,
+            "ok: tick processed. Ticker: 4!\n",
+        )
+
+        # Entity should be removed
+        self.assertEqual(len(test_cli.entity_list), 0)
+
+        # Grid tile should no longer contain entity
+        self.assertEqual(
+            test_cli.grid.grid[10][10].occupants,
+            [],
+        )
+
+    # Test tick removes multiple dead entities
+    def test_tick_removes_multiple_dead_entities(self):
+
+        # Create test CLI
+        test_cli = self.create_test_cli()
+
+        # Create map
+        self.create_test_map(test_cli)
+
+        # Spawn entities
+        test_cli.process_command("spawn warrior 10 10")
+        test_cli.process_command("spawn goblin 11 10")
+        test_cli.process_command("spawn mage 12 10")
+
+        # Get entities
+        warrior = test_cli.entity_list[0]
+        goblin = test_cli.entity_list[1]
+        mage = test_cli.entity_list[2]
+
+        # Kill warrior and goblin
+        warrior.handle_death()
+        goblin.handle_death()
+
+        # Process ticks
+        test_cli.process_command("tick")
+        test_cli.process_command("tick")
+        test_cli.process_command("tick")
+        test_cli.process_command("tick")
+
+        self.assertEqual(test_cli.ticker, 5)
+
+        # Mage should remain
+        self.assertEqual(len(test_cli.entity_list), 1)
+        self.assertEqual(test_cli.entity_list[0].id, 3)
+
+    # Test tick updates entity timers
+    def test_tick_updates_entity_timers(self):
+
+        # Create test CLI
+        test_cli = self.create_test_cli()
+
+        # Create map
+        self.create_test_map(test_cli)
+
+        # Spawn entity
+        test_cli.process_command("spawn warrior 10 10")
+
+        # Get entity
+        entity = test_cli.entity_list[0]
+
+        # Add temporary buff
+        entity.temp_buffs.append(
+            {
+                "Name": "TestBuff",
+                "Turns": 2,
+                "Effects": {
+                    "Flat_modifiers": {},
+                    "Percent_modifiers": {},
+                },
+            }
+        )
+
+        # Process tick
+        self.process_command_and_get_output(
+            test_cli,
+            "tick",
+        )
+
+        # Check buff timer
+        self.assertEqual(
+            entity.temp_buffs[0]["Turns"],
+            1,
+        )
 
 
 # reset entity stats

@@ -212,6 +212,7 @@ Tony Pescatore
     - **Offensive:** Purely damage based magic.
     - **Support:** Supports the targetted entity with healing.
     - **Control:** Deals lower damage but applies debuffs to targets.
+- Standard healing spells cannot revive characters from the dead, adn these specialized spells must revive the entity before it disappears completely, similar to death saves in Dungeon and Dragons 5e.
 
 ### Attacks
 - Currently there are two types of attacks that can be made, excluding spellcasting. The only difference currently is their attack ranges.
@@ -225,16 +226,19 @@ Tony Pescatore
 - Entities will have a dictionary of active modifiers which will contain two keys, Flat_modifiers and Percent_modifiers, which will make it significantly easier to calculate the entities final stats with these modifiers taken into account.
 - Entities will have 5 spaces open for their backpack, this is where they store their items in their inventory as well as any backup items and consumables.
 - When an entity dies they will remain on the map for 3 turns, for looting purposes, and will be given the "Dead" status as a temporary buff. This will prevent them from making any actions or being targetted, but will keep them present on the map.
+- After 3 turns on the map, the "Dead" entity will be removed from the game completely.
 
 ### Equipment
 - The equipment class represents items that will be held within an entity's inventory. There are only 3 types, weapon, armor, and accessory, all of which can only have 1 equipped in a single slot at a time. These items will have modifiers that will be to calculate the final stat values for the entity that they are equipped to. 
 - The items themselves will inherit the Equipment class then add their own stats to it so make getting the stats from each item simpler.
-- New items consumables will inherit the Equipment class but expand on it with two types of effects: over time effects and instant effects. This allows for them to be consumed (consumables), while other item cannot be consumed, and for their effects to effect the entity stats. Over time effects are waiting for time to be added (turns?) before their functionality is fully figured out.
+- New items consumables will inherit the Equipment class but expand on it with two types of effects: over time effects and instant effects. This allows for them to be consumed (consumables), while other item cannot be consumed, and for their effects to effect the entity stats. Over time effects duration are reduced by 1 per tick of the in game ticker. They will be removed when the duration reaches 0.
 
-### Test Suite NEEDS REFACTOR WITH TEST FUNCTIONS TO REDUCE LINES/REDUNDANCY
+### Test Suite 
 - The test suite tests the public facing methods as they will call and use the other private facing methods. This means that these private facing methods will also be tested in tandem. It incldues verbose tests includings tests on the boundary values, the validity of inputs, and ensures that all public facing methods and private methods are working as intended. 
 - All other aspects of the project are tested within this suite including the Command Line Interface, Equipment, Entities, Grid, and Tiles.
+- Each suite has a set of helper functions to reduce the amount of code needed, but does not detract from the readability of the code.
 
 ### Command Line Interface
 - The command line interface is where the game in played. Running the command line interface will allow the user to input commands, which will be handled accordingly by the command line interfaces process_command method. This will return descriptive error messages so that users will know what was wrong with their inputs. 
+- Manages time passing in game through ticks.
 - The command line interface will house the current game grid of tiles, a list of the current entities, and a boolean to determine if the map was already created. It also contains the main function that will prompt for the commands in the terminal, the player can exit at any time by entering 'quit'.

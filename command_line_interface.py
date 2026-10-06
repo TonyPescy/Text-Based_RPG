@@ -529,7 +529,7 @@ class CLI:
 
         # Ensure entity is alive
         if not entity.is_alive():
-            print("error: pickup_failed - Entity is dead!")
+            print("error: drop_failed - Entity is dead!")
             return
 
         # Find item in backpack
@@ -901,6 +901,7 @@ class CLI:
             return
         elif not self.map_created:
             print("error: tick_failed - Map does not exist!")
+            return
         # Check to see if there are entities to update
         if len(self.entity_list) > 0:
             # Entites present, update them
@@ -1035,7 +1036,7 @@ class CLI:
 
         # Remove entity from entity_list
         self.entity_list.remove(entity)
-        print(f"Entity Removed: {entity.id}, Type: {entity.e_type}!")
+        # print(f"Entity Removed: {entity.id}, Type: {entity.e_type}!")
 
     # Capitalize If String Start
     # Will capitalize and return string if it is a string

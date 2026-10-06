@@ -319,7 +319,7 @@ class Entity:
                         return True
 
                     self.temp_buffs.remove(buff)
-                    print(f"Buff Removed: {buff["Name"]}!")
+                    print(f'Buff Removed: {buff["Name"]}!')
                     break
         return False
 
@@ -327,14 +327,19 @@ class Entity:
     # Processes turn tick on entity - temp buffs updates, ...
     # Only temp buffs right now, may need updates in future with new functionality
     # Params: None
-    # Returns: bool - bool - True if entity is to be removed after 3 turns of being Dead
+    # Returns: bool - bool - True if entity is to be removed
     def process_tick_on_entity(self):
+        # Check if entity is already dead
+        if not self.is_alive():
+            return True
         # Update the buffs of the entity
         buffs_to_remove = self.update_temp_buffs()
         # If there are buffs to remove
-        if len(buffs_to_remove > 0):
+        if len(buffs_to_remove) > 0:
             # Remove them
             return self.remove_temp_buffs(buffs_to_remove)
+
+        return False
 
     # Add Item To Backpack
     # Adds provided item to backpack

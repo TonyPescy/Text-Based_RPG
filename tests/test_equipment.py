@@ -22,15 +22,148 @@ TLDR: This will primarily test only success cases as any and all error handling 
 these functions are handled within the CLI prior to calling this function.
 """
 
-
 # imports
 import unittest
+
 import equipment
 import domain_library as dl
+
 from entity import Warrior, Mage
 
 
 class TestEquipment(unittest.TestCase):
+
+    # Repeated Test Functions
+    # Saves repeated setup and assertion code while keeping individual tests readable
+
+    # Create a test Warrior
+    def create_warrior(self):
+        return Warrior(0, [0, 0])
+
+    # Create a test Mage
+    def create_mage(self):
+        return Mage(0, [0, 0])
+
+    # Get a consumable from EQUIPMENT_TYPES
+    def get_consumable(self, consumable_name):
+        return dl.EQUIPMENT_TYPES[consumable_name]()
+
+    # Use a consumable on an entity
+    def use_consumable(self, consumable_name, entity):
+        consumable = self.get_consumable(consumable_name)
+        equipment.Consumable.use_consumable(
+            consumable,
+            entity,
+        )
+        return consumable
+
+    # Verify standard Warrior stats
+    def assert_base_warrior_stats(self, entity):
+        self.assertEqual(entity.attack, 15)
+        self.assertEqual(entity.defence, 10)
+        self.assertEqual(entity.speed, 5)
+        self.assertEqual(entity.max_health, 120)
+
+    # Verify standard Mage stats
+    def assert_base_mage_stats(self, entity):
+        self.assertEqual(entity.health, 70)
+        self.assertEqual(entity.attack, 8)
+        self.assertEqual(entity.defence, 4)
+        self.assertEqual(entity.speed, 5)
+        self.assertEqual(entity.max_health, 70)
+        self.assertEqual(entity.max_mana, 100)
+
+    # Verify common consumable attributes
+    def assert_consumable_attributes(
+        self,
+        item,
+        name,
+        instant_effects,
+        over_time_effects,
+        duration,
+    ):
+        self.assertEqual(
+            item.name,
+            name,
+        )
+        self.assertEqual(
+            item.slot,
+            "Consumable",
+        )
+        self.assertEqual(
+            item.effects,
+            {},
+        )
+        self.assertEqual(
+            item.instant_effects,
+            instant_effects,
+        )
+        self.assertEqual(
+            item.over_time_effects,
+            over_time_effects,
+        )
+        self.assertEqual(
+            item.duration,
+            duration,
+        )
+
+    # Verify a standard instant health consumable
+    def assert_health_potion(
+        self,
+        item,
+        name,
+        health_amount,
+    ):
+        self.assert_consumable_attributes(
+            item,
+            name,
+            {
+                "Flat_modifiers": {
+                    "Health": health_amount,
+                },
+                "Percent_modifiers": {},
+            },
+            {
+                "Flat_modifiers": {},
+                "Percent_modifiers": {},
+            },
+            0,
+        )
+
+    # Verify standard entity stats after a health potion
+    def assert_warrior_health_stats(self, entity):
+        self.assert_base_warrior_stats(entity)
+
+    # Verify standard entity stats after a mana potion
+    def assert_mage_mana_stats(self, entity):
+        self.assertEqual(entity.health, 70)
+        self.assertEqual(entity.attack, 8)
+        self.assertEqual(entity.defence, 4)
+        self.assertEqual(entity.speed, 5)
+        self.assertEqual(entity.max_health, 70)
+        self.assertEqual(entity.max_mana, 100)
+
+    # Verify a temporary buff
+    def assert_temp_buff(
+        self,
+        entity,
+        index,
+        name,
+        effects,
+        turns,
+    ):
+        self.assertEqual(
+            entity.temp_buffs[index]["Name"],
+            name,
+        )
+        self.assertEqual(
+            entity.temp_buffs[index]["Effects"],
+            effects,
+        )
+        self.assertEqual(
+            entity.temp_buffs[index]["Turns"],
+            turns,
+        )
 
     # Test Equipment base class init
     def test_item_init(self):
@@ -40,8 +173,14 @@ class TestEquipment(unittest.TestCase):
             {"Attack": "+10"},
         )
 
-        self.assertEqual(item.name, "test")
-        self.assertEqual(item.slot, "Weapon")
+        self.assertEqual(
+            item.name,
+            "test",
+        )
+        self.assertEqual(
+            item.slot,
+            "Weapon",
+        )
         self.assertDictEqual(
             item.effects,
             {"Attack": "+10"},
@@ -189,120 +328,65 @@ class TestEquipment(unittest.TestCase):
     def test_small_health_potion_init(self):
         item = equipment.SmallHealthPotion()
 
-        self.assertEqual(item.name, "SmallHealthPotion")
-        self.assertEqual(item.slot, "Consumable")
-        self.assertEqual(item.effects, {})
-        self.assertEqual(
-            item.instant_effects,
-            {
-                "Flat_modifiers": {
-                    "Health": "20",
-                },
-                "Percent_modifiers": {},
-            },
+        self.assert_health_potion(
+            item,
+            "SmallHealthPotion",
+            "20",
         )
-        self.assertEqual(
-            item.over_time_effects,
-            {
-                "Flat_modifiers": {},
-                "Percent_modifiers": {},
-            },
-        )
-        self.assertEqual(item.duration, 0)
 
     # Test GreaterHealthPotion initialization
     def test_greater_health_potion_init(self):
         item = equipment.GreaterHealthPotion()
 
-        self.assertEqual(item.name, "GreaterHealthPotion")
-        self.assertEqual(item.slot, "Consumable")
-        self.assertEqual(item.effects, {})
-        self.assertEqual(
-            item.instant_effects,
-            {
-                "Flat_modifiers": {
-                    "Health": "50",
-                },
-                "Percent_modifiers": {},
-            },
+        self.assert_health_potion(
+            item,
+            "GreaterHealthPotion",
+            "50",
         )
-        self.assertEqual(
-            item.over_time_effects,
-            {
-                "Flat_modifiers": {},
-                "Percent_modifiers": {},
-            },
-        )
-        self.assertEqual(item.duration, 0)
 
     # Test SuperiorHealthPotion initialization
     def test_superior_health_potion_init(self):
         item = equipment.SuperiorHealthPotion()
 
-        self.assertEqual(item.name, "SuperiorHealthPotion")
-        self.assertEqual(item.slot, "Consumable")
-        self.assertEqual(item.effects, {})
-        self.assertEqual(
-            item.instant_effects,
-            {
-                "Flat_modifiers": {
-                    "Health": "100",
-                },
-                "Percent_modifiers": {},
-            },
+        self.assert_health_potion(
+            item,
+            "SuperiorHealthPotion",
+            "100",
         )
-        self.assertEqual(
-            item.over_time_effects,
-            {
-                "Flat_modifiers": {},
-                "Percent_modifiers": {},
-            },
-        )
-        self.assertEqual(item.duration, 0)
 
     # Test ManaPotion initialization
     def test_mana_potion_init(self):
         item = equipment.ManaPotion()
 
-        self.assertEqual(item.name, "ManaPotion")
-        self.assertEqual(item.slot, "Consumable")
-        self.assertEqual(item.effects, {})
-        self.assertEqual(
-            item.instant_effects,
+        self.assert_consumable_attributes(
+            item,
+            "ManaPotion",
             {
                 "Flat_modifiers": {
                     "Mana": "50",
                 },
                 "Percent_modifiers": {},
             },
-        )
-        self.assertEqual(
-            item.over_time_effects,
             {
                 "Flat_modifiers": {},
                 "Percent_modifiers": {},
             },
+            0,
         )
-        self.assertEqual(item.duration, 0)
 
     # Test TurtleMasterPotion initialization
     def test_turtle_master_potion_init(self):
         item = equipment.TurtleMasterPotion()
 
-        self.assertEqual(item.name, "TurtleMasterPotion")
-        self.assertEqual(item.slot, "Consumable")
-        self.assertEqual(item.effects, {})
-        self.assertEqual(
-            item.instant_effects,
+        self.assert_consumable_attributes(
+            item,
+            "TurtleMasterPotion",
             {
                 "Flat_modifiers": {},
                 "Percent_modifiers": {
                     "Health": "10",
                 },
             },
-        )
-        self.assertEqual(
-            item.over_time_effects,
             {
                 "Flat_modifiers": {
                     "Speed": "-3",
@@ -313,167 +397,130 @@ class TestEquipment(unittest.TestCase):
                     "Defence": "20",
                 },
             },
+            5,
         )
-        self.assertEqual(item.duration, 5)
 
     # Test use_consumable with Small Health Potion
     def test_use_consumable_small_health_potion(self):
-
         # Create test entity
-        entity = Warrior(0, [0, 0])
+        entity = self.create_warrior()
 
         # Set current Health
         entity.health = 50
 
-        # Get consumable
-        consumable = dl.EQUIPMENT_TYPES["smallhealthpotion"]()
-
         # Use consumable
-        equipment.Consumable.use_consumable(consumable, entity)
+        self.use_consumable(
+            "smallhealthpotion",
+            entity,
+        )
 
         # Check Health increased by 20
         self.assertEqual(entity.health, 70)
 
         # Check other stats remain unchanged
-        self.assertEqual(entity.attack, 15)
-        self.assertEqual(entity.defence, 10)
-        self.assertEqual(entity.speed, 5)
-
-        # Check max stats remain unchanged
-        self.assertEqual(entity.max_health, 120)
+        self.assert_warrior_health_stats(entity)
 
     # Test use_consumable with Greater Health Potion
     def test_use_consumable_greater_health_potion(self):
-
         # Create test entity
-        entity = Warrior(0, [0, 0])
+        entity = self.create_warrior()
         entity.health = 50
 
-        # Get consumable
-        consumable = dl.EQUIPMENT_TYPES["greaterhealthpotion"]()
-
         # Use consumable
-        equipment.Consumable.use_consumable(consumable, entity)
+        self.use_consumable(
+            "greaterhealthpotion",
+            entity,
+        )
 
         # Check Health increased by 50
         self.assertEqual(entity.health, 100)
 
         # Check other stats remain unchanged
-        self.assertEqual(entity.attack, 15)
-        self.assertEqual(entity.defence, 10)
-        self.assertEqual(entity.speed, 5)
-
-        # Check max stats remain unchanged
-        self.assertEqual(entity.max_health, 120)
+        self.assert_warrior_health_stats(entity)
 
     # Test use_consumable with Superior Health Potion
     def test_use_consumable_superior_health_potion(self):
-
         # Create test entity
-        entity = Warrior(0, [0, 0])
+        entity = self.create_warrior()
         entity.health = 50
 
-        # Get consumable
-        consumable = dl.EQUIPMENT_TYPES["superiorhealthpotion"]()
-
         # Use consumable
-        equipment.Consumable.use_consumable(consumable, entity)
+        self.use_consumable(
+            "superiorhealthpotion",
+            entity,
+        )
 
         # Check Health is capped at max Health
         self.assertEqual(entity.health, 120)
 
         # Check other stats remain unchanged
-        self.assertEqual(entity.attack, 15)
-        self.assertEqual(entity.defence, 10)
-        self.assertEqual(entity.speed, 5)
-
-        # Check max stats remain unchanged
-        self.assertEqual(entity.max_health, 120)
+        self.assert_warrior_health_stats(entity)
 
     # Test use_consumable when Health would exceed max Health
     def test_use_consumable_health_exceeds_max(self):
-
         # Create test entity
-        entity = Warrior(0, [0, 0])
+        entity = self.create_warrior()
         entity.health = 110
 
-        # Get consumable
-        consumable = dl.EQUIPMENT_TYPES["greaterhealthpotion"]()
-
         # Use consumable
-        equipment.Consumable.use_consumable(consumable, entity)
+        self.use_consumable(
+            "greaterhealthpotion",
+            entity,
+        )
 
         # Check Health does not exceed max Health
         self.assertEqual(entity.health, 120)
 
         # Check other stats remain unchanged
-        self.assertEqual(entity.attack, 15)
-        self.assertEqual(entity.defence, 10)
-        self.assertEqual(entity.speed, 5)
-
-        # Check max stats remain unchanged
-        self.assertEqual(entity.max_health, 120)
+        self.assert_warrior_health_stats(entity)
 
     # Test use_consumable when Health is already at max Health
     def test_use_consumable_health_at_max(self):
-
         # Create test entity
-        entity = Warrior(0, [0, 0])
+        entity = self.create_warrior()
         entity.health = entity.max_health
 
-        # Get consumable
-        consumable = dl.EQUIPMENT_TYPES["smallhealthpotion"]()
-
         # Use consumable
-        equipment.Consumable.use_consumable(consumable, entity)
+        self.use_consumable(
+            "smallhealthpotion",
+            entity,
+        )
 
         # Check Health remains at max Health
         self.assertEqual(entity.health, 120)
 
         # Check other stats remain unchanged
-        self.assertEqual(entity.attack, 15)
-        self.assertEqual(entity.defence, 10)
-        self.assertEqual(entity.speed, 5)
-
-        # Check max stats remain unchanged
-        self.assertEqual(entity.max_health, 120)
+        self.assert_warrior_health_stats(entity)
 
     # Test use_consumable with Turtle Master Potion percentage effect
     def test_use_consumable_turtle_master_percent_health(self):
-
         # Create test entity
-        entity = Warrior(0, [0, 0])
+        entity = self.create_warrior()
         entity.health = 50
 
-        # Get consumable
-        consumable = dl.EQUIPMENT_TYPES["turtlemasterpotion"]()
-
         # Use consumable
-        equipment.Consumable.use_consumable(consumable, entity)
+        self.use_consumable(
+            "turtlemasterpotion",
+            entity,
+        )
 
         # Check Health increased by 10 percent
         self.assertEqual(entity.health, 55)
 
         # Check other stats remain unchanged immediately
-        self.assertEqual(entity.attack, 15)
-        self.assertEqual(entity.defence, 10)
-        self.assertEqual(entity.speed, 5)
-
-        # Check max Health remains unchanged
-        self.assertEqual(entity.max_health, 120)
+        self.assert_warrior_health_stats(entity)
 
     # Test use_consumable with Turtle Master Potion at max Health
     def test_use_consumable_turtle_master_at_max_health(self):
-
         # Create test entity
-        entity = Warrior(0, [0, 0])
+        entity = self.create_warrior()
         entity.health = entity.max_health
 
-        # Get consumable
-        consumable = dl.EQUIPMENT_TYPES["turtlemasterpotion"]()
-
         # Use consumable
-        equipment.Consumable.use_consumable(consumable, entity)
+        self.use_consumable(
+            "turtlemasterpotion",
+            entity,
+        )
 
         # Check Health does not exceed max Health
         self.assertEqual(entity.health, 120)
@@ -483,109 +530,75 @@ class TestEquipment(unittest.TestCase):
 
     # Test use_consumable with Mana Potion
     def test_use_consumable_mana_potion(self):
-
         # Create test entity
-        entity = Mage(0, [0, 0])
+        entity = self.create_mage()
         entity.mana = 25
 
-        # Get consumable
-        consumable = dl.EQUIPMENT_TYPES["manapotion"]()
-
         # Use consumable
-        equipment.Consumable.use_consumable(consumable, entity)
+        self.use_consumable(
+            "manapotion",
+            entity,
+        )
 
         # Check Mana increased by 50
         self.assertEqual(entity.mana, 75)
 
         # Check other stats remain unchanged
-        self.assertEqual(entity.health, 70)
-        self.assertEqual(entity.attack, 8)
-        self.assertEqual(entity.defence, 4)
-        self.assertEqual(entity.speed, 5)
-
-        # Check max stats remain unchanged
-        self.assertEqual(entity.max_health, 70)
-        self.assertEqual(entity.max_mana, 100)
+        self.assert_mage_mana_stats(entity)
 
     # Test use_consumable when Mana would exceed max Mana
     def test_use_consumable_mana_exceeds_max(self):
-
         # Create test entity
-        entity = Mage(0, [0, 0])
+        entity = self.create_mage()
         entity.mana = 90
 
-        # Get consumable
-        consumable = dl.EQUIPMENT_TYPES["manapotion"]()
-
         # Use consumable
-        equipment.Consumable.use_consumable(consumable, entity)
+        self.use_consumable(
+            "manapotion",
+            entity,
+        )
 
         # Check Mana does not exceed max Mana
         self.assertEqual(entity.mana, 100)
 
         # Check other stats remain unchanged
-        self.assertEqual(entity.health, 70)
-        self.assertEqual(entity.attack, 8)
-        self.assertEqual(entity.defence, 4)
-        self.assertEqual(entity.speed, 5)
-
-        # Check max stats remain unchanged
-        self.assertEqual(entity.max_health, 70)
-        self.assertEqual(entity.max_mana, 100)
+        self.assert_mage_mana_stats(entity)
 
     # Test use_consumable when Mana is already at max Mana
     def test_use_consumable_mana_at_max(self):
-
         # Create test entity
-        entity = Mage(0, [0, 0])
+        entity = self.create_mage()
         entity.mana = entity.max_mana
 
-        # Get consumable
-        consumable = dl.EQUIPMENT_TYPES["manapotion"]()
-
         # Use consumable
-        equipment.Consumable.use_consumable(consumable, entity)
+        self.use_consumable(
+            "manapotion",
+            entity,
+        )
 
         # Check Mana remains at max Mana
         self.assertEqual(entity.mana, 100)
 
         # Check other stats remain unchanged
-        self.assertEqual(entity.health, 70)
-        self.assertEqual(entity.attack, 8)
-        self.assertEqual(entity.defence, 4)
-        self.assertEqual(entity.speed, 5)
-
-        # Check max stats remain unchanged
-        self.assertEqual(entity.max_health, 70)
-        self.assertEqual(entity.max_mana, 100)
+        self.assert_mage_mana_stats(entity)
 
     # Test use_consumable with Turtle Master Potion over-time effects
     def test_use_consumable_turtle_master_over_time_effects(self):
-
         # Create test entity
-        entity = Warrior(0, [0, 0])
-
-        # Get consumable
-        consumable = dl.EQUIPMENT_TYPES["turtlemasterpotion"]()
+        entity = self.create_warrior()
 
         # Use consumable
-        equipment.Consumable.use_consumable(consumable, entity)
+        consumable = self.use_consumable(
+            "turtlemasterpotion",
+            entity,
+        )
 
-        # Check buff name
-        self.assertEqual(
-            entity.temp_buffs[0]["Name"],
+        # Check buff
+        self.assert_temp_buff(
+            entity,
+            0,
             "TurtleMasterPotion",
-        )
-
-        # Check buff effects
-        self.assertEqual(
-            entity.temp_buffs[0]["Effects"],
             consumable.over_time_effects,
-        )
-
-        # Check buff duration
-        self.assertEqual(
-            entity.temp_buffs[0]["Turns"],
             5,
         )
 
@@ -598,48 +611,55 @@ class TestEquipment(unittest.TestCase):
 
     # Test use_consumable with multiple over-time buffs
     def test_use_consumable_multiple_over_time_buffs(self):
-
         # Create test entity
-        entity = Warrior(0, [0, 0])
-
-        # Get consumables
-        first_consumable = dl.EQUIPMENT_TYPES["turtlemasterpotion"]()
-        second_consumable = dl.EQUIPMENT_TYPES["turtlemasterpotion"]()
+        entity = self.create_warrior()
 
         # Use first consumable
-        equipment.Consumable.use_consumable(first_consumable, entity)
+        first_consumable = self.use_consumable(
+            "turtlemasterpotion",
+            entity,
+        )
 
         # Use second consumable
-        equipment.Consumable.use_consumable(second_consumable, entity)
+        second_consumable = self.use_consumable(
+            "turtlemasterpotion",
+            entity,
+        )
 
         # Check first buff
-        self.assertEqual(
-            entity.temp_buffs[0]["Name"],
+        self.assert_temp_buff(
+            entity,
+            0,
             "TurtleMasterPotion",
+            first_consumable.over_time_effects,
+            5,
         )
-        self.assertEqual(entity.temp_buffs[0]["Turns"], 5)
 
         # Check second buff
-        self.assertEqual(
-            entity.temp_buffs[1]["Name"],
+        self.assert_temp_buff(
+            entity,
+            1,
             "TurtleMasterPotion",
+            second_consumable.over_time_effects,
+            5,
         )
-        self.assertEqual(entity.temp_buffs[1]["Turns"], 5)
 
     # Test use_consumable with consumable without over-time effects
     def test_use_consumable_no_over_time_effects(self):
-
         # Create test entity
-        entity = Warrior(0, [0, 0])
-
-        # Get consumable
-        consumable = dl.EQUIPMENT_TYPES["smallhealthpotion"]()
+        entity = self.create_warrior()
 
         # Use consumable
-        equipment.Consumable.use_consumable(consumable, entity)
+        self.use_consumable(
+            "smallhealthpotion",
+            entity,
+        )
 
         # Check no temporary buffs were added
-        self.assertEqual(entity.temp_buffs, [])
+        self.assertEqual(
+            entity.temp_buffs,
+            [],
+        )
 
         # Check stats
         self.assertEqual(entity.health, 120)
@@ -650,9 +670,8 @@ class TestEquipment(unittest.TestCase):
 
     # Test use_consumable preserves existing temporary buffs
     def test_use_consumable_preserves_existing_temp_buffs(self):
-
         # Create test entity
-        entity = Warrior(0, [0, 0])
+        entity = self.create_warrior()
 
         # Add existing temporary buff
         entity.temp_buffs.append(
@@ -668,20 +687,33 @@ class TestEquipment(unittest.TestCase):
             }
         )
 
-        # Get consumable
-        consumable = dl.EQUIPMENT_TYPES["turtlemasterpotion"]()
-
         # Use consumable
-        equipment.Consumable.use_consumable(consumable, entity)
+        consumable = self.use_consumable(
+            "turtlemasterpotion",
+            entity,
+        )
 
         # Check existing buff was preserved
-        self.assertEqual(
-            entity.temp_buffs[0]["Name"],
+        self.assert_temp_buff(
+            entity,
+            0,
             "ExistingBuff",
+            {
+                "Flat_modifiers": {
+                    "Attack": "5",
+                },
+                "Percent_modifiers": {},
+            },
+            2,
         )
-        self.assertEqual(
-            entity.temp_buffs[1]["Name"],
+
+        # Check new buff was added
+        self.assert_temp_buff(
+            entity,
+            1,
             "TurtleMasterPotion",
+            consumable.over_time_effects,
+            5,
         )
 
         # Check stats remain unchanged immediately, except instant Health

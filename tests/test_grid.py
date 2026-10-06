@@ -32,10 +32,53 @@ import domain_library as dl
 
 class TestGrid(unittest.TestCase):
 
+    # Create Test Grid
+    # Params: width/height - int - grid dimensions
+    # Returns: Grid
+    def create_test_grid(self, width=25, height=25):
+        return Grid(width, height)
+
+    # Reset Tile Item List
+    # Params:   test_grid - Grid - current grid
+    #           x/y - ints - grid position
+    # Returns: None
+    def reset_tile_item_list(self, test_grid, x=0, y=0):
+        test_grid.clear_tile_item_list(x, y)
+
+    # Add Test Item
+    # Params:   test_grid - Grid - current grid
+    #           x/y - ints - grid position
+    #           item_name - string - item name
+    # Returns: None
+    def add_test_item(self, test_grid, x, y, item_name):
+        test_grid.add_item_to_tile_item_list(x, y, item_name)
+
+    # Get Test Tile Item
+    # Gets item from tile
+    # Params:   test_grid - Grid - current grid
+    #           x/y - ints - grid position
+    #           item_index - int - item index
+    # Returns: Item present at position on grid
+    def get_test_tile_item(self, test_grid, x=0, y=0, item_index=0):
+        return test_grid.grid[x][y].item_list[item_index]
+
+    # Assert Tile Defaults
+    # Asserts common tile default stats
+    # Params:   tile - Tile - current tile
+    #           tile_type - string - current tiles type
+    #           passable - bool - true if passable, false otherwise
+    #           modifers - dicts - list of modifiers on tile
+    # Returns: None
+    def assert_tile_defaults(self, tile, tile_type, passable, modifiers):
+        self.assertEqual(tile.t_type, tile_type)
+        self.assertEqual(tile.passable, passable)
+        self.assertEqual(tile.occupants, [])
+        self.assertDictEqual(tile.modifiers, modifiers)
+
     # test grid proper grid init
     def test_correct_grid_init_at_lower_bound(self):
         # Create grid
-        test_grid = Grid(5, 5)
+        test_grid = self.create_test_grid(5, 5)
 
         self.assertEqual(test_grid.width, 5)
         self.assertEqual(test_grid.height, 5)
@@ -71,7 +114,7 @@ class TestGrid(unittest.TestCase):
     # test is_occupied success
     def test_is_occupied_success_with_occupant(self):
         # create grid
-        test_grid = Grid(25, 25)
+        test_grid = self.create_test_grid()
         # Add occupant  - LIST
         test_grid.grid[0][0].occupants = [1]
         self.assertEqual(test_grid.is_occupied(0, 0), True)
@@ -79,7 +122,7 @@ class TestGrid(unittest.TestCase):
     # test is_occupied x/y int fail
     def test_is_occupied_not_ints_provided(self):
         # create grid
-        test_grid = Grid(25, 25)
+        test_grid = self.create_test_grid()
         # Add occupant  - LIST
         test_grid.grid[0][0].occupants = [1]
         self.assertEqual(test_grid.is_occupied(0, "sev"), None)
@@ -87,7 +130,7 @@ class TestGrid(unittest.TestCase):
     # test is_occupied success without occupants
     def test_is_occupied_success_without_occupant(self):
         # create grid
-        test_grid = Grid(25, 25)
+        test_grid = self.create_test_grid()
         # Add occupant  - LIST
         test_grid.grid[0][0].occupants = []
         self.assertEqual(test_grid.is_occupied(0, 0), False)
@@ -95,7 +138,7 @@ class TestGrid(unittest.TestCase):
     # test occupy success
     def test_occupy_success(self):
         # create grid
-        test_grid = Grid(25, 25)
+        test_grid = self.create_test_grid()
         # Reset occupants  - LIST
         test_grid.grid[0][0].occupants = []
         # add occupants
@@ -105,7 +148,7 @@ class TestGrid(unittest.TestCase):
     # test clear occupant (only 1) from grid position
     def test_clear_occupant_success(self):
         # create grid
-        test_grid = Grid(25, 25)
+        test_grid = self.create_test_grid()
         # Reset occupants  - LIST
         test_grid.grid[0][0].occupants = []
         # add occupants
@@ -117,7 +160,7 @@ class TestGrid(unittest.TestCase):
     # test clear occupant (3) from grid position
     def test_clear_occupant_success_with_occupants(self):
         # create grid
-        test_grid = Grid(25, 25)
+        test_grid = self.create_test_grid()
         # Reset occupants  - LIST
         test_grid.grid[0][0].occupants = []
         # add occupants
@@ -131,7 +174,7 @@ class TestGrid(unittest.TestCase):
     # test clear occupant (3) from grid position
     def test_clear_occupant_without_occupants(self):
         # create grid
-        test_grid = Grid(25, 25)
+        test_grid = self.create_test_grid()
         # Reset occupants  - LIST
         test_grid.grid[0][0].occupants = []
         # Clear occupant
@@ -141,7 +184,7 @@ class TestGrid(unittest.TestCase):
     # test if tile on grid is passable - true due to floor at 0, 0
     def test_is_passable_true(self):
         # create grid
-        test_grid = Grid(25, 25)
+        test_grid = self.create_test_grid()
         # Clear occupant
         test_grid.grid[0][0].passable = True
         self.assertEqual(test_grid.is_passable(0, 0), True)
@@ -149,7 +192,7 @@ class TestGrid(unittest.TestCase):
     # test if tile on grid is passable - false due to wall at 0, 0
     def test_is_passable_false(self):
         # create grid
-        test_grid = Grid(25, 25)
+        test_grid = self.create_test_grid()
         # Clear occupant
         test_grid.grid[0][0].passable = False
         self.assertEqual(test_grid.is_passable(0, 0), False)
@@ -157,7 +200,7 @@ class TestGrid(unittest.TestCase):
     # test to get stats of grid position
     def test_get_stats(self):
         # create grid
-        test_grid = Grid(25, 25)
+        test_grid = self.create_test_grid()
         # Reset occupants  - LIST
         test_grid.grid[0][0].occupants = [0, 1, 2, 3, 5, 4, 7]
         # Clear occupant
@@ -188,33 +231,33 @@ class TestGrid(unittest.TestCase):
 
     # test to see if ints provided are within grid bounds - ints are higher
     def test_valid_grid_position_false_higher(self):
-        temp_grid = Grid(25, 25)
+        temp_grid = self.create_test_grid()
         self.assertEqual(temp_grid.is_valid_grid_position(25, 25), False)
 
     # test to see if ints provided are within grid bounds - ints are on lower boundary
     def test_valid_grid_posiiton_true_lower_boundary(self):
-        temp_grid = Grid(25, 25)
+        temp_grid = self.create_test_grid()
         self.assertEqual(temp_grid.is_valid_grid_position(0, 0), True)
 
     # test to see if ints provided are within bounds - ints are on higher boundary
     def test_valid_grid_positions_true_higher_boundary(self):
-        temp_grid = Grid(25, 25)
+        temp_grid = self.create_test_grid()
         self.assertEqual(temp_grid.is_valid_grid_position(24, 24), True)
 
     # test to see if ints provided are within grid bounds - ints are lower
     def test_valid_grid_positions_false_lower(self):
-        temp_grid = Grid(25, 25)
+        temp_grid = self.create_test_grid()
         self.assertEqual(temp_grid.is_valid_grid_position(-1, -1), False)
 
     # test to see if ints provided are within bounds - ints are vlid
     def test_valid_grid_positions_true(self):
-        temp_grid = Grid(25, 25)
+        temp_grid = self.create_test_grid()
         self.assertEqual(temp_grid.is_valid_grid_position(15, 15), True)
 
     # Test set_tile success
     def test_set_tile_success(self):
         # create grid with entities and set tile
-        temp_grid = Grid(25, 25)
+        temp_grid = self.create_test_grid()
         temp_grid.occupy(0, 0, 1)
         temp_grid.occupy(0, 0, 2)
         temp_grid.occupy(0, 0, 0)
@@ -229,7 +272,7 @@ class TestGrid(unittest.TestCase):
     # test spawn entity
     def test_spawn_entity_success(self):
         # create grid
-        temp_grid = Grid(25, 25)
+        temp_grid = self.create_test_grid()
         # reset
         cli.entity_list = []
         cli.entity_ids_issued = 0
@@ -285,29 +328,22 @@ class TestGrid(unittest.TestCase):
     def test_create_tile_floor(self):
         tile = Tile.create_tile("floor")
 
-        self.assertEqual(tile.t_type, "Floor")
-        self.assertEqual(tile.passable, True)
-        self.assertEqual(tile.occupants, [])
-        self.assertDictEqual(tile.modifiers, {})
+        self.assert_tile_defaults(tile, "Floor", True, {})
 
     # Tests for create_tile with wall
     def test_create_tile_wall(self):
         tile = Tile.create_tile("wall")
 
-        self.assertEqual(tile.t_type, "Wall")
-        self.assertEqual(tile.passable, False)
-        self.assertEqual(tile.occupants, [])
-        self.assertDictEqual(tile.modifiers, {})
+        self.assert_tile_defaults(tile, "Wall", False, {})
 
     # Tests for create_tile with shallow water
     def test_create_tile_shallow_water(self):
         tile = Tile.create_tile("shallowwater")
 
-        self.assertEqual(tile.t_type, "ShallowWater")
-        self.assertEqual(tile.passable, True)
-        self.assertEqual(tile.occupants, [])
-        self.assertDictEqual(
-            tile.modifiers,
+        self.assert_tile_defaults(
+            tile,
+            "ShallowWater",
+            True,
             {"Speed": "-2"},
         )
 
@@ -315,11 +351,10 @@ class TestGrid(unittest.TestCase):
     def test_create_tile_forest(self):
         tile = Tile.create_tile("forest")
 
-        self.assertEqual(tile.t_type, "Forest")
-        self.assertEqual(tile.passable, True)
-        self.assertEqual(tile.occupants, [])
-        self.assertDictEqual(
-            tile.modifiers,
+        self.assert_tile_defaults(
+            tile,
+            "Forest",
+            True,
             {"Defence": "+5", "Speed": "-1"},
         )
 
@@ -330,9 +365,9 @@ class TestGrid(unittest.TestCase):
 
     # Test adding an item to a tile item list
     def test_add_item_to_tile_item_list(self):
-        temp_grid = Grid(5, 5)
+        temp_grid = self.create_test_grid(5, 5)
         # reset
-        temp_grid.clear_tile_item_list(0, 0)
+        self.reset_tile_item_list(temp_grid, 0, 0)
         # Add item
         temp_grid.add_item_to_tile_item_list(
             0,
@@ -347,15 +382,15 @@ class TestGrid(unittest.TestCase):
         )
 
         self.assertEqual(
-            temp_grid.grid[0][0].item_list[0].name,
+            self.get_test_tile_item(temp_grid).name,
             "IronSword",
         )
 
     # Test adding multiple items to a tile item list
     def test_add_multiple_items_to_tile_item_list(self):
-        temp_grid = Grid(5, 5)
+        temp_grid = self.create_test_grid(5, 5)
         # reset
-        temp_grid.clear_tile_item_list(0, 0)
+        self.reset_tile_item_list(temp_grid, 0, 0)
         # Add items
         temp_grid.add_item_to_tile_item_list(
             0,
@@ -376,21 +411,21 @@ class TestGrid(unittest.TestCase):
         )
 
         self.assertEqual(
-            temp_grid.grid[0][0].item_list[0].name,
+            self.get_test_tile_item(temp_grid).name,
             "IronSword",
         )
 
         self.assertEqual(
-            temp_grid.grid[0][0].item_list[1].name,
+            self.get_test_tile_item(temp_grid, item_index=1).name,
             "CursedDagger",
         )
 
     # Test adding an item to a different tile
     def test_add_item_to_different_tile(self):
-        temp_grid = Grid(5, 5)
+        temp_grid = self.create_test_grid(5, 5)
         # reset
-        temp_grid.clear_tile_item_list(0, 0)
-        temp_grid.clear_tile_item_list(2, 3)
+        self.reset_tile_item_list(temp_grid, 0, 0)
+        self.reset_tile_item_list(temp_grid, 2, 3)
         # Add item to first tile
         temp_grid.add_item_to_tile_item_list(
             0,
@@ -409,7 +444,7 @@ class TestGrid(unittest.TestCase):
             1,
         )
         self.assertEqual(
-            temp_grid.grid[0][0].item_list[0].name,
+            self.get_test_tile_item(temp_grid).name,
             "IronSword",
         )
 
@@ -420,15 +455,15 @@ class TestGrid(unittest.TestCase):
         )
 
         self.assertEqual(
-            temp_grid.grid[2][3].item_list[0].name,
+            self.get_test_tile_item(temp_grid, 2, 3).name,
             "MageStaff",
         )
 
     # Test removing an item from a tile item list
     def test_remove_item_from_tile_item_list(self):
-        temp_grid = Grid(5, 5)
+        temp_grid = self.create_test_grid(5, 5)
         # reset
-        temp_grid.clear_tile_item_list(0, 0)
+        self.reset_tile_item_list(temp_grid, 0, 0)
         # Add item
         temp_grid.add_item_to_tile_item_list(
             0,
@@ -451,9 +486,9 @@ class TestGrid(unittest.TestCase):
 
     # Test removing one item while another remains
     def test_remove_item_from_tile_item_list_with_multiple_items(self):
-        temp_grid = Grid(5, 5)
+        temp_grid = self.create_test_grid(5, 5)
         # reset
-        temp_grid.clear_tile_item_list(0, 0)
+        self.reset_tile_item_list(temp_grid, 0, 0)
         # Add items
         temp_grid.add_item_to_tile_item_list(
             0,
@@ -481,15 +516,15 @@ class TestGrid(unittest.TestCase):
         )
 
         self.assertEqual(
-            temp_grid.grid[0][0].item_list[0].name,
+            self.get_test_tile_item(temp_grid).name,
             "CursedDagger",
         )
 
     # Test removing an item using different capitalization
     def test_remove_item_case_insensitive(self):
-        temp_grid = Grid(5, 5)
+        temp_grid = self.create_test_grid(5, 5)
         # reset
-        temp_grid.clear_tile_item_list(0, 0)
+        self.reset_tile_item_list(temp_grid, 0, 0)
         # Add item
         temp_grid.add_item_to_tile_item_list(
             0,
@@ -512,9 +547,9 @@ class TestGrid(unittest.TestCase):
 
     # Test removing an item that does not exist
     def test_remove_nonexistent_item_from_tile_item_list(self):
-        temp_grid = Grid(5, 5)
+        temp_grid = self.create_test_grid(5, 5)
         # reset
-        temp_grid.clear_tile_item_list(0, 0)
+        self.reset_tile_item_list(temp_grid, 0, 0)
         # Add item
         temp_grid.add_item_to_tile_item_list(
             0,
@@ -536,15 +571,15 @@ class TestGrid(unittest.TestCase):
         )
 
         self.assertEqual(
-            temp_grid.grid[0][0].item_list[0].name,
+            self.get_test_tile_item(temp_grid).name,
             "IronSword",
         )
 
     # Test setting a tile item list
     def test_set_tile_item_list(self):
-        temp_grid = Grid(5, 5)
+        temp_grid = self.create_test_grid(5, 5)
         # reset
-        temp_grid.clear_tile_item_list(0, 0)
+        self.reset_tile_item_list(temp_grid, 0, 0)
         item_list = [
             dl.EQUIPMENT_TYPES["ironsword"],
             dl.EQUIPMENT_TYPES["magestaff"],
@@ -564,9 +599,9 @@ class TestGrid(unittest.TestCase):
 
     # Test clearing a tile item list
     def test_clear_tile_item_list(self):
-        temp_grid = Grid(5, 5)
+        temp_grid = self.create_test_grid(5, 5)
         # reset
-        temp_grid.clear_tile_item_list(0, 0)
+        self.reset_tile_item_list(temp_grid, 0, 0)
         # Add items directly
         temp_grid.grid[0][0].item_list = [
             dl.EQUIPMENT_TYPES["ironsword"],
@@ -589,7 +624,7 @@ class TestGrid(unittest.TestCase):
     def test_is_within_range_same_position(self):
 
         # Create grid
-        test_grid = Grid(25, 25)
+        test_grid = self.create_test_grid()
 
         # Check if target is current position
         result = test_grid.is_within_range([5, 5], [5, 5], 0)
@@ -600,7 +635,7 @@ class TestGrid(unittest.TestCase):
     def test_is_within_range_one_tile(self):
 
         # Create grid
-        test_grid = Grid(25, 25)
+        test_grid = self.create_test_grid()
 
         # Check if target is within range
         result = test_grid.is_within_range([5, 5], [6, 5], 1)
@@ -611,7 +646,7 @@ class TestGrid(unittest.TestCase):
     def test_is_within_range_exact_range(self):
 
         # Create grid
-        test_grid = Grid(25, 25)
+        test_grid = self.create_test_grid()
 
         # Check if target is exactly three tiles away
         result = test_grid.is_within_range([5, 5], [8, 5], 3)
@@ -622,7 +657,7 @@ class TestGrid(unittest.TestCase):
     def test_is_within_range_outside_range(self):
 
         # Create grid
-        test_grid = Grid(25, 25)
+        test_grid = self.create_test_grid()
 
         # Check if target is farther than the provided range
         result = test_grid.is_within_range([5, 5], [8, 5], 2)
@@ -633,7 +668,7 @@ class TestGrid(unittest.TestCase):
     def test_is_within_range_diagonal(self):
 
         # Create grid
-        test_grid = Grid(25, 25)
+        test_grid = self.create_test_grid()
 
         # Manhattan distance from (5, 5) to (7, 7) is 4
         result = test_grid.is_within_range([5, 5], [7, 7], 4)
@@ -644,7 +679,7 @@ class TestGrid(unittest.TestCase):
     def test_is_within_range_diagonal_outside_range(self):
 
         # Create grid
-        test_grid = Grid(25, 25)
+        test_grid = self.create_test_grid()
 
         # Manhattan distance from (5, 5) to (7, 7) is 4
         result = test_grid.is_within_range([5, 5], [7, 7], 3)
@@ -655,7 +690,7 @@ class TestGrid(unittest.TestCase):
     def test_is_within_range_zero_range(self):
 
         # Create grid
-        test_grid = Grid(25, 25)
+        test_grid = self.create_test_grid()
 
         # Check if another position is reachable with zero range
         result = test_grid.is_within_range([5, 5], [6, 5], 0)
@@ -666,7 +701,7 @@ class TestGrid(unittest.TestCase):
     def test_is_within_range_shallow_water(self):
 
         # Create grid
-        test_grid = Grid(25, 25)
+        test_grid = self.create_test_grid()
 
         # Set target tile to shallow water
         test_grid.set_tile(6, 5, "shallowwater")
@@ -680,7 +715,7 @@ class TestGrid(unittest.TestCase):
     def test_is_within_range_wall_blocks_path(self):
 
         # Create grid
-        test_grid = Grid(25, 25)
+        test_grid = self.create_test_grid()
 
         # Set wall between starting position and target
         test_grid.set_tile(6, 5, "wall")
@@ -695,7 +730,7 @@ class TestGrid(unittest.TestCase):
     def test_is_within_range_path_around_wall(self):
 
         # Create grid
-        test_grid = Grid(25, 25)
+        test_grid = self.create_test_grid()
 
         # Set wall between starting position and target
         test_grid.set_tile(6, 5, "wall")
@@ -710,7 +745,7 @@ class TestGrid(unittest.TestCase):
     def test_is_within_range_target_is_wall(self):
 
         # Create grid
-        test_grid = Grid(25, 25)
+        test_grid = self.create_test_grid()
 
         # Set target tile to wall
         test_grid.set_tile(6, 5, "wall")
@@ -724,7 +759,7 @@ class TestGrid(unittest.TestCase):
     def test_is_within_range_lower_boundary(self):
 
         # Create grid
-        test_grid = Grid(25, 25)
+        test_grid = self.create_test_grid()
 
         # Check if target at (0, 1) is within range
         result = test_grid.is_within_range([1, 1], [0, 1], 1)
@@ -735,7 +770,7 @@ class TestGrid(unittest.TestCase):
     def test_is_within_range_outside_grid(self):
 
         # Create grid
-        test_grid = Grid(25, 25)
+        test_grid = self.create_test_grid()
 
         # Check if target outside grid can be reached
         result = test_grid.is_within_range([1, 1], [-1, 1], 2)
@@ -746,7 +781,7 @@ class TestGrid(unittest.TestCase):
     def test_is_within_range_string_coordinates(self):
 
         # Create grid
-        test_grid = Grid(25, 25)
+        test_grid = self.create_test_grid()
 
         # Check if string coordinates are converted to integers
         result = test_grid.is_within_range(["5", "5"], ["6", "5"], 1)
@@ -805,7 +840,7 @@ class TestGrid(unittest.TestCase):
     def test_get_neighbors_all_directions(self):
 
         # Create grid
-        test_grid = Grid(25, 25)
+        test_grid = self.create_test_grid()
 
         # Get neighbors of center position
         result = test_grid.get_neighbors([5, 5])
@@ -825,7 +860,7 @@ class TestGrid(unittest.TestCase):
     def test_get_neighbors_lower_left_corner(self):
 
         # Create grid
-        test_grid = Grid(25, 25)
+        test_grid = self.create_test_grid()
 
         # Get neighbors of lower left corner
         result = test_grid.get_neighbors([0, 0])
@@ -843,7 +878,7 @@ class TestGrid(unittest.TestCase):
     def test_get_neighbors_upper_right_corner(self):
 
         # Create grid
-        test_grid = Grid(25, 25)
+        test_grid = self.create_test_grid()
 
         # Get neighbors of upper right corner
         result = test_grid.get_neighbors([24, 24])
@@ -861,7 +896,7 @@ class TestGrid(unittest.TestCase):
     def test_get_neighbors_wall_excluded(self):
 
         # Create grid
-        test_grid = Grid(25, 25)
+        test_grid = self.create_test_grid()
 
         # Set one neighboring tile to wall
         test_grid.set_tile(6, 5, "wall")
@@ -883,7 +918,7 @@ class TestGrid(unittest.TestCase):
     def test_get_neighbors_shallow_water(self):
 
         # Create grid
-        test_grid = Grid(25, 25)
+        test_grid = self.create_test_grid()
 
         # Set one neighboring tile to shallow water
         test_grid.set_tile(6, 5, "shallowwater")
@@ -898,7 +933,7 @@ class TestGrid(unittest.TestCase):
     def test_get_neighbors_surrounded_by_walls(self):
 
         # Create grid
-        test_grid = Grid(25, 25)
+        test_grid = self.create_test_grid()
 
         # Set all four neighboring tiles to walls
         test_grid.set_tile(5, 4, "wall")

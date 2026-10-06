@@ -236,7 +236,7 @@ class Consumable(Equipment):
                     }
                 )
 
-    # NO TIME ADDED YET, SO THIS IS  A PLACEHOLDER - WILL NEED TESTS WHEN TIME IS ADDED AS WELL
+    """# NO TIME ADDED YET, SO THIS IS  A PLACEHOLDER - WILL NEED TESTS WHEN TIME IS ADDED AS WELL
     # Process temp buffs
     # Processes the temp buffs on the entity
     # Params: entity - Entity instance - entity whose buffs are being processed
@@ -298,6 +298,8 @@ class Consumable(Equipment):
         cli.entity_temp_buffs[entity.id] = [
             buff for buff in temp_buffs if buff["Turns"] > 0
         ]
+
+"""
 
 
 # Small Health Potion Class - Inherits from Consumable Class

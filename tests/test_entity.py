@@ -27,7 +27,7 @@ import unittest
 from equipment import Consumable
 from entity import Warrior, Mage, Goblin, Skeleton, create_entity
 from grid import Grid
-from domain_library import EQUIPMENT_TYPES
+from domain_library import EQUIPMENT_TYPES, DEAD_STATUS
 import command_line_interface as cli
 
 
@@ -35,29 +35,32 @@ import command_line_interface as cli
 class TestEntity(unittest.TestCase):
 
     # Repeated Test Functions
-    # Saves 100s to 1000s lines of code
 
     # Create Test Entity
     # Create a Entity for testing
+    # Params:   entity_type - string - type of entity
+    #           entity_id - int - default 1
+    #           position - int - entity position
+    #           modifiers - dicts - flat and percent modifiers list
+    # Returns:  entity
     def create_test_entity(
-        self, entity_class, entity_id=0, position=None, modifiers=None
+        self, entity_class, entity_id=1, position=None, modifiers=None
     ):
         if position is None:
             position = [0, 0]
 
         if modifiers is None:
-            modifiers = {
-                "Flat_modifiers": {},
-                "Percent_modifiers": {},
-            }
-
-        entity = entity_class(entity_id, position, modifiers)
-
-        self.reset_entity(entity)
+            entity = entity_class(entity_id, position)
+            self.reset_entity(entity)
+        else:
+            entity = entity_class(entity_id, position, modifiers)
 
         return entity
 
+    # Reset entity
     # Reset common entity test data
+    # Params:   entity - Entity - entity to reset
+    # Returns:  None
     def reset_entity(self, entity):
         entity.active_modifiers = {
             "Flat_modifiers": {},
@@ -66,18 +69,22 @@ class TestEntity(unittest.TestCase):
 
         entity.backpack = []
 
-        entity.inventory[0] = EQUIPMENT_TYPES["none_wep"]()
-        entity.inventory[1] = EQUIPMENT_TYPES["none_armor"]()
-        entity.inventory[2] = EQUIPMENT_TYPES["none_acc"]()
+        self.reset_inventory(entity)
 
+    # Create Test CLI
     # Create CLI with a test grid
+    # Params: None
+    # Return: CLI
     def create_test_cli(self):
         active_cli = cli.CLI()
         active_cli.grid = Grid(5, 5)
 
         return active_cli
 
+    # Update and Get Stats
     # Update entity stats and return stat dictionary
+    # Params:   entity - Entity - entity to get stats from
+    # Returns: stats of entity
     def update_and_get_stats(self, entity):
         active_cli = self.create_test_cli()
 
@@ -85,7 +92,10 @@ class TestEntity(unittest.TestCase):
 
         return entity.get_stats()
 
-    # Assert common stats
+    # Assert base stats
+    # Params: stat_dict - dictionary of stats
+    #           health/attack/defence/speed - ints - common sata values
+    # Returns: None
     def assert_base_stats(self, stat_dict, health, attack, defence, speed):
         self.assertEqual(stat_dict["Health"], health)
         self.assertEqual(stat_dict["Attack"], attack)
@@ -93,6 +103,9 @@ class TestEntity(unittest.TestCase):
         self.assertEqual(stat_dict["Speed"], speed)
 
     # Assert empty modifiers
+    # Assets empty modifiers on entity
+    # Params: Entity
+    # Returns: None
     def assert_empty_modifiers(self, entity):
         self.assertDictEqual(
             entity.active_modifiers,
@@ -102,31 +115,73 @@ class TestEntity(unittest.TestCase):
             },
         )
 
-    # Create an equipment item
+    # Create Item
+    # Params: item_name - string - item name
+    # Returns: Matching Item
     def create_item(self, item_name):
         return EQUIPMENT_TYPES[item_name]()
 
-    # Create an attacker and defender
+    # Create combat entities
+    # Create basic attacker and defender for most combat tests
+    # Params:   None
+    # Returns:  attacker/defender - combat entities
     def create_combat_entities(self):
-        attacker = Warrior(0, [0, 0])
-        defender = Goblin(1, [1, 0])
+        attacker = self.create_test_entity(Warrior, 0)
+        defender = self.create_test_entity(Goblin, 1, [1, 0])
 
         return attacker, defender
+
+    # Reset inventory
+    # Reset the common inventory slots and backpack for entity tests
+    # Params: entity - Entity - entity to reset
+    # Returns: None
+    def reset_inventory(self, entity):
+        entity.backpack = []
+        entity.inventory[0] = EQUIPMENT_TYPES["none_wep"]()
+        entity.inventory[1] = EQUIPMENT_TYPES["none_armor"]()
+        entity.inventory[2] = EQUIPMENT_TYPES["none_acc"]()
+
+    # Create and equip item
+    # Create an item and equip it in the requested slot
+    # Params: entity - Entity - entity receiving item
+    #         item_name - string - item name
+    #         slot - string - inventory slot
+    # Returns: item
+    def equip_test_item(self, entity, item_name, slot=None):
+        item = self.create_item(item_name)
+
+        if slot is None:
+            slot = item.slot.lower()
+
+        entity.equip_item(item, slot)
+
+        return item
+
+    # Update entity stats
+    # Create the test CLI and update the entity's stats
+    # Params: entity - Entity - entity to update
+    # Returns: stats of entity
+    def update_test_entity(self, entity):
+        active_cli = self.create_test_cli()
+        entity.update_stats(active_cli)
+        return entity.get_stats()
+
+    # Create consumable
+    # Create and use a consumable on an entity
+    # Params: entity - Entity - entity using consumable
+    #         item_name - string - consumable name
+    # Returns: consumable
+    def use_test_consumable(self, entity, item_name):
+        consumable = self.create_item(item_name)
+        Consumable.use_consumable(consumable, entity)
+        return consumable
 
     # Init for all entity types
     # Init warrior with base stats
     def test_warrior_init(self):
-        entity = Warrior(
-            0,
-            [0, 0],
-        )
+        entity = self.create_test_entity(Warrior, 0)
         # Reset
-        entity.active_modifiers = {"Flat_modifiers": {}, "Percent_modifiers": {}}
-        entity.backpack = []
-        # Reset
-        entity.inventory[0] = EQUIPMENT_TYPES["none_wep"]()
-        entity.inventory[1] = EQUIPMENT_TYPES["none_armor"]()
-        entity.inventory[2] = EQUIPMENT_TYPES["none_acc"]()
+        self.reset_inventory(entity)
         # Check values
         self.assertEqual(entity.id, 0)
         self.assertEqual(entity.e_type, "warrior")
@@ -152,17 +207,9 @@ class TestEntity(unittest.TestCase):
 
     # Init goblin with base stats
     def test_goblin_init(self):
-        entity = Goblin(
-            0,
-            [0, 0],
-        )
+        entity = self.create_test_entity(Goblin, 0)
         # Reset
-        entity.active_modifiers = {"Flat_modifiers": {}, "Percent_modifiers": {}}
-        entity.backpack = []
-        # Reset
-        entity.inventory[0] = EQUIPMENT_TYPES["none_wep"]()
-        entity.inventory[1] = EQUIPMENT_TYPES["none_armor"]()
-        entity.inventory[2] = EQUIPMENT_TYPES["none_acc"]()
+        self.reset_inventory(entity)
         # Check values
         self.assertEqual(entity.id, 0)
         self.assertEqual(entity.e_type, "goblin")
@@ -188,17 +235,9 @@ class TestEntity(unittest.TestCase):
 
     # Init skeleton with base stats
     def test_skeleton_init(self):
-        entity = Skeleton(
-            0,
-            [0, 0],
-        )
+        entity = self.create_test_entity(Skeleton, 0)
         # Reset
-        entity.active_modifiers = {"Flat_modifiers": {}, "Percent_modifiers": {}}
-        entity.backpack = []
-        # Reset
-        entity.inventory[0] = EQUIPMENT_TYPES["none_wep"]()
-        entity.inventory[1] = EQUIPMENT_TYPES["none_armor"]()
-        entity.inventory[2] = EQUIPMENT_TYPES["none_acc"]()
+        self.reset_inventory(entity)
         # Check values
         self.assertEqual(entity.id, 0)
         self.assertEqual(entity.e_type, "skeleton")
@@ -224,17 +263,9 @@ class TestEntity(unittest.TestCase):
 
     # Init Mage with base stats
     def test_mage_init(self):
-        entity = Mage(
-            0,
-            [0, 0],
-        )
+        entity = self.create_test_entity(Mage, 0)
         # Reset
-        entity.active_modifiers = {"Flat_modifiers": {}, "Percent_modifiers": {}}
-        entity.backpack = []
-        # Reset
-        entity.inventory[0] = EQUIPMENT_TYPES["none_wep"]()
-        entity.inventory[1] = EQUIPMENT_TYPES["none_armor"]()
-        entity.inventory[2] = EQUIPMENT_TYPES["none_acc"]()
+        self.reset_inventory(entity)
         # Check values
         self.assertEqual(entity.id, 0)
         self.assertEqual(entity.e_type, "mage")
@@ -264,10 +295,7 @@ class TestEntity(unittest.TestCase):
     # Tests for universal entity method testing
     # Tests for get_stats on warrior
     def test_get_stats_on_warrior(self):
-        entity = Warrior(
-            0,
-            [0, 0],
-        )
+        entity = self.create_test_entity(Warrior, 0)
         # Reset
         entity.active_modifiers = {"Flat_modifiers": {}, "Percent_modifiers": {}}
         entity.backpack = []
@@ -292,10 +320,7 @@ class TestEntity(unittest.TestCase):
 
     # Tests for get_stats on goblin
     def test_get_stats_on_goblin(self):
-        entity = Goblin(
-            0,
-            [0, 0],
-        )
+        entity = self.create_test_entity(Goblin, 0)
         # Reset
         entity.active_modifiers = {"Flat_modifiers": {}, "Percent_modifiers": {}}
         entity.backpack = []
@@ -320,10 +345,7 @@ class TestEntity(unittest.TestCase):
 
     # Tests for get_stats on skeleton
     def test_get_stats_on_skeleton(self):
-        entity = Skeleton(
-            0,
-            [0, 0],
-        )
+        entity = self.create_test_entity(Skeleton, 0)
         # Reset
         entity.active_modifiers = {"Flat_modifiers": {}, "Percent_modifiers": {}}
         entity.backpack = []
@@ -348,10 +370,7 @@ class TestEntity(unittest.TestCase):
 
     # Tests for get_stats on mage
     def test_get_stats_on_mage(self):
-        entity = Mage(
-            0,
-            [0, 0],
-        )
+        entity = self.create_test_entity(Mage, 0)
         # Reset
         entity.active_modifiers = {"Flat_modifiers": {}, "Percent_modifiers": {}}
         entity.backpack = []
@@ -377,10 +396,7 @@ class TestEntity(unittest.TestCase):
 
     # Tests for reset_stats on warrior
     def test_reset_stats_on_warrior(self):
-        entity = Warrior(
-            0,
-            [0, 0],
-        )
+        entity = self.create_test_entity(Warrior, 0)
         # change stats that can change
         entity.attack = 999
         entity.health = 999
@@ -412,10 +428,7 @@ class TestEntity(unittest.TestCase):
 
     # Tests for reset_stats on goblin
     def test_reset_stats_on_goblin(self):
-        entity = Goblin(
-            0,
-            [0, 0],
-        )
+        entity = self.create_test_entity(Goblin, 0)
         # Reset
         entity.active_modifiers = {"Flat_modifiers": {}, "Percent_modifiers": {}}
         entity.backpack = []
@@ -449,10 +462,7 @@ class TestEntity(unittest.TestCase):
 
     # Tests for reset_stats on skeleton
     def test_reset_stats_on_skeleton(self):
-        entity = Skeleton(
-            0,
-            [0, 0],
-        )
+        entity = self.create_test_entity(Skeleton, 0)
         # Reset
         entity.active_modifiers = {"Flat_modifiers": {}, "Percent_modifiers": {}}
         entity.backpack = []
@@ -486,17 +496,9 @@ class TestEntity(unittest.TestCase):
 
     # Tests for reset_stats on mage
     def test_reset_stats_on_mage(self):
-        entity = Mage(
-            0,
-            [0, 0],
-        )
+        entity = self.create_test_entity(Mage, 0)
         # Reset
-        entity.active_modifiers = {"Flat_modifiers": {}, "Percent_modifiers": {}}
-        entity.backpack = []
-        # Reset
-        entity.inventory[0] = EQUIPMENT_TYPES["none_wep"]()
-        entity.inventory[1] = EQUIPMENT_TYPES["none_armor"]()
-        entity.inventory[2] = EQUIPMENT_TYPES["none_acc"]()
+        self.reset_inventory(entity)
         # change stats that can change
         entity.attack = 999
         entity.health = 999
@@ -531,10 +533,7 @@ class TestEntity(unittest.TestCase):
 
     # Tests for handle_modifiers with a flat modifier
     def test_handle_flat_modifier(self):
-        entity = Warrior(
-            0,
-            [0, 0],
-        )
+        entity = self.create_test_entity(Warrior, 0)
         # Reset
         entity.active_modifiers = {"Flat_modifiers": {}, "Percent_modifiers": {}}
         entity.backpack = []
@@ -553,10 +552,7 @@ class TestEntity(unittest.TestCase):
 
     # Tests for handle_modifiers with a percent modifier
     def test_handle_percent_modifier(self):
-        entity = Warrior(
-            0,
-            [0, 0],
-        )
+        entity = self.create_test_entity(Warrior, 0)
         # Reset
         entity.active_modifiers = {"Flat_modifiers": {}, "Percent_modifiers": {}}
         entity.backpack = []
@@ -576,10 +572,7 @@ class TestEntity(unittest.TestCase):
 
     # Tests for handle_modifiers with multiple flat modifiers
     def test_handle_multiple_flat_modifiers(self):
-        entity = Warrior(
-            0,
-            [0, 0],
-        )
+        entity = self.create_test_entity(Warrior, 0)
         # Reset
         entity.active_modifiers = {"Flat_modifiers": {}, "Percent_modifiers": {}}
         entity.backpack = []
@@ -600,10 +593,7 @@ class TestEntity(unittest.TestCase):
 
     # Tests for handle_modifiers with multiple percent modifiers
     def test_handle_multiple_percent_modifiers(self):
-        entity = Warrior(
-            0,
-            [0, 0],
-        )
+        entity = self.create_test_entity(Warrior, 0)
         # Reset
         entity.active_modifiers = {"Flat_modifiers": {}, "Percent_modifiers": {}}
         entity.backpack = []
@@ -624,10 +614,7 @@ class TestEntity(unittest.TestCase):
 
     # Tests for handle_modifiers with multiple modifier types
     def test_handle_multiple_modifier_types(self):
-        entity = Warrior(
-            0,
-            [0, 0],
-        )
+        entity = self.create_test_entity(Warrior, 0)
         # Reset
         entity.active_modifiers = {"Flat_modifiers": {}, "Percent_modifiers": {}}
         entity.backpack = []
@@ -654,10 +641,7 @@ class TestEntity(unittest.TestCase):
 
     # Tests for handle_modifiers with mage entity
     def test_handle_multiple_modifier_types_on_mage(self):
-        entity = Mage(
-            0,
-            [0, 0],
-        )
+        entity = self.create_test_entity(Mage, 0)
         # Reset
         entity.active_modifiers = {"Flat_modifiers": {}, "Percent_modifiers": {}}
         entity.backpack = []
@@ -679,10 +663,10 @@ class TestEntity(unittest.TestCase):
 
     # Test for calculate_final_stats with flat modifiers
     def test_calculate_final_stats_with_flat_modifiers(self):
-        entity = Warrior(
+        entity = self.create_test_entity(
+            Warrior,
             0,
-            [0, 0],
-            {
+            modifiers={
                 "Flat_modifiers": {
                     "Health": 20,
                     "Attack": 5,
@@ -703,10 +687,10 @@ class TestEntity(unittest.TestCase):
 
     # Test for calculate_final_stats with percent modifiers
     def test_calculate_final_stats_with_percent_modifiers(self):
-        entity = Warrior(
+        entity = self.create_test_entity(
+            Warrior,
             0,
-            [0, 0],
-            {
+            modifiers={
                 "Flat_modifiers": {},
                 "Percent_modifiers": {
                     "Health": 10,
@@ -727,10 +711,10 @@ class TestEntity(unittest.TestCase):
 
     # Test for calculate_final_stats with flat and percent modifiers
     def test_calculate_final_stats_with_flat_and_percent_modifiers(self):
-        entity = Warrior(
+        entity = self.create_test_entity(
+            Warrior,
             0,
-            [0, 0],
-            {
+            modifiers={
                 "Flat_modifiers": {
                     "Health": 20,
                     "Attack": 5,
@@ -756,10 +740,10 @@ class TestEntity(unittest.TestCase):
 
     # Tests for calculate_final_stats with mage only stats
     def test_calculate_final_stats_with_mage_stats(self):
-        entity = Mage(
+        entity = self.create_test_entity(
+            Mage,
             0,
-            [0, 0],
-            {
+            modifiers={
                 "Flat_modifiers": {
                     "Health": 20,
                     "Attack": 5,
@@ -789,19 +773,13 @@ class TestEntity(unittest.TestCase):
 
     # Tests for update_stats with no modifiers on warrior
     def test_update_stats_on_warrior_with_no_modifiers(self):
-        entity = Warrior(
-            0,
-            [0, 0],
-        )
+        entity = self.create_test_entity(Warrior, 0)
         # RESET
         entity.inventory[0].effects = {}
         entity.inventory[1].effects = {}
         entity.inventory[2].effects = {}
-        # Create active CLI
-        active_cli = cli.CLI()
-
-        # Create active grid
-        active_cli.grid = Grid(5, 5)
+        # Create active CLI and grid
+        active_cli = self.create_test_cli()
 
         # Update stats
         entity.update_stats(active_cli)
@@ -826,20 +804,17 @@ class TestEntity(unittest.TestCase):
 
     # Tests for update_stats with inventory flat modifiers on warrior
     def test_update_stats_on_warrior_with_inventory_flat_modifiers(self):
-        entity = Warrior(
+        entity = self.create_test_entity(
+            Warrior,
             0,
-            [0, 0],
-            {"Flat_modifiers": {}, "Percent_modifiers": {}},
+            modifiers={"Flat_modifiers": {}, "Percent_modifiers": {}},
         )
         # RESET
         entity.inventory[0].effects = {}
         entity.inventory[1].effects = {}
         entity.inventory[2].effects = {}
-        # Create active CLI
-        active_cli = cli.CLI()
-
-        # Create active grid
-        active_cli.grid = Grid(5, 5)
+        # Create active CLI and grid
+        active_cli = self.create_test_cli()
 
         # Add inventory modifiers
         entity.inventory[0].effects = {
@@ -867,20 +842,17 @@ class TestEntity(unittest.TestCase):
 
     # Tests for update_stats with inventory negative flat modifiers on warrior
     def test_update_stats_on_warrior_with_negative_inventory_flat_modifiers(self):
-        entity = Warrior(
+        entity = self.create_test_entity(
+            Warrior,
             0,
-            [0, 0],
-            {"Flat_modifiers": {}, "Percent_modifiers": {}},
+            modifiers={"Flat_modifiers": {}, "Percent_modifiers": {}},
         )
         # RESET
         entity.inventory[0].effects = {}
         entity.inventory[1].effects = {}
         entity.inventory[2].effects = {}
-        # Create active CLI
-        active_cli = cli.CLI()
-
-        # Create active grid
-        active_cli.grid = Grid(5, 5)
+        # Create active CLI and grid
+        active_cli = self.create_test_cli()
 
         # Add inventory modifiers
         entity.inventory[0].effects = {
@@ -908,20 +880,17 @@ class TestEntity(unittest.TestCase):
 
     # Tests for update_stats with inventory percent modifiers on warrior
     def test_update_stats_on_warrior_with_inventory_percent_modifiers(self):
-        entity = Warrior(
+        entity = self.create_test_entity(
+            Warrior,
             0,
-            [0, 0],
-            {"Flat_modifiers": {}, "Percent_modifiers": {}},
+            modifiers={"Flat_modifiers": {}, "Percent_modifiers": {}},
         )
         # RESET
         entity.inventory[0].effects = {}
         entity.inventory[1].effects = {}
         entity.inventory[2].effects = {}
-        # Create active CLI
-        active_cli = cli.CLI()
-
-        # Create active grid
-        active_cli.grid = Grid(5, 5)
+        # Create active CLI and grid
+        active_cli = self.create_test_cli()
 
         # Add inventory modifiers
         entity.inventory[0].effects = {
@@ -949,20 +918,17 @@ class TestEntity(unittest.TestCase):
 
     # Tests for update_stats with negative inventory percent modifiers on warrior
     def test_update_stats_on_warrior_with_negative_inventory_percent_modifiers(self):
-        entity = Warrior(
+        entity = self.create_test_entity(
+            Warrior,
             0,
-            [0, 0],
-            {"Flat_modifiers": {}, "Percent_modifiers": {}},
+            modifiers={"Flat_modifiers": {}, "Percent_modifiers": {}},
         )
         # RESET
         entity.inventory[0].effects = {}
         entity.inventory[1].effects = {}
         entity.inventory[2].effects = {}
-        # Create active CLI
-        active_cli = cli.CLI()
-
-        # Create active grid
-        active_cli.grid = Grid(5, 5)
+        # Create active CLI and grid
+        active_cli = self.create_test_cli()
 
         # Add inventory modifiers
         entity.inventory[0].effects = {
@@ -990,20 +956,17 @@ class TestEntity(unittest.TestCase):
 
     # Tests for update_stats with tile flat modifiers on warrior
     def test_update_stats_on_warrior_with_tile_flat_modifiers(self):
-        entity = Warrior(
+        entity = self.create_test_entity(
+            Warrior,
             0,
-            [0, 0],
-            {"Flat_modifiers": {}, "Percent_modifiers": {}},
+            modifiers={"Flat_modifiers": {}, "Percent_modifiers": {}},
         )
         # RESET
         entity.inventory[0].effects = {}
         entity.inventory[1].effects = {}
         entity.inventory[2].effects = {}
-        # Create active CLI
-        active_cli = cli.CLI()
-
-        # Create active grid
-        active_cli.grid = Grid(5, 5)
+        # Create active CLI and grid
+        active_cli = self.create_test_cli()
 
         # Add tile modifiers
         active_cli.grid.grid[0][0].modifiers = {
@@ -1031,20 +994,17 @@ class TestEntity(unittest.TestCase):
 
     # Tests for update_stats with tile percent modifiers on warrior
     def test_update_stats_on_warrior_with_tile_percent_modifiers(self):
-        entity = Warrior(
+        entity = self.create_test_entity(
+            Warrior,
             0,
-            [0, 0],
-            {"Flat_modifiers": {}, "Percent_modifiers": {}},
+            modifiers={"Flat_modifiers": {}, "Percent_modifiers": {}},
         )
         # RESET
         entity.inventory[0].effects = {}
         entity.inventory[1].effects = {}
         entity.inventory[2].effects = {}
-        # Create active CLI
-        active_cli = cli.CLI()
-
-        # Create active grid
-        active_cli.grid = Grid(5, 5)
+        # Create active CLI and grid
+        active_cli = self.create_test_cli()
 
         # Add tile modifiers
         active_cli.grid.grid[0][0].modifiers = {
@@ -1072,20 +1032,17 @@ class TestEntity(unittest.TestCase):
 
     # Tests for update_stats with inventory and tile modifiers on warrior
     def test_update_stats_on_warrior_with_inventory_and_tile_modifiers(self):
-        entity = Warrior(
+        entity = self.create_test_entity(
+            Warrior,
             0,
-            [0, 0],
-            {"Flat_modifiers": {}, "Percent_modifiers": {}},
+            modifiers={"Flat_modifiers": {}, "Percent_modifiers": {}},
         )
         # RESET
         entity.inventory[0].effects = {}
         entity.inventory[1].effects = {}
         entity.inventory[2].effects = {}
-        # Create active CLI
-        active_cli = cli.CLI()
-
-        # Create active grid
-        active_cli.grid = Grid(5, 5)
+        # Create active CLI and grid
+        active_cli = self.create_test_cli()
 
         # Add inventory modifiers
         entity.inventory[0].effects = {
@@ -1120,20 +1077,17 @@ class TestEntity(unittest.TestCase):
 
     # Tests for update_stats ignoring Mana and Spell_power modifiers on warrior
     def test_update_stats_on_warrior_ignores_mana_and_spell_power(self):
-        entity = Warrior(
+        entity = self.create_test_entity(
+            Warrior,
             0,
-            [0, 0],
-            {"Flat_modifiers": {}, "Percent_modifiers": {}},
+            modifiers={"Flat_modifiers": {}, "Percent_modifiers": {}},
         )
         # RESET
         entity.inventory[0].effects = {}
         entity.inventory[1].effects = {}
         entity.inventory[2].effects = {}
-        # Create active CLI
-        active_cli = cli.CLI()
-
-        # Create active grid
-        active_cli.grid = Grid(5, 5)
+        # Create active CLI and grid
+        active_cli = self.create_test_cli()
 
         # Add inventory modifiers
         entity.inventory[0].effects = {
@@ -1161,10 +1115,10 @@ class TestEntity(unittest.TestCase):
 
     # Tests for update_stats clearing previous modifiers on warrior
     def test_update_stats_clears_previous_modifiers_on_warrior(self):
-        entity = Warrior(
+        entity = self.create_test_entity(
+            Warrior,
             0,
-            [0, 0],
-            {
+            modifiers={
                 "Flat_modifiers": {
                     "Attack": "5",
                 },
@@ -1177,11 +1131,8 @@ class TestEntity(unittest.TestCase):
         entity.inventory[0].effects = {}
         entity.inventory[1].effects = {}
         entity.inventory[2].effects = {}
-        # Create active CLI
-        active_cli = cli.CLI()
-
-        # Create active grid
-        active_cli.grid = Grid(5, 5)
+        # Create active CLI and grid
+        active_cli = self.create_test_cli()
 
         # Add inventory modifiers
         entity.inventory[0].effects = {
@@ -1207,20 +1158,17 @@ class TestEntity(unittest.TestCase):
 
     # Tests for update_stats with shallow water tile on warrior
     def test_update_stats_on_warrior_on_shallow_water(self):
-        entity = Warrior(
+        entity = self.create_test_entity(
+            Warrior,
             0,
-            [0, 0],
-            {"Flat_modifiers": {}, "Percent_modifiers": {}},
+            modifiers={"Flat_modifiers": {}, "Percent_modifiers": {}},
         )
         # RESET
         entity.inventory[0].effects = {}
         entity.inventory[1].effects = {}
         entity.inventory[2].effects = {}
-        # Create active CLI
-        active_cli = cli.CLI()
-
-        # Create active grid
-        active_cli.grid = Grid(5, 5)
+        # Create active CLI and grid
+        active_cli = self.create_test_cli()
 
         # Set entity tile to shallow water
         active_cli.grid.set_tile(0, 0, "shallowwater")
@@ -1244,19 +1192,13 @@ class TestEntity(unittest.TestCase):
 
     # Test for update_stats on mage with mage stats changing
     def test_update_stats_on_mage_with_mage_only_stats_affected(self):
-        entity = Mage(
-            0,
-            [0, 0],
-        )
+        entity = self.create_test_entity(Mage, 0)
         # RESET
         entity.inventory[0].effects = {}
         entity.inventory[1].effects = {}
         entity.inventory[2].effects = {}
-        # Create active CLI
-        active_cli = cli.CLI()
-
-        # Create active grid
-        active_cli.grid = Grid(5, 5)
+        # Create active CLI and grid
+        active_cli = self.create_test_cli()
 
         entity.inventory[0].effects = {"Mana": "100", "Spell_power": "100%"}
         # Update stats
@@ -1279,19 +1221,13 @@ class TestEntity(unittest.TestCase):
 
     # Tests for update_stats with shallow water tile on mage
     def test_update_stats_on_mage_on_shallow_water(self):
-        entity = Mage(
-            0,
-            [0, 0],
-        )
+        entity = self.create_test_entity(Mage, 0)
         # RESET
         entity.inventory[0].effects = {}
         entity.inventory[1].effects = {}
         entity.inventory[2].effects = {}
-        # Create active CLI
-        active_cli = cli.CLI()
-
-        # Create active grid
-        active_cli.grid = Grid(5, 5)
+        # Create active CLI and grid
+        active_cli = self.create_test_cli()
 
         # Set entity tile to shallow water
         active_cli.grid.set_tile(0, 0, "shallowwater")
@@ -1313,27 +1249,258 @@ class TestEntity(unittest.TestCase):
             },
         )
 
+    # success
+    def test_update_stats_with_temp_flat_modifier(self):
+        # Create test entity
+        entity = self.create_test_entity(Warrior, 0)
+
+        # Add temporary Attack buff
+        entity.temp_buffs.append(
+            {
+                "Name": "AttackBuff",
+                "Effects": {
+                    "Flat_modifiers": {
+                        "Attack": 5,
+                    },
+                    "Percent_modifiers": {},
+                },
+                "Turns": 2,
+            }
+        )
+
+        # Update entity stats
+        stats = self.update_test_entity(entity)
+
+        # Verify temporary modifier was applied
+        self.assertEqual(stats["Attack"], Warrior.BASE_STATS["Attack"] + 5)
+
+    # success
+    def test_update_stats_with_temp_percent_modifier(self):
+        # Create test entity
+        entity = self.create_test_entity(Warrior, 0)
+
+        # Add temporary Attack buff
+        entity.temp_buffs.append(
+            {
+                "Name": "AttackBuff",
+                "Effects": {
+                    "Flat_modifiers": {},
+                    "Percent_modifiers": {
+                        "Attack": 20,
+                    },
+                },
+                "Turns": 2,
+            }
+        )
+
+        # Update entity stats
+        stats = self.update_test_entity(entity)
+
+        # Verify temporary modifier was applied
+        expected_attack = int(Warrior.BASE_STATS["Attack"] * 1.20)
+
+        self.assertEqual(
+            stats["Attack"],
+            expected_attack,
+        )
+
+    # success
+    def test_update_stats_with_multiple_temp_buffs(self):
+        # Create test entity
+        entity = self.create_test_entity(Warrior, 0)
+
+        # Add Attack buff
+        entity.temp_buffs.append(
+            {
+                "Name": "AttackBuff",
+                "Effects": {
+                    "Flat_modifiers": {
+                        "Attack": 5,
+                    },
+                    "Percent_modifiers": {},
+                },
+                "Turns": 2,
+            }
+        )
+
+        # Add Defence buff
+        entity.temp_buffs.append(
+            {
+                "Name": "DefenceBuff",
+                "Effects": {
+                    "Flat_modifiers": {
+                        "Defence": 3,
+                    },
+                    "Percent_modifiers": {},
+                },
+                "Turns": 2,
+            }
+        )
+
+        # Update entity stats
+        stats = self.update_test_entity(entity)
+
+        # Verify both temporary buffs were applied
+        self.assertEqual(
+            stats["Attack"],
+            Warrior.BASE_STATS["Attack"] + 5,
+        )
+
+        self.assertEqual(
+            stats["Defence"],
+            Warrior.BASE_STATS["Defence"] + 3,
+        )
+
+    # success
+    def test_update_stats_does_not_double_temp_buffs(self):
+        # Create test entity
+        entity = self.create_test_entity(Warrior, 0)
+
+        # Add temporary Attack buff
+        entity.temp_buffs.append(
+            {
+                "Name": "AttackBuff",
+                "Effects": {
+                    "Flat_modifiers": {
+                        "Attack": 5,
+                    },
+                    "Percent_modifiers": {},
+                },
+                "Turns": 2,
+            }
+        )
+
+        # Update stats for the first time
+        first_stats = self.update_test_entity(entity)
+
+        # Update stats a second time
+        second_stats = self.update_test_entity(entity)
+
+        # Verify modifier was not doubled
+        self.assertEqual(
+            first_stats["Attack"],
+            Warrior.BASE_STATS["Attack"] + 5,
+        )
+
+        self.assertEqual(
+            second_stats["Attack"],
+            Warrior.BASE_STATS["Attack"] + 5,
+        )
+
+        # success
+
+    def test_update_stats_does_not_double_temp_buffs(self):
+        # Create test entity
+        entity = self.create_test_entity(Warrior, 0)
+
+        # Add temporary Attack buff
+        entity.temp_buffs.append(
+            {
+                "Name": "AttackBuff",
+                "Effects": {
+                    "Flat_modifiers": {
+                        "Attack": 5,
+                    },
+                    "Percent_modifiers": {},
+                },
+                "Turns": 2,
+            }
+        )
+
+        # Update stats for the first time
+        first_stats = self.update_test_entity(entity)
+
+        # Update stats a second time
+        second_stats = self.update_test_entity(entity)
+
+        # Verify modifier was not doubled
+        self.assertEqual(
+            first_stats["Attack"],
+            Warrior.BASE_STATS["Attack"] + 5,
+        )
+
+        self.assertEqual(
+            second_stats["Attack"],
+            Warrior.BASE_STATS["Attack"] + 5,
+        )
+
+        # success
+
+    def test_mage_update_stats_with_temp_spell_power_modifier(self):
+        # Create test Mage
+        entity = self.create_test_entity(Mage, 0)
+
+        # Add temporary Spell Power buff
+        entity.temp_buffs.append(
+            {
+                "Name": "SpellPowerBuff",
+                "Effects": {
+                    "Flat_modifiers": {
+                        "Spell_power": 10,
+                    },
+                    "Percent_modifiers": {},
+                },
+                "Turns": 2,
+            }
+        )
+
+        # Update Mage stats
+        self.update_test_entity(entity)
+
+        # Verify temporary Spell Power modifier was applied
+        self.assertEqual(
+            entity.spell_power,
+            Mage.BASE_STATS["Spell_power"] + 10,
+        )
+
+        # success
+
+    def test_mage_update_stats_with_temp_mana_and_spell_power_modifiers(self):
+        # Create test Mage
+        entity = self.create_test_entity(Mage, 0)
+
+        # Add temporary Mana and Spell Power buff
+        entity.temp_buffs.append(
+            {
+                "Name": "MagicBuff",
+                "Effects": {
+                    "Flat_modifiers": {
+                        "Mana": 25,
+                        "Spell_power": 10,
+                    },
+                    "Percent_modifiers": {},
+                },
+                "Turns": 2,
+            }
+        )
+
+        # Update Mage stats
+        self.update_test_entity(entity)
+
+        # Verify temporary Mana modifier was applied
+        self.assertEqual(
+            entity.mana,
+            Mage.BASE_STATS["Mana"] + 25,
+        )
+
+        # Verify temporary Spell Power modifier was applied
+        self.assertEqual(
+            entity.spell_power,
+            Mage.BASE_STATS["Spell_power"] + 10,
+        )
+
     # Tests for equip item
     # weapon
     def test_equip_item_weapon(self):
-        entity = Warrior(
-            0,
-            [0, 0],
-        )
+        entity = self.create_test_entity(Warrior, 0)
         # RESET
         self.assertEqual(entity.backpack, [])
-        entity.inventory[0] = EQUIPMENT_TYPES["none_wep"]()
-        entity.inventory[1] = EQUIPMENT_TYPES["none_armor"]()
-        entity.inventory[2] = EQUIPMENT_TYPES["none_acc"]()
+        self.reset_inventory(entity)
         # create and equip weapon
-        weapon = EQUIPMENT_TYPES["ironsword"]()
-        entity.equip_item(weapon, weapon.slot.lower())
+        weapon = self.equip_test_item(entity, "ironsword")
         # update stats
-        # Create active CLI
-        active_cli = cli.CLI()
-
-        # Create active grid
-        active_cli.grid = Grid(5, 5)
+        # Create active CLI and grid
+        active_cli = self.create_test_cli()
 
         entity.update_stats(active_cli)
         # Check values
@@ -1352,24 +1519,15 @@ class TestEntity(unittest.TestCase):
 
     # armor
     def test_equip_item_armor(self):
-        entity = Warrior(
-            0,
-            [0, 0],
-        )
+        entity = self.create_test_entity(Warrior, 0)
         # RESET
         self.assertEqual(entity.backpack, [])
-        entity.inventory[0] = EQUIPMENT_TYPES["none_wep"]()
-        entity.inventory[1] = EQUIPMENT_TYPES["none_armor"]()
-        entity.inventory[2] = EQUIPMENT_TYPES["none_acc"]()
+        self.reset_inventory(entity)
         # create and equip armor
-        armor = EQUIPMENT_TYPES["ironchestplate"]()
-        entity.equip_item(armor, armor.slot.lower())
+        armor = self.equip_test_item(entity, "ironchestplate")
         # update stats
-        # Create active CLI
-        active_cli = cli.CLI()
-
-        # Create active grid
-        active_cli.grid = Grid(5, 5)
+        # Create active CLI and grid
+        active_cli = self.create_test_cli()
 
         entity.update_stats(active_cli)
         # Check values
@@ -1386,23 +1544,14 @@ class TestEntity(unittest.TestCase):
 
     # acc
     def test_equip_item_accessory(self):
-        entity = Warrior(
-            0,
-            [0, 0],
-        )
+        entity = self.create_test_entity(Warrior, 0)
         # RESET
-        entity.inventory[0] = EQUIPMENT_TYPES["none_wep"]()
-        entity.inventory[1] = EQUIPMENT_TYPES["none_armor"]()
-        entity.inventory[2] = EQUIPMENT_TYPES["none_acc"]()
+        self.reset_inventory(entity)
         # create and equip acc
-        acc = EQUIPMENT_TYPES["ringofhaste"]()
-        entity.equip_item(acc, acc.slot.lower())
+        acc = self.equip_test_item(entity, "ringofhaste")
         # update stats
-        # Create active CLI
-        active_cli = cli.CLI()
-
-        # Create active grid
-        active_cli.grid = Grid(5, 5)
+        # Create active CLI and grid
+        active_cli = self.create_test_cli()
 
         entity.update_stats(active_cli)
         # Check values
@@ -1421,28 +1570,16 @@ class TestEntity(unittest.TestCase):
 
     # all
     def test_equip_item_all(self):
-        entity = Warrior(
-            0,
-            [0, 0],
-        )
+        entity = self.create_test_entity(Warrior, 0)
         # RESET
-        entity.backpack = []
-        entity.inventory[0] = EQUIPMENT_TYPES["none_wep"]()
-        entity.inventory[1] = EQUIPMENT_TYPES["none_armor"]()
-        entity.inventory[2] = EQUIPMENT_TYPES["none_acc"]()
+        self.reset_inventory(entity)
         # create and equip items
-        weapon = EQUIPMENT_TYPES["ironsword"]()
-        armor = EQUIPMENT_TYPES["ironchestplate"]()
-        acc = EQUIPMENT_TYPES["amuletofvitality"]()
-        entity.equip_item(weapon, weapon.slot.lower())
-        entity.equip_item(armor, armor.slot.lower())
-        entity.equip_item(acc, acc.slot.lower())
+        weapon = self.equip_test_item(entity, "ironsword")
+        armor = self.equip_test_item(entity, "ironchestplate")
+        acc = self.equip_test_item(entity, "amuletofvitality")
         # update stats
-        # Create active CLI
-        active_cli = cli.CLI()
-
-        # Create active grid
-        active_cli.grid = Grid(5, 5)
+        # Create active CLI and grid
+        active_cli = self.create_test_cli()
 
         entity.update_stats(active_cli)
         # Check values
@@ -1466,28 +1603,16 @@ class TestEntity(unittest.TestCase):
 
     # all on warrior with mage effects
     def test_equip_item_all_on_warrior_with_mage_effects(self):
-        entity = Warrior(
-            0,
-            [0, 0],
-        )
+        entity = self.create_test_entity(Warrior, 0)
         # RESET
-        entity.backpack = []
-        entity.inventory[0] = EQUIPMENT_TYPES["none_wep"]()
-        entity.inventory[1] = EQUIPMENT_TYPES["none_armor"]()
-        entity.inventory[2] = EQUIPMENT_TYPES["none_acc"]()
+        self.reset_inventory(entity)
         # create and equip items
-        weapon = EQUIPMENT_TYPES["magestaff"]()
-        armor = EQUIPMENT_TYPES["ironchestplate"]()
-        acc = EQUIPMENT_TYPES["ringofthesorcerer"]()
-        entity.equip_item(weapon, weapon.slot.lower())
-        entity.equip_item(armor, armor.slot.lower())
-        entity.equip_item(acc, acc.slot.lower())
+        weapon = self.equip_test_item(entity, "magestaff")
+        armor = self.equip_test_item(entity, "ironchestplate")
+        acc = self.equip_test_item(entity, "ringofthesorcerer")
         # update stats
-        # Create active CLI
-        active_cli = cli.CLI()
-
-        # Create active grid
-        active_cli.grid = Grid(5, 5)
+        # Create active CLI and grid
+        active_cli = self.create_test_cli()
 
         entity.update_stats(active_cli)
         # Check values
@@ -1513,28 +1638,16 @@ class TestEntity(unittest.TestCase):
 
     # all on mage with mage effects
     def test_equip_item_all_on_mage_with_mage_effects(self):
-        entity = Mage(
-            0,
-            [0, 0],
-        )
+        entity = self.create_test_entity(Mage, 0)
         # RESET
-        entity.backpack = []
-        entity.inventory[0] = EQUIPMENT_TYPES["none_wep"]()
-        entity.inventory[1] = EQUIPMENT_TYPES["none_armor"]()
-        entity.inventory[2] = EQUIPMENT_TYPES["none_acc"]()
+        self.reset_inventory(entity)
         # create and equip items
-        weapon = EQUIPMENT_TYPES["magestaff"]()
-        armor = EQUIPMENT_TYPES["ironchestplate"]()
-        acc = EQUIPMENT_TYPES["ringofthesorcerer"]()
-        entity.equip_item(weapon, weapon.slot.lower())
-        entity.equip_item(armor, armor.slot.lower())
-        entity.equip_item(acc, acc.slot.lower())
+        weapon = self.equip_test_item(entity, "magestaff")
+        armor = self.equip_test_item(entity, "ironchestplate")
+        acc = self.equip_test_item(entity, "ringofthesorcerer")
         # update stats
-        # Create active CLI
-        active_cli = cli.CLI()
-
-        # Create active grid
-        active_cli.grid = Grid(5, 5)
+        # Create active CLI and grid
+        active_cli = self.create_test_cli()
 
         entity.update_stats(active_cli)
         # Check values
@@ -1559,24 +1672,15 @@ class TestEntity(unittest.TestCase):
 
     # wrong slot
     def test_equip_item_with_wrong_slot(self):
-        entity = Warrior(
-            0,
-            [0, 0],
-        )
+        entity = self.create_test_entity(Warrior, 0)
         # RESET
-        entity.backpack = []
-        entity.inventory[0] = EQUIPMENT_TYPES["none_wep"]()
-        entity.inventory[1] = EQUIPMENT_TYPES["none_armor"]()
-        entity.inventory[2] = EQUIPMENT_TYPES["none_acc"]()
+        self.reset_inventory(entity)
         # create and equip acc
         acc = EQUIPMENT_TYPES["ringofhaste"]()
         entity.equip_item(acc, "weapon")
         # update stats
-        # Create active CLI
-        active_cli = cli.CLI()
-
-        # Create active grid
-        active_cli.grid = Grid(5, 5)
+        # Create active CLI and grid
+        active_cli = self.create_test_cli()
 
         entity.update_stats(active_cli)
         # Check values
@@ -1594,23 +1698,14 @@ class TestEntity(unittest.TestCase):
 
     # no existing weapon
     def test_equip_item_without_item(self):
-        entity = Warrior(
-            0,
-            [0, 0],
-        )
+        entity = self.create_test_entity(Warrior, 0)
         # RESET
-        entity.backpack = []
-        entity.inventory[0] = EQUIPMENT_TYPES["none_wep"]()
-        entity.inventory[1] = EQUIPMENT_TYPES["none_armor"]()
-        entity.inventory[2] = EQUIPMENT_TYPES["none_acc"]()
+        self.reset_inventory(entity)
         # create and equip acc
         entity.equip_item("unobtainium", "weapon")
         # update stats
-        # Create active CLI
-        active_cli = cli.CLI()
-
-        # Create active grid
-        active_cli.grid = Grid(5, 5)
+        # Create active CLI and grid
+        active_cli = self.create_test_cli()
 
         entity.update_stats(active_cli)
         # Check values
@@ -1673,7 +1768,7 @@ class TestEntity(unittest.TestCase):
     def test_update_inventory_item_in_backpack(self):
 
         # Create test entity
-        entity = Warrior(0, [0, 0])
+        entity = self.create_test_entity(Warrior, 0)
         # reset
         entity.backpack = []
         entity.inventory = [
@@ -1700,7 +1795,7 @@ class TestEntity(unittest.TestCase):
     def test_update_inventory_remove_phantom_item(self):
 
         # Create test entity
-        entity = Warrior(0, [0, 0])
+        entity = self.create_test_entity(Warrior, 0)
         # reset
         entity.backpack = []
         entity.inventory = [
@@ -1726,7 +1821,7 @@ class TestEntity(unittest.TestCase):
     def test_update_inventory_preserve_none(self):
 
         # Create test entity
-        entity = Warrior(0, [0, 0])
+        entity = self.create_test_entity(Warrior, 0)
 
         # reset
         entity.backpack = []
@@ -1750,7 +1845,7 @@ class TestEntity(unittest.TestCase):
     def test_update_inventory_duplicate_item_in_backpack(self):
 
         # Create test entity
-        entity = Warrior(0, [0, 0])
+        entity = self.create_test_entity(Warrior, 0)
         # reset
         entity.backpack = []
         entity.inventory = [
@@ -1775,7 +1870,7 @@ class TestEntity(unittest.TestCase):
     def test_update_inventory_mixed_items(self):
 
         # Create test entity
-        entity = Warrior(0, [0, 0])
+        entity = self.create_test_entity(Warrior, 0)
         # reset
         entity.backpack = []
         entity.inventory = [
@@ -1807,7 +1902,7 @@ class TestEntity(unittest.TestCase):
     def test_update_inventory_multiple_phantom_items(self):
 
         # Create test entity
-        entity = Warrior(0, [0, 0])
+        entity = self.create_test_entity(Warrior, 0)
         # reset
         entity.backpack = []
         entity.inventory = [
@@ -1838,7 +1933,7 @@ class TestEntity(unittest.TestCase):
     def test_update_inventory_duplicate_equipped_items(self):
 
         # Create test entity
-        entity = Warrior(0, [0, 0])
+        entity = self.create_test_entity(Warrior, 0)
         # reset
         entity.backpack = []
         entity.inventory = [
@@ -1866,7 +1961,7 @@ class TestEntity(unittest.TestCase):
     def test_update_inventory_only_none_items(self):
 
         # Create test entity
-        entity = Warrior(0, [0, 0])
+        entity = self.create_test_entity(Warrior, 0)
         # reset
         entity.backpack = []
         entity.inventory = [
@@ -1898,10 +1993,7 @@ class TestEntity(unittest.TestCase):
     # Test for calculate_max_stats with no modifiers
     def test_calculate_max_stats_with_no_modifiers(self):
 
-        entity = Warrior(
-            0,
-            [0, 0],
-        )
+        entity = self.create_test_entity(Warrior, 0)
 
         # Calculate max stats
         entity.calculate_max_stats()
@@ -1913,10 +2005,10 @@ class TestEntity(unittest.TestCase):
 
     def test_calculate_max_stats_with_flat_modifiers(self):
 
-        entity = Warrior(
+        entity = self.create_test_entity(
+            Warrior,
             0,
-            [0, 0],
-            {
+            modifiers={
                 "Flat_modifiers": {
                     "Health": 20,
                 },
@@ -1933,10 +2025,10 @@ class TestEntity(unittest.TestCase):
     # Test for calculate_max_stats with percent modifiers
     def test_calculate_max_stats_with_percent_modifiers(self):
 
-        entity = Warrior(
+        entity = self.create_test_entity(
+            Warrior,
             0,
-            [0, 0],
-            {
+            modifiers={
                 "Flat_modifiers": {},
                 "Percent_modifiers": {
                     "Health": 10,
@@ -1953,10 +2045,10 @@ class TestEntity(unittest.TestCase):
     # Test for calculate_max_stats with flat and percent modifiers
     def test_calculate_max_stats_with_flat_and_percent_modifiers(self):
 
-        entity = Warrior(
+        entity = self.create_test_entity(
+            Warrior,
             0,
-            [0, 0],
-            {
+            modifiers={
                 "Flat_modifiers": {
                     "Health": 20,
                 },
@@ -1975,10 +2067,10 @@ class TestEntity(unittest.TestCase):
     # Test for calculate_max_stats with Mage stats
     def test_calculate_max_stats_with_mage_stats(self):
 
-        entity = Mage(
+        entity = self.create_test_entity(
+            Mage,
             0,
-            [0, 0],
-            {
+            modifiers={
                 "Flat_modifiers": {
                     "Health": 20,
                     "Mana": 25,
@@ -2000,21 +2092,15 @@ class TestEntity(unittest.TestCase):
     # Tests for update_stats with max health modifier on warrior
     def test_update_stats_on_warrior_with_max_health_modifier(self):
 
-        entity = Warrior(
-            0,
-            [0, 0],
-        )
+        entity = self.create_test_entity(Warrior, 0)
 
         # RESET
         entity.inventory[0].effects = {}
         entity.inventory[1].effects = {}
         entity.inventory[2].effects = {}
 
-        # Create active CLI
-        active_cli = cli.CLI()
-
-        # Create active grid
-        active_cli.grid = Grid(5, 5)
+        # Create active CLI and grid
+        active_cli = self.create_test_cli()
 
         # Add health modifier
         entity.inventory[0].effects = {
@@ -2044,16 +2130,13 @@ class TestEntity(unittest.TestCase):
     # Test use_consumable with Small Health Potion
     def test_use_consumable_small_health_potion(self):
         # Create test entity
-        entity = Warrior(0, [0, 0])
+        entity = self.create_test_entity(Warrior, 0)
 
         # Set current Health
         entity.health = 50
 
-        # Get consumable
-        consumable = EQUIPMENT_TYPES["smallhealthpotion"]()
-
-        # Use consumable
-        Consumable.use_consumable(consumable, entity)
+        # Get and use consumable
+        consumable = self.use_test_consumable(entity, "smallhealthpotion")
 
         # Check Health increased by 20
         self.assertEqual(entity.health, 70)
@@ -2070,16 +2153,13 @@ class TestEntity(unittest.TestCase):
     # Test use_consumable with Greater Health Potion
     def test_use_consumable_greater_health_potion(self):
         # Create test entity
-        entity = Warrior(0, [0, 0])
+        entity = self.create_test_entity(Warrior, 0)
 
         # Set current Health
         entity.health = 50
 
-        # Get consumable
-        consumable = EQUIPMENT_TYPES["greaterhealthpotion"]()
-
-        # Use consumable
-        Consumable.use_consumable(consumable, entity)
+        # Get and use consumable
+        consumable = self.use_test_consumable(entity, "greaterhealthpotion")
 
         # Check Health increased by 50
         self.assertEqual(entity.health, 100)
@@ -2093,16 +2173,13 @@ class TestEntity(unittest.TestCase):
     # Test use_consumable with Superior Health Potion
     def test_use_consumable_superior_health_potion(self):
         # Create test entity
-        entity = Warrior(0, [0, 0])
+        entity = self.create_test_entity(Warrior, 0)
 
         # Set current Health
         entity.health = 50
 
-        # Get consumable
-        consumable = EQUIPMENT_TYPES["superiorhealthpotion"]()
-
-        # Use consumable
-        Consumable.use_consumable(consumable, entity)
+        # Get and use consumable
+        consumable = self.use_test_consumable(entity, "superiorhealthpotion")
 
         # Check Health is capped at max Health
         self.assertEqual(entity.health, 120)
@@ -2115,16 +2192,13 @@ class TestEntity(unittest.TestCase):
     # Test use_consumable with Health Potion exceeding max Health
     def test_use_consumable_health_potion_exceeds_max(self):
         # Create test entity
-        entity = Warrior(0, [0, 0])
+        entity = self.create_test_entity(Warrior, 0)
 
         # Set current Health
         entity.health = 110
 
-        # Get consumable
-        consumable = EQUIPMENT_TYPES["greaterhealthpotion"]()
-
-        # Use consumable
-        Consumable.use_consumable(consumable, entity)
+        # Get and use consumable
+        consumable = self.use_test_consumable(entity, "greaterhealthpotion")
 
         # Check Health does not exceed max Health
         self.assertEqual(entity.health, 120)
@@ -2137,16 +2211,13 @@ class TestEntity(unittest.TestCase):
     # Test use_consumable with Health Potion at max Health
     def test_use_consumable_health_potion_at_max_health(self):
         # Create test entity
-        entity = Warrior(0, [0, 0])
+        entity = self.create_test_entity(Warrior, 0)
 
         # Set current Health
         entity.health = entity.max_health
 
-        # Get consumable
-        consumable = EQUIPMENT_TYPES["smallhealthpotion"]()
-
-        # Use consumable
-        Consumable.use_consumable(consumable, entity)
+        # Get and use consumable
+        consumable = self.use_test_consumable(entity, "smallhealthpotion")
 
         # Check Health remains at max Health
         self.assertEqual(entity.health, 120)
@@ -2159,16 +2230,13 @@ class TestEntity(unittest.TestCase):
     # Test use_consumable with Turtle Master Potion instant effect
     def test_use_consumable_turtle_master_instant_effect(self):
         # Create test entity
-        entity = Warrior(0, [0, 0])
+        entity = self.create_test_entity(Warrior, 0)
 
         # Set current Health
         entity.health = 50
 
-        # Get consumable
-        consumable = EQUIPMENT_TYPES["turtlemasterpotion"]()
-
-        # Use consumable
-        Consumable.use_consumable(consumable, entity)
+        # Get and use consumable
+        consumable = self.use_test_consumable(entity, "turtlemasterpotion")
 
         # Check Health increased by 10 percent of current Health
         self.assertEqual(entity.health, 55)
@@ -2181,16 +2249,13 @@ class TestEntity(unittest.TestCase):
     # Test use_consumable with Mana Potion
     def test_use_consumable_mana_potion(self):
         # Create test entity
-        entity = Mage(0, [0, 0])
+        entity = self.create_test_entity(Mage, 0)
 
         # Set current Mana
         entity.mana = 25
 
-        # Get consumable
-        consumable = EQUIPMENT_TYPES["manapotion"]()
-
-        # Use consumable
-        Consumable.use_consumable(consumable, entity)
+        # Get and use consumable
+        consumable = self.use_test_consumable(entity, "manapotion")
 
         # Check Mana increased by 50
         self.assertEqual(entity.mana, 75)
@@ -2205,16 +2270,13 @@ class TestEntity(unittest.TestCase):
     # Test use_consumable with Mana Potion exceeding max Mana
     def test_use_consumable_mana_potion_exceeds_max(self):
         # Create test entity
-        entity = Mage(0, [0, 0])
+        entity = self.create_test_entity(Mage, 0)
 
         # Set current Mana
         entity.mana = 90
 
-        # Get consumable
-        consumable = EQUIPMENT_TYPES["manapotion"]()
-
-        # Use consumable
-        Consumable.use_consumable(consumable, entity)
+        # Get and use consumable
+        consumable = self.use_test_consumable(entity, "manapotion")
 
         # Check Mana does not exceed max Mana
         self.assertEqual(entity.mana, 100)
@@ -2229,16 +2291,13 @@ class TestEntity(unittest.TestCase):
     # Test use_consumable with Mana Potion at max Mana
     def test_use_consumable_mana_potion_at_max_mana(self):
         # Create test entity
-        entity = Mage(0, [0, 0])
+        entity = self.create_test_entity(Mage, 0)
 
         # Set current Mana
         entity.mana = entity.max_mana
 
-        # Get consumable
-        consumable = EQUIPMENT_TYPES["manapotion"]()
-
-        # Use consumable
-        Consumable.use_consumable(consumable, entity)
+        # Get and use consumable
+        consumable = self.use_test_consumable(entity, "manapotion")
 
         # Check Mana remains at max Mana
         self.assertEqual(entity.mana, 100)
@@ -2253,14 +2312,11 @@ class TestEntity(unittest.TestCase):
     # Test use_consumable with Turtle Master Potion over-time effects
     def test_use_consumable_turtle_master_over_time_effects(self):
         # Create test entity
-        entity = Warrior(0, [0, 0])
+        entity = self.create_test_entity(Warrior, 0)
         entity.temp_buffs.clear()
 
-        # Get consumable
-        consumable = EQUIPMENT_TYPES["turtlemasterpotion"]()
-
-        # Use consumable
-        Consumable.use_consumable(consumable, entity)
+        # Get and use consumable
+        consumable = self.use_test_consumable(entity, "turtlemasterpotion")
 
         # Check buff name
         self.assertEqual(
@@ -2299,7 +2355,7 @@ class TestEntity(unittest.TestCase):
     def test_use_consumable_multiple_over_time_buffs(self):
 
         # Create test entity
-        entity = Warrior(0, [0, 0])
+        entity = self.create_test_entity(Warrior, 0)
 
         # Get consumables
         first_consumable = EQUIPMENT_TYPES["turtlemasterpotion"]()
@@ -2333,13 +2389,10 @@ class TestEntity(unittest.TestCase):
     def test_use_consumable_no_over_time_effects(self):
 
         # Create test entity
-        entity = Warrior(0, [0, 0])
+        entity = self.create_test_entity(Warrior, 0)
 
-        # Get consumable
-        consumable = EQUIPMENT_TYPES["smallhealthpotion"]()
-
-        # Use consumable
-        Consumable.use_consumable(consumable, entity)
+        # Get and use consumable
+        consumable = self.use_test_consumable(entity, "smallhealthpotion")
 
         # Check no temporary buffs were added
         self.assertEqual(entity.temp_buffs, [])
@@ -2354,16 +2407,13 @@ class TestEntity(unittest.TestCase):
     def test_use_consumable_instant_and_over_time_effects(self):
 
         # Create test entity
-        entity = Warrior(0, [0, 0])
+        entity = self.create_test_entity(Warrior, 0)
 
         # Set current Health
         entity.health = 50
 
-        # Get consumable
-        consumable = EQUIPMENT_TYPES["turtlemasterpotion"]()
-
-        # Use consumable
-        Consumable.use_consumable(consumable, entity)
+        # Get and use consumable
+        consumable = self.use_test_consumable(entity, "turtlemasterpotion")
 
         # Check instant Health effect
         self.assertEqual(entity.health, 55)
@@ -2383,7 +2433,7 @@ class TestEntity(unittest.TestCase):
     def test_use_consumable_preserves_existing_temp_buffs(self):
 
         # Create test entity
-        entity = Warrior(0, [0, 0])
+        entity = self.create_test_entity(Warrior, 0)
 
         # Add existing temporary buff
         entity.temp_buffs.append(
@@ -2399,11 +2449,8 @@ class TestEntity(unittest.TestCase):
             }
         )
 
-        # Get consumable
-        consumable = EQUIPMENT_TYPES["turtlemasterpotion"]()
-
-        # Use consumable
-        Consumable.use_consumable(consumable, entity)
+        # Get and use consumable
+        consumable = self.use_test_consumable(entity, "turtlemasterpotion")
 
         # Check existing buff was preserved
         self.assertEqual(
@@ -2425,11 +2472,8 @@ class TestEntity(unittest.TestCase):
 
     # success
     def test_attack_entity_with_attack_greater_than_defence(self):
-        # Create attacker
-        attacker = Warrior(0, [0, 0])
-
-        # Create defender
-        defender = Goblin(1, [1, 0])
+        # Create attacker and defender
+        attacker, defender = self.create_combat_entities()
 
         # Store defender's starting health
         starting_health = defender.health
@@ -2451,11 +2495,8 @@ class TestEntity(unittest.TestCase):
 
     # success
     def test_attack_entity_minimum_damage(self):
-        # Create attacker
-        attacker = Warrior(0, [0, 0])
-
-        # Create defender
-        defender = Goblin(1, [1, 0])
+        # Create attacker and defender
+        attacker, defender = self.create_combat_entities()
 
         # Set attack lower than defence
         attacker.attack = 5
@@ -2478,11 +2519,8 @@ class TestEntity(unittest.TestCase):
 
     # success
     def test_attack_entity_health_does_not_go_below_zero(self):
-        # Create attacker
-        attacker = Warrior(0, [0, 0])
-
-        # Create defender
-        defender = Goblin(1, [1, 0])
+        # Create attacker and defender
+        attacker, defender = self.create_combat_entities()
 
         # Set defender health below attack damage
         defender.health = 5
@@ -2500,11 +2538,8 @@ class TestEntity(unittest.TestCase):
 
     # success
     def test_attack_entity_returns_damage_dealt(self):
-        # Create attacker
-        attacker = Warrior(0, [0, 0])
-
-        # Create defender
-        defender = Goblin(1, [1, 0])
+        # Create attacker and defender
+        attacker, defender = self.create_combat_entities()
 
         # Set specific attack and defence values
         attacker.attack = 15
@@ -2518,11 +2553,8 @@ class TestEntity(unittest.TestCase):
 
     # success
     def test_attack_entity_does_not_modify_attacker_health(self):
-        # Create attacker
-        attacker = Warrior(0, [0, 0])
-
-        # Create defender
-        defender = Goblin(1, [1, 0])
+        # Create attacker and defender
+        attacker, defender = self.create_combat_entities()
 
         # Store attacker's starting health
         starting_health = attacker.health
@@ -2532,3 +2564,388 @@ class TestEntity(unittest.TestCase):
 
         # Verify attacker's health was not changed
         self.assertEqual(attacker.health, starting_health)
+
+    # success
+    def test_attack_entity_kills_target(self):
+        # Create attacker and defender
+        attacker, defender = self.create_combat_entities()
+
+        # Set defender health low enough to die
+        defender.health = 5
+
+        # Set attack damage to exactly 5
+        attacker.attack = 5
+        defender.defence = 0
+
+        # Attack defender
+        damage = attacker.attack_entity(defender)
+
+        # Verify defender died
+        self.assertEqual(damage, 5)
+        self.assertEqual(defender.health, 0)
+
+        # Verify Dead status was added
+        self.assertFalse(defender.is_alive())
+        self.assertEqual(
+            defender.temp_buffs[0]["Name"],
+            "Dead",
+        )
+
+    # success
+    def test_attack_entity_does_not_add_dead_status_when_target_survives(self):
+        # Create attacker and defender
+        attacker, defender = self.create_combat_entities()
+
+        # Store defender's starting health
+        starting_health = defender.health
+
+        # Attack defender
+        attacker.attack_entity(defender)
+
+        # Verify defender survived
+        self.assertGreater(defender.health, 0)
+
+        # Verify health was reduced
+        self.assertLess(defender.health, starting_health)
+
+        # Verify Dead status was not added
+        self.assertTrue(defender.is_alive())
+
+    # success
+    def test_is_alive_with_no_temp_buffs(self):
+        # Create test entity
+        entity = self.create_test_entity(Warrior, 0)
+
+        # Verify entity is alive
+        self.assertTrue(entity.is_alive())
+
+    # success
+    def test_is_alive_with_active_buff(self):
+        # Create test entity
+        entity = self.create_test_entity(Warrior, 0)
+
+        # Add normal temporary buff
+        entity.temp_buffs.append(
+            {
+                "Name": "AttackBuff",
+                "Effects": {
+                    "Flat_modifiers": {
+                        "Attack": "5",
+                    },
+                    "Percent_modifiers": {},
+                },
+                "Turns": 2,
+            }
+        )
+
+        # Verify entity is still alive
+        self.assertTrue(entity.is_alive())
+
+    # success
+    def test_is_alive_with_dead_status(self):
+        # Create test entity
+        entity = self.create_test_entity(Warrior, 0)
+
+        # Add dead status
+        entity.temp_buffs.append(DEAD_STATUS)
+
+        # Verify entity is dead
+        self.assertFalse(entity.is_alive())
+
+    # success
+    def test_update_temp_buffs_with_no_buffs(self):
+        # Create test entity
+        entity = self.create_test_entity(Warrior, 0)
+
+        # Update temporary buffs
+        buffs_to_remove = entity.update_temp_buffs()
+
+        # Verify no buffs were returned
+        self.assertEqual(buffs_to_remove, [])
+
+    # success
+    def test_update_temp_buffs_decrements_turns(self):
+        # Create test entity
+        entity = self.create_test_entity(Warrior, 0)
+
+        # Add temporary buff
+        entity.temp_buffs.append(
+            {
+                "Name": "AttackBuff",
+                "Effects": {
+                    "Flat_modifiers": {
+                        "Attack": "5",
+                    },
+                    "Percent_modifiers": {},
+                },
+                "Turns": 3,
+            }
+        )
+
+        # Update temporary buffs
+        buffs_to_remove = entity.update_temp_buffs()
+
+        # Verify duration was decremented
+        self.assertEqual(entity.temp_buffs[0]["Turns"], 2)
+
+        # Verify buff was not marked for removal
+        self.assertEqual(buffs_to_remove, [])
+
+    # success
+    def test_update_temp_buffs_marks_expired_buff_for_removal(self):
+        # Create test entity
+        entity = self.create_test_entity(Warrior, 0)
+
+        # Add temporary buff with one turn remaining
+        entity.temp_buffs.append(
+            {
+                "Name": "AttackBuff",
+                "Effects": {
+                    "Flat_modifiers": {
+                        "Attack": "5",
+                    },
+                    "Percent_modifiers": {},
+                },
+                "Turns": 1,
+            }
+        )
+
+        # Update temporary buffs
+        buffs_to_remove = entity.update_temp_buffs()
+
+        # Verify duration reached zero
+        self.assertEqual(entity.temp_buffs[0]["Turns"], 0)
+
+        # Verify buff was marked for removal
+        self.assertEqual(
+            buffs_to_remove,
+            ["AttackBuff"],
+        )
+
+    # success
+    def test_update_temp_buffs_updates_multiple_buffs(self):
+        # Create test entity
+        entity = self.create_test_entity(Warrior, 0)
+
+        # Add first temporary buff
+        entity.temp_buffs.append(
+            {
+                "Name": "AttackBuff",
+                "Effects": {
+                    "Flat_modifiers": {
+                        "Attack": "5",
+                    },
+                    "Percent_modifiers": {},
+                },
+                "Turns": 1,
+            }
+        )
+
+        # Add second temporary buff
+        entity.temp_buffs.append(
+            {
+                "Name": "SpeedBuff",
+                "Effects": {
+                    "Flat_modifiers": {
+                        "Speed": "2",
+                    },
+                    "Percent_modifiers": {},
+                },
+                "Turns": 3,
+            }
+        )
+
+        # Update temporary buffs
+        buffs_to_remove = entity.update_temp_buffs()
+
+        # Verify both durations were decremented
+        self.assertEqual(entity.temp_buffs[0]["Turns"], 0)
+        self.assertEqual(entity.temp_buffs[1]["Turns"], 2)
+
+        # Verify only expired buff was marked
+        self.assertEqual(
+            buffs_to_remove,
+            ["AttackBuff"],
+        )
+
+    # success
+    def test_remove_temp_buffs_removes_buff(self):
+        # Create test entity
+        entity = self.create_test_entity(Warrior, 0)
+
+        # Add temporary buff
+        entity.temp_buffs.append(
+            {
+                "Name": "AttackBuff",
+                "Effects": {
+                    "Flat_modifiers": {
+                        "Attack": "5",
+                    },
+                    "Percent_modifiers": {},
+                },
+                "Turns": 0,
+            }
+        )
+
+        # Remove temporary buff
+        should_remove_entity = entity.remove_temp_buffs(["AttackBuff"])
+
+        # Verify entity should remain on board
+        self.assertFalse(should_remove_entity)
+
+        # Verify buff was removed
+        self.assertEqual(entity.temp_buffs, [])
+
+    # success
+    def test_remove_temp_buffs_removes_multiple_buffs(self):
+        # Create test entity
+        entity = self.create_test_entity(Warrior, 0)
+
+        # Add first temporary buff
+        entity.temp_buffs.append(
+            {
+                "Name": "AttackBuff",
+                "Effects": {
+                    "Flat_modifiers": {
+                        "Attack": "5",
+                    },
+                    "Percent_modifiers": {},
+                },
+                "Turns": 0,
+            }
+        )
+
+        # Add second temporary buff
+        entity.temp_buffs.append(
+            {
+                "Name": "SpeedBuff",
+                "Effects": {
+                    "Flat_modifiers": {
+                        "Speed": "2",
+                    },
+                    "Percent_modifiers": {},
+                },
+                "Turns": 0,
+            }
+        )
+
+        # Remove temporary buffs
+        should_remove_entity = entity.remove_temp_buffs(["AttackBuff", "SpeedBuff"])
+
+        # Verify entity should remain on board
+        self.assertFalse(should_remove_entity)
+
+        # Verify all buffs were removed
+        self.assertEqual(entity.temp_buffs, [])
+
+    # success
+    def test_remove_temp_buffs_dead_status_returns_true(self):
+        # Create test entity
+        entity = self.create_test_entity(Warrior, 0)
+
+        # Add dead status
+        entity.temp_buffs.append(DEAD_STATUS)
+
+        # Remove dead status
+        should_remove_entity = entity.remove_temp_buffs(["Dead"])
+
+        # Verify entity should be removed from board
+        self.assertTrue(should_remove_entity)
+
+        # Verify dead status remains because the method returns
+        # before removing the Dead buff
+        self.assertEqual(
+            entity.temp_buffs[0]["Name"],
+            "Dead",
+        )
+
+    # success
+    def test_handle_death_adds_dead_status(self):
+        # Create test entity
+        entity = self.create_test_entity(Warrior, 0)
+
+        # Handle entity death
+        entity.handle_death()
+
+        # Verify Dead status was added
+        self.assertEqual(
+            entity.temp_buffs,
+            [DEAD_STATUS],
+        )
+
+    # success
+    def test_handle_death_makes_entity_not_alive(self):
+        # Create test entity
+        entity = self.create_test_entity(Warrior, 0)
+
+        # Handle entity death
+        entity.handle_death()
+
+        # Verify entity is no longer alive
+        self.assertFalse(entity.is_alive())
+
+    # success
+    def test_process_tick_on_entity_with_no_buffs(self):
+        # Create test entity
+        entity = self.create_test_entity(Warrior, 0)
+
+        # Process entity tick
+        should_remove_entity = entity.process_tick_on_entity()
+
+        # Verify entity should not be removed
+        self.assertFalse(should_remove_entity)
+
+    # success
+    def test_process_tick_on_entity_removes_expired_buff(self):
+        # Create test entity
+        entity = self.create_test_entity(Warrior, 0)
+
+        # Add temporary buff with one turn remaining
+        entity.temp_buffs.append(
+            {
+                "Name": "AttackBuff",
+                "Effects": {
+                    "Flat_modifiers": {
+                        "Attack": "5",
+                    },
+                    "Percent_modifiers": {},
+                },
+                "Turns": 1,
+            }
+        )
+
+        # Process entity tick
+        should_remove_entity = entity.process_tick_on_entity()
+
+        # Verify entity should remain on board
+        self.assertFalse(should_remove_entity)
+
+        # Verify buff was removed
+        self.assertEqual(entity.temp_buffs, [])
+
+    # success
+    def test_process_tick_on_entity_removes_entity_after_dead_status_expires(self):
+        # Create test entity
+        entity = self.create_test_entity(Warrior, 0)
+
+        # Create Dead status with one turn remaining
+        dead_status = {
+            "Name": "Dead",
+            "Effects": {
+                "Flat_modifiers": {},
+                "Percent_modifiers": {},
+            },
+            "Turns": 1,
+        }
+
+        # Add Dead status
+        entity.temp_buffs.append(dead_status)
+
+        # Verify entity is currently dead
+        self.assertFalse(entity.is_alive())
+
+        # Process entity tick
+        should_remove_entity = entity.process_tick_on_entity()
+
+        # Verify entity should be removed from board
+        self.assertTrue(should_remove_entity)
