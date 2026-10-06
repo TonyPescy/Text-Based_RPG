@@ -683,7 +683,7 @@ class TestCLI(unittest.TestCase):
         # check output
         self.assertEqual(
             output,
-            "ok: Spawned warrior at 10, 0. id: 0!\n",
+            "ok: Spawned warrior at 10, 0. id: 1!\n",
         )
 
     # Entity will be generated and will be 0 as it is the first one created
@@ -703,7 +703,7 @@ class TestCLI(unittest.TestCase):
         # check output
         self.assertEqual(
             output,
-            "ok: Spawned warrior at 10, 24. id: 0!\n",
+            "ok: Spawned warrior at 10, 24. id: 1!\n",
         )
 
     def test_spawn_entity_x_position_higher_than_width(self):
@@ -761,7 +761,7 @@ class TestCLI(unittest.TestCase):
         # check output
         self.assertEqual(
             output,
-            "ok: Spawned warrior at 0, 10. id: 0!\n",
+            "ok: Spawned warrior at 0, 10. id: 1!\n",
         )
 
     # Entity will be generated and will be 0 as it is the first one created
@@ -781,7 +781,7 @@ class TestCLI(unittest.TestCase):
         # check output
         self.assertEqual(
             output,
-            "ok: Spawned warrior at 24, 10. id: 0!\n",
+            "ok: Spawned warrior at 24, 10. id: 1!\n",
         )
 
     def test_spawn_entity_on_existing_entity(self):
@@ -823,7 +823,7 @@ class TestCLI(unittest.TestCase):
         # check output
         self.assertEqual(
             output,
-            "ok: Spawned mage at 10, 10. id: 0!\n",
+            "ok: Spawned mage at 10, 10. id: 1!\n",
         )
         # other checks
 
@@ -850,7 +850,7 @@ class TestCLI(unittest.TestCase):
         # check output
         self.assertEqual(
             output,
-            "ok: Spawned warrior at 10, 10. id: 0!\n",
+            "ok: Spawned warrior at 10, 10. id: 1!\n",
         )
         # other check
         entity = test_cli.entity_list[0]
@@ -880,7 +880,7 @@ class TestCLI(unittest.TestCase):
         # check output
         self.assertEqual(
             output,
-            "ok: Spawned skeleton at 12, 12. id: 3!\n",
+            "ok: Spawned skeleton at 12, 12. id: 4!\n",
         )
 
     def test_spawn_multiple_entities_max_stats(self):
@@ -924,11 +924,11 @@ class TestCLI(unittest.TestCase):
         test_cli.process_command("spawn mage 11 10")
 
         # Check that entity IDs are assigned correctly
-        self.assertEqual(test_cli.entity_list[0].id, 0)
-        self.assertEqual(test_cli.entity_list[1].id, 1)
+        self.assertEqual(test_cli.entity_list[0].id, 1)
+        self.assertEqual(test_cli.entity_list[1].id, 2)
 
         # Check that the next ID has been incremented
-        self.assertEqual(test_cli.entity_ids_issued, 2)
+        self.assertEqual(test_cli.entity_ids_issued, 3)
 
     # Only sends back the last entity spawned id: 8 (0, 1, 2, 3, 4, 5, 6, X)
     def test_spawn_multiple_of_all_entities(self):
@@ -955,7 +955,7 @@ class TestCLI(unittest.TestCase):
         # check output
         self.assertEqual(
             output,
-            "ok: Spawned skeleton at 12, 13. id: 7!\n",
+            "ok: Spawned skeleton at 12, 13. id: 8!\n",
         )
 
     # Equip Cases
@@ -1060,7 +1060,7 @@ class TestCLI(unittest.TestCase):
         test_cli.process_command("init map 25 25")
         # clear out entity list
         test_cli.reset_entity_list()
-        command = "swap 0 weapon IronSWORD"
+        command = "swap 1 weapon IronSWORD"
         # Process command
         with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
             test_cli.process_command(command)
@@ -1086,7 +1086,7 @@ class TestCLI(unittest.TestCase):
         # backpack fix
         entity = test_cli.entity_list[0]
         entity.add_item_to_backpack(dl.create_equipment("ironsword"))
-        command = "swap 0 armor IronSWORD"
+        command = "swap 1 armor IronSWORD"
         # Process command
         with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
             test_cli.process_command(command)
@@ -1120,7 +1120,7 @@ class TestCLI(unittest.TestCase):
         # backpack fix
         entity = test_cli.entity_list[0]
         entity.add_item_to_backpack(dl.create_equipment("ironsword"))
-        command = "swap 0 weapon ironsword"
+        command = "swap 1 weapon ironsword"
         # Process command
         with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
             test_cli.process_command(command)
@@ -1218,7 +1218,7 @@ class TestCLI(unittest.TestCase):
             dl.create_equipment("none_acc"),
         ]
         test_cli.process_command("spawn warrior 10 10")
-        command = "inventory 0"
+        command = "inventory 1"
         # Process command
         with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
             test_cli.process_command(command)
@@ -1263,10 +1263,10 @@ class TestCLI(unittest.TestCase):
         entity.add_item_to_backpack(dl.create_equipment("amuletofvitality"))
         entity.add_item_to_backpack(dl.create_equipment("ironsword"))
         # Change all slots
-        test_cli.process_command("swap 0 armor scoutarmor")
-        test_cli.process_command("swap 0 accessory amuletofvitality")
-        test_cli.process_command("swap 0 weapon ironsword")
-        command = "inventory 0"
+        test_cli.process_command("swap 1 armor scoutarmor")
+        test_cli.process_command("swap 1 accessory amuletofvitality")
+        test_cli.process_command("swap 1 weapon ironsword")
+        command = "inventory 1"
         # Process command
         with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
             test_cli.process_command(command)
@@ -1325,11 +1325,11 @@ class TestCLI(unittest.TestCase):
         entity.add_item_to_backpack(dl.create_equipment("ironsword"))
 
         # Change all slots
-        test_cli.process_command("swap 0 armor scoutarmor")
-        test_cli.process_command("swap 0 accessory ringofthesorcerer")
-        test_cli.process_command("swap 0 weapon ironsword")
+        test_cli.process_command("swap 1 armor scoutarmor")
+        test_cli.process_command("swap 1 accessory ringofthesorcerer")
+        test_cli.process_command("swap 1 weapon ironsword")
 
-        command = "inventory 0"
+        command = "inventory 1"
 
         # Process command
         with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
@@ -1413,7 +1413,7 @@ class TestCLI(unittest.TestCase):
         test_cli.reset_entity_list()
         # Create Map
         test_cli.process_command("init map 25 25")
-        command = "inspect 0"
+        command = "inspect 1"
         # Process command
         with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
             test_cli.process_command(command)
@@ -1434,7 +1434,7 @@ class TestCLI(unittest.TestCase):
         test_cli.reset_entity_list()
         # spawn warrior
         test_cli.process_command("spawn warrior 10 10")
-        command = "inspect 0"
+        command = "inspect 1"
         # Process command
         with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
             test_cli.process_command(command)
@@ -1510,7 +1510,7 @@ class TestCLI(unittest.TestCase):
         ]
         # spawn warrior
         test_cli.process_command("spawn warrior 10 10")
-        command = "inspect 0"
+        command = "inspect 1"
         # Process command
         with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
             test_cli.process_command(command)
@@ -1519,7 +1519,7 @@ class TestCLI(unittest.TestCase):
         # check output
         self.assertEqual(
             output,
-            "Id: 0\n"
+            "Id: 1\n"
             "Type: Warrior\n"
             "Position: [10, 10]\n"
             "Health: 120\n"
@@ -1547,7 +1547,7 @@ class TestCLI(unittest.TestCase):
         ]
         # spawn warrior
         test_cli.process_command("spawn mage 10 10")
-        command = "inspect 0"
+        command = "inspect 1"
         # Process command
         with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
             test_cli.process_command(command)
@@ -1556,7 +1556,7 @@ class TestCLI(unittest.TestCase):
         # check output
         self.assertEqual(
             output,
-            "Id: 0\n"
+            "Id: 1\n"
             "Type: Mage\n"
             "Position: [10, 10]\n"
             "Health: 70\n"
@@ -1585,10 +1585,10 @@ class TestCLI(unittest.TestCase):
         entity.add_item_to_backpack(dl.create_equipment("amuletofvitality"))
         entity.add_item_to_backpack(dl.create_equipment("ironsword"))
         # Change all slots
-        test_cli.process_command("swap 0 armor ironchestplate")
-        test_cli.process_command("swap 0 accessory amuletofvitality")
-        test_cli.process_command("swap 0 weapon ironsword")
-        command = "inspect 0"
+        test_cli.process_command("swap 1 armor ironchestplate")
+        test_cli.process_command("swap 1 accessory amuletofvitality")
+        test_cli.process_command("swap 1 weapon ironsword")
+        command = "inspect 1"
         # Process command
         with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
             test_cli.process_command(command)
@@ -1597,7 +1597,7 @@ class TestCLI(unittest.TestCase):
         # check output
         self.assertEqual(
             output,
-            "Id: 0\n"
+            "Id: 1\n"
             "Type: Warrior\n"
             "Position: [10, 10]\n"
             "Health: 132.0\n"
@@ -1631,10 +1631,10 @@ class TestCLI(unittest.TestCase):
         entity.add_item_to_backpack(dl.create_equipment("ringofthesorcerer"))
         entity.add_item_to_backpack(dl.create_equipment("magestaff"))
         # Change all slots
-        test_cli.process_command("swap 0 armor ironchestplate")
-        test_cli.process_command("swap 0 accessory ringofthesorcerer")
-        test_cli.process_command("swap 0 weapon magestaff")
-        command = "inspect 0"
+        test_cli.process_command("swap 1 armor ironchestplate")
+        test_cli.process_command("swap 1 accessory ringofthesorcerer")
+        test_cli.process_command("swap 1 weapon magestaff")
+        command = "inspect 1"
         # Process command
         with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
             test_cli.process_command(command)
@@ -1643,7 +1643,7 @@ class TestCLI(unittest.TestCase):
         # check output
         self.assertEqual(
             output,
-            "Id: 0\n"
+            "Id: 1\n"
             "Type: Mage\n"
             "Position: [10, 10]\n"
             "Health: 70\n"
@@ -1678,10 +1678,10 @@ class TestCLI(unittest.TestCase):
         entity.add_item_to_backpack(dl.create_equipment("amuletofvitality"))
         entity.add_item_to_backpack(dl.create_equipment("ironsword"))
         # Change all slots
-        test_cli.process_command("swap 0 armor ironchestplate")
-        test_cli.process_command("swap 0 accessory ringofthesorcerer")
-        test_cli.process_command("swap 0 weapon magestaff")
-        command = "inspect 0"
+        test_cli.process_command("swap 1 armor ironchestplate")
+        test_cli.process_command("swap 1 accessory ringofthesorcerer")
+        test_cli.process_command("swap 1 weapon magestaff")
+        command = "inspect 1"
         # Process command
         with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
             test_cli.process_command(command)
@@ -1690,7 +1690,7 @@ class TestCLI(unittest.TestCase):
         # check output
         self.assertEqual(
             output,
-            "Id: 0\n"
+            "Id: 1\n"
             "Type: Warrior\n"
             "Position: [10, 10]\n"
             "Health: 120\n"
@@ -1727,10 +1727,10 @@ class TestCLI(unittest.TestCase):
         entity.add_item_to_backpack(dl.create_equipment("amuletofvitality"))
         entity.add_item_to_backpack(dl.create_equipment("ironsword"))
         # Change all slots
-        test_cli.process_command("swap 0 armor ironchestplate")
-        test_cli.process_command("swap 0 accessory amuletofvitality")
-        test_cli.process_command("swap 0 weapon ironsword")
-        command = "inspect 0"
+        test_cli.process_command("swap 1 armor ironchestplate")
+        test_cli.process_command("swap 1 accessory amuletofvitality")
+        test_cli.process_command("swap 1 weapon ironsword")
+        command = "inspect 1"
         # Process command
         with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
             test_cli.process_command(command)
@@ -1739,7 +1739,7 @@ class TestCLI(unittest.TestCase):
         # check output
         self.assertEqual(
             output,
-            "Id: 0\n"
+            "Id: 1\n"
             "Type: Warrior\n"
             "Position: [10, 10]\n"
             "Health: 132.0\n"
@@ -1771,10 +1771,10 @@ class TestCLI(unittest.TestCase):
         entity.add_item_to_backpack(dl.create_equipment("amuletofvitality"))
         entity.add_item_to_backpack(dl.create_equipment("ironsword"))
         # Change all slots
-        test_cli.process_command("swap 0 armor ironchestplate")
-        test_cli.process_command("swap 0 accessory amuletofvitality")
-        test_cli.process_command("swap 0 weapon ironsword")
-        command = "inspect 0"
+        test_cli.process_command("swap 1 armor ironchestplate")
+        test_cli.process_command("swap 1 accessory amuletofvitality")
+        test_cli.process_command("swap 1 weapon ironsword")
+        command = "inspect 1"
         # Process command
         with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
             test_cli.process_command(command)
@@ -1783,7 +1783,7 @@ class TestCLI(unittest.TestCase):
         # check output
         self.assertEqual(
             output,
-            "Id: 0\n"
+            "Id: 1\n"
             "Type: Warrior\n"
             "Position: [10, 10]\n"
             "Health: 132.0\n"
@@ -2062,7 +2062,7 @@ class TestCLI(unittest.TestCase):
             "Coordinate: 10, 10\n"
             "Type: ShallowWater\n"
             "Passable: True\n"
-            "Occupants: 0\n",
+            "Occupants: 1\n",
         )
 
     # Test invalid command with too few arguments
@@ -2092,7 +2092,7 @@ class TestCLI(unittest.TestCase):
 
         # Process command
         with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.process_pickup_item_command(["pickup", "0", "IronSword", "extra"])
+            test_cli.process_pickup_item_command(["pickup", "1", "IronSword", "extra"])
 
         # Get print output
         output = mock_stdout.getvalue()
@@ -2111,7 +2111,7 @@ class TestCLI(unittest.TestCase):
 
         # Process command
         with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.process_pickup_item_command(["pickup", "0", "IronSword"])
+            test_cli.process_pickup_item_command(["pickup", "1", "IronSword"])
 
         # Get print output
         output = mock_stdout.getvalue()
@@ -2180,7 +2180,7 @@ class TestCLI(unittest.TestCase):
 
         # Process command
         with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            test_cli.process_pickup_item_command(["pickup", "0", "NotAnItem"])
+            test_cli.process_pickup_item_command(["pickup", "1", "NotAnItem"])
 
         # Get print output
         output = mock_stdout.getvalue()
@@ -3406,7 +3406,7 @@ class TestCLI(unittest.TestCase):
         # Create test CLI
         test_cli = CLI()
 
-        command = "use 0"
+        command = "use 1"
 
         # Process command
         with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
@@ -3426,7 +3426,7 @@ class TestCLI(unittest.TestCase):
         # Create test CLI
         test_cli = CLI()
 
-        command = "use 0 SmallHealthPotion extra"
+        command = "use 1 SmallHealthPotion extra"
 
         # Process command
         with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
@@ -3470,7 +3470,7 @@ class TestCLI(unittest.TestCase):
         test_cli.process_command("init map 10 10")
         test_cli.process_command("spawn Warrior 1 1")
 
-        command = "use 0 NotARealItem"
+        command = "use 1 NotARealItem"
 
         # Process command
         with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
@@ -3494,7 +3494,7 @@ class TestCLI(unittest.TestCase):
         test_cli.process_command("init map 10 10")
         test_cli.process_command("spawn Warrior 1 1")
 
-        command = "use 0 SmallHealthPotion"
+        command = "use 1 SmallHealthPotion"
 
         # Process command
         with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
@@ -3525,7 +3525,7 @@ class TestCLI(unittest.TestCase):
         item = dl.EQUIPMENT_TYPES["ironsword"]()
         entity.backpack.append(item)
 
-        command = "use 0 IronSword"
+        command = "use 1 IronSword"
 
         # Process command
         with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
@@ -3562,7 +3562,7 @@ class TestCLI(unittest.TestCase):
         item = dl.EQUIPMENT_TYPES["smallhealthpotion"]()
         entity.backpack.append(item)
 
-        command = "use 0 SmallHealthPotion"
+        command = "use 1 SmallHealthPotion"
 
         # Process command
         with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
@@ -3597,7 +3597,7 @@ class TestCLI(unittest.TestCase):
         item = dl.EQUIPMENT_TYPES["greaterhealthpotion"]()
         entity.backpack.append(item)
 
-        command = "use 0 GreaterHealthPotion"
+        command = "use 1 GreaterHealthPotion"
 
         # Process command
         with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
@@ -3632,7 +3632,7 @@ class TestCLI(unittest.TestCase):
         item = dl.EQUIPMENT_TYPES["superiorhealthpotion"]()
         entity.backpack.append(item)
 
-        command = "use 0 SuperiorHealthPotion"
+        command = "use 1 SuperiorHealthPotion"
 
         # Process command
         with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
@@ -3667,7 +3667,7 @@ class TestCLI(unittest.TestCase):
         item = dl.EQUIPMENT_TYPES["superiorhealthpotion"]()
         entity.backpack.append(item)
 
-        command = "use 0 SuperiorHealthPotion"
+        command = "use 1 SuperiorHealthPotion"
 
         # Process command
         with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
@@ -3704,7 +3704,7 @@ class TestCLI(unittest.TestCase):
         item = dl.EQUIPMENT_TYPES["manapotion"]()
         entity.backpack.append(item)
 
-        command = "use 0 ManaPotion"
+        command = "use 1 ManaPotion"
 
         # Process command
         with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
@@ -3739,7 +3739,7 @@ class TestCLI(unittest.TestCase):
         item = dl.EQUIPMENT_TYPES["manapotion"]()
         entity.backpack.append(item)
 
-        command = "use 0 ManaPotion"
+        command = "use 1 ManaPotion"
 
         # Process command
         with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
@@ -3776,7 +3776,7 @@ class TestCLI(unittest.TestCase):
         item = dl.EQUIPMENT_TYPES["turtlemasterpotion"]()
         entity.backpack.append(item)
 
-        command = "use 0 TurtleMasterPotion"
+        command = "use 1 TurtleMasterPotion"
 
         # Process command
         with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
@@ -3815,7 +3815,7 @@ class TestCLI(unittest.TestCase):
         entity.backpack.append(item)
 
         # Use potion with lowercase name
-        command = "use 0 smallhealthpotion"
+        command = "use 1 smallhealthpotion"
 
         # Process command
         with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
@@ -3853,7 +3853,7 @@ class TestCLI(unittest.TestCase):
         entity.backpack.append(potion_to_use)
         entity.backpack.append(other_potion)
 
-        command = "use 0 SmallHealthPotion"
+        command = "use 1 SmallHealthPotion"
 
         # Process command
         with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
@@ -4450,7 +4450,7 @@ class TestCLI(unittest.TestCase):
         self.assertEqual(len(test_cli.entity_list), 1)
 
         # Check that the entity ID was not incremented again
-        self.assertEqual(test_cli.entity_ids_issued, 1)
+        self.assertEqual(test_cli.entity_ids_issued, 2)
 
     # Test spawning an invalid entity type
     def test_spawn_entity_invalid_type(self):
@@ -4477,7 +4477,7 @@ class TestCLI(unittest.TestCase):
         self.assertEqual(len(test_cli.entity_list), 0)
 
         # Check that the entity ID was not incremented
-        self.assertEqual(test_cli.entity_ids_issued, 0)
+        self.assertEqual(test_cli.entity_ids_issued, 1)
 
     # Test successfully spawning a Warrior
     def test_spawn_entity_warrior(self):
@@ -4497,14 +4497,14 @@ class TestCLI(unittest.TestCase):
         # Check output
         self.assertEqual(
             output,
-            "ok: Spawned Warrior at 2, 3. id: 0!\n",
+            "ok: Spawned Warrior at 2, 3. id: 1!\n",
         )
 
         # Get spawned entity
         entity = test_cli.entity_list[0]
 
         # Check entity details
-        self.assertEqual(entity.id, 0)
+        self.assertEqual(entity.id, 1)
         self.assertEqual(entity.e_type.lower(), "warrior")
 
         # Check max health
@@ -4514,7 +4514,7 @@ class TestCLI(unittest.TestCase):
         self.assertEqual(entity.temp_buffs, [])
 
         # Check entity ID counter
-        self.assertEqual(test_cli.entity_ids_issued, 1)
+        self.assertEqual(test_cli.entity_ids_issued, 2)
 
         # Check entity was added to entity list
         self.assertEqual(len(test_cli.entity_list), 1)
@@ -4542,14 +4542,14 @@ class TestCLI(unittest.TestCase):
         # Check output
         self.assertEqual(
             output,
-            "ok: Spawned Mage at 2, 3. id: 0!\n",
+            "ok: Spawned Mage at 2, 3. id: 1!\n",
         )
 
         # Get spawned entity
         entity = test_cli.entity_list[0]
 
         # Check entity details
-        self.assertEqual(entity.id, 0)
+        self.assertEqual(entity.id, 1)
         self.assertEqual(entity.e_type.lower(), "mage")
 
         # Check max health and mana
@@ -4560,7 +4560,7 @@ class TestCLI(unittest.TestCase):
         self.assertEqual(entity.temp_buffs, [])
 
         # Check entity ID counter
-        self.assertEqual(test_cli.entity_ids_issued, 1)
+        self.assertEqual(test_cli.entity_ids_issued, 2)
 
         # Check entity was added to entity list
         self.assertEqual(len(test_cli.entity_list), 1)
@@ -4589,18 +4589,18 @@ class TestCLI(unittest.TestCase):
         # Check output
         self.assertEqual(
             output,
-            "ok: Spawned Mage at 4, 5. id: 1!\n",
+            "ok: Spawned Mage at 4, 5. id: 2!\n",
         )
 
         # Check entity count
         self.assertEqual(len(test_cli.entity_list), 2)
 
         # Check entity IDs
-        self.assertEqual(test_cli.entity_list[0].id, 0)
-        self.assertEqual(test_cli.entity_list[1].id, 1)
+        self.assertEqual(test_cli.entity_list[0].id, 1)
+        self.assertEqual(test_cli.entity_list[1].id, 2)
 
         # Check entity ID counter
-        self.assertEqual(test_cli.entity_ids_issued, 2)
+        self.assertEqual(test_cli.entity_ids_issued, 3)
 
         # Check both grid locations
         self.assertTrue(Grid.is_occupied(test_cli.grid, 2, 3))
@@ -4893,7 +4893,7 @@ class TestCLI(unittest.TestCase):
         # Create map
         test_cli.process_command("init map 25 25")
 
-        command = "move 0 2"
+        command = "move 1 2"
 
         # Process command
         with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
@@ -4917,7 +4917,7 @@ class TestCLI(unittest.TestCase):
         # Create map
         test_cli.process_command("init map 25 25")
 
-        command = "move 0 2"
+        command = "move 1 2"
 
         # Process command
         with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
@@ -4941,7 +4941,7 @@ class TestCLI(unittest.TestCase):
         # Create map
         test_cli.process_command("init map 25 25")
 
-        command = "move 0 2"
+        command = "move 1 2"
 
         # Process command
         with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
@@ -4965,7 +4965,7 @@ class TestCLI(unittest.TestCase):
         # Create map
         test_cli.process_command("init map 25 25")
 
-        command = "move 0 2"
+        command = "move 1 2"
 
         # Process command
         with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
@@ -4988,7 +4988,7 @@ class TestCLI(unittest.TestCase):
         # Create map
         test_cli.process_command("init map 25 25")
 
-        command = "move 0 2"
+        command = "move 1 2"
 
         # Process command
         with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
@@ -5020,7 +5020,7 @@ class TestCLI(unittest.TestCase):
         # Set target tile to wall
         test_cli.grid.set_tile(2, 2, "wall")
 
-        command = "move 0 2 2"
+        command = "move 1 2 2"
 
         # Process command
         with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
@@ -5078,7 +5078,7 @@ class TestCLI(unittest.TestCase):
         reset_ent_stats(entity, test_cli)
 
         # Attempt to move farther than the entity's speed
-        command = "move 0 20 20"
+        command = "move 1 20 20"
 
         # Process command
         with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
@@ -5110,7 +5110,7 @@ class TestCLI(unittest.TestCase):
         entity = test_cli.entity_list[0]
         reset_ent_stats(entity, test_cli)
 
-        command = "move 0 2 1"
+        command = "move 1 2 1"
         # Process command
         with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
             test_cli.process_command(command)
@@ -5119,7 +5119,7 @@ class TestCLI(unittest.TestCase):
         output = mock_stdout.getvalue()
 
         # Check output
-        self.assertEqual(output, "ok: moved 0 to 2, 1!\n")
+        self.assertEqual(output, "ok: moved 1 to 2, 1!\n")
 
         # Check entity position
         self.assertEqual(entity.position, [2, 1])
@@ -5147,7 +5147,7 @@ class TestCLI(unittest.TestCase):
         # Set target tile to shallow water
         test_cli.grid.set_tile(2, 1, "shallowwater")
 
-        command = "move 0 2 1"
+        command = "move 1 2 1"
 
         self.assertEqual(entity.speed, 5)
 
@@ -5159,7 +5159,7 @@ class TestCLI(unittest.TestCase):
         output = mock_stdout.getvalue()
 
         # Check output
-        self.assertEqual(output, "ok: moved 0 to 2, 1!\n")
+        self.assertEqual(output, "ok: moved 1 to 2, 1!\n")
 
         # Check entity position
         self.assertEqual(entity.position, [2, 1])
@@ -5184,7 +5184,7 @@ class TestCLI(unittest.TestCase):
         reset_ent_stats(entity, test_cli)
 
         # Move to coordinate 0, 1
-        command = "move 0 0 1"
+        command = "move 1 0 1"
 
         # Process command
         with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
@@ -5194,7 +5194,7 @@ class TestCLI(unittest.TestCase):
         output = mock_stdout.getvalue()
 
         # Check output
-        self.assertEqual(output, "ok: moved 0 to 0, 1!\n")
+        self.assertEqual(output, "ok: moved 1 to 0, 1!\n")
 
         # Check entity position
         entity = test_cli.entity_list[0]
@@ -5225,7 +5225,7 @@ class TestCLI(unittest.TestCase):
 
         test_cli.entity_list[0].speed = 30
 
-        command = "move 0 24 1"
+        command = "move 1 24 1"
 
         # Process command
         with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
@@ -5235,7 +5235,7 @@ class TestCLI(unittest.TestCase):
         output = mock_stdout.getvalue()
 
         # Check output
-        self.assertEqual(output, "ok: moved 0 to 24, 1!\n")
+        self.assertEqual(output, "ok: moved 1 to 24, 1!\n")
 
         # Check entity position
         entity = test_cli.entity_list[0]
@@ -5271,7 +5271,7 @@ class TestCLI(unittest.TestCase):
         # Set target tile to floor
         test_cli.grid.set_tile(2, 1, "floor")
 
-        command = "move 0 2 1"
+        command = "move 1 2 1"
 
         # Process command
         with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
@@ -5281,7 +5281,7 @@ class TestCLI(unittest.TestCase):
         output = mock_stdout.getvalue()
 
         # Check output
-        self.assertEqual(output, "ok: moved 0 to 2, 1!\n")
+        self.assertEqual(output, "ok: moved 1 to 2, 1!\n")
 
         # Check entity position
         self.assertEqual(entity.position, [2, 1])
@@ -5481,7 +5481,7 @@ class TestCLI(unittest.TestCase):
         starting_health = defender.health
 
         # Process attack
-        test_cli.process_command("attack 0 1")
+        test_cli.process_command("attack 1 2")
 
         # Verify defender lost health
         self.assertLess(defender.health, starting_health)
@@ -5513,7 +5513,7 @@ class TestCLI(unittest.TestCase):
         starting_health = defender.health
 
         # Process attack
-        test_cli.process_command("attack 0 1")
+        test_cli.process_command("attack 1 2")
 
         # Verify defender lost health
         self.assertLess(defender.health, starting_health)
@@ -5535,7 +5535,7 @@ class TestCLI(unittest.TestCase):
         test_cli = CLI()
 
         # Process attack without creating map
-        test_cli.process_command("attack 0 1")
+        test_cli.process_command("attack 1 2")
 
         # Verify map was not created
         self.assertFalse(test_cli.map_created)
@@ -5575,7 +5575,7 @@ class TestCLI(unittest.TestCase):
         defender = test_cli.entity_list[0]
 
         # Process attack with invalid attacking entity id
-        test_cli.process_command("attack 0 1")
+        test_cli.process_command("attack 1 2")
 
         # Verify only defender exists
         self.assertEqual(len(test_cli.entity_list), 1)
@@ -5599,7 +5599,7 @@ class TestCLI(unittest.TestCase):
         attacker = test_cli.entity_list[0]
 
         # Process attack with invalid defending entity id
-        test_cli.process_command("attack 0 1")
+        test_cli.process_command("attack 1 2")
 
         # Verify only attacker exists
         self.assertEqual(len(test_cli.entity_list), 1)
@@ -5632,7 +5632,7 @@ class TestCLI(unittest.TestCase):
         starting_health = defender.health
 
         # Process attack
-        test_cli.process_command("attack 0 1")
+        test_cli.process_command("attack 1 2")
 
         # Verify defender did not lose health
         self.assertEqual(defender.health, starting_health)
@@ -5664,7 +5664,7 @@ class TestCLI(unittest.TestCase):
         starting_health = defender.health
 
         # Attack defender
-        test_cli.process_command("attack 0 1")
+        test_cli.process_command("attack 1 2")
 
         # Verify defender took damage
         self.assertLess(defender.health, starting_health)
@@ -5673,8 +5673,8 @@ class TestCLI(unittest.TestCase):
         damaged_health = defender.health
 
         # Add health potion to defender
-        test_cli.process_command("give 1 smallhealthpotion")
-        test_cli.process_command("use 1 smallhealthpotion")
+        test_cli.process_command("give 2 smallhealthpotion")
+        test_cli.process_command("use 2 smallhealthpotion")
 
         # Verify defender healed
         self.assertGreater(defender.health, damaged_health)
@@ -5709,7 +5709,7 @@ class TestCLI(unittest.TestCase):
         max_health = defender.max_health
 
         # Attack defender
-        test_cli.process_command("attack 0 1")
+        test_cli.process_command("attack 1 2")
 
         # Verify defender took damage
         self.assertLess(defender.health, max_health)
@@ -5739,10 +5739,10 @@ class TestCLI(unittest.TestCase):
         test_cli.process_command("spawn warrior 0 0")
 
         # Get assigned entity
-        entity = test_cli.assign_entity_from_list(0)
+        entity = test_cli.assign_entity_from_list(1)
 
         # Verify correct entity was returned
-        self.assertEqual(entity.id, 0)
+        self.assertEqual(entity.id, 1)
         self.assertEqual(entity.e_type.capitalize(), "Warrior")
 
     # success
@@ -5762,10 +5762,10 @@ class TestCLI(unittest.TestCase):
         test_cli.process_command("spawn mage 2 0")
 
         # Get assigned entity
-        entity = test_cli.assign_entity_from_list(1)
+        entity = test_cli.assign_entity_from_list(2)
 
         # Verify correct entity was returned
-        self.assertEqual(entity.id, 1)
+        self.assertEqual(entity.id, 2)
         self.assertEqual(entity.e_type.capitalize(), "Goblin")
 
     # success
@@ -5785,10 +5785,10 @@ class TestCLI(unittest.TestCase):
         test_cli.process_command("spawn mage 2 0")
 
         # Get assigned entity
-        entity = test_cli.assign_entity_from_list(2)
+        entity = test_cli.assign_entity_from_list(3)
 
         # Verify correct entity was returned
-        self.assertEqual(entity.id, 2)
+        self.assertEqual(entity.id, 3)
         self.assertEqual(entity.e_type.capitalize(), "Mage")
 
     # success
@@ -5809,7 +5809,7 @@ class TestCLI(unittest.TestCase):
         list_entity = test_cli.entity_list[0]
 
         # Assign entity from list
-        assigned_entity = test_cli.assign_entity_from_list(0)
+        assigned_entity = test_cli.assign_entity_from_list(1)
 
         # Verify the same entity instance was returned
         self.assertIs(assigned_entity, list_entity)
@@ -5841,7 +5841,7 @@ class TestCLI(unittest.TestCase):
         starting_health = defender.health
 
         # Cast offensive spell
-        test_cli.process_command("cast 0 1 fireball")
+        test_cli.process_command("cast 1 2 fireball")
 
         print(f"STARTING: {starting_health}")
         print(f"ENDING: {defender.health}")
@@ -5877,7 +5877,7 @@ class TestCLI(unittest.TestCase):
         damaged_health = target.health
 
         # Cast healing spell
-        test_cli.process_command("cast 0 1 heal")
+        test_cli.process_command("cast 1 2 heal")
 
         # Verify target healed
         self.assertGreater(target.health, damaged_health)
@@ -5912,7 +5912,7 @@ class TestCLI(unittest.TestCase):
         starting_health = target.health
 
         # Attack target
-        test_cli.process_command("attack 0 2")
+        test_cli.process_command("attack 1 3")
 
         # Verify target took damage
         self.assertLess(target.health, starting_health)
@@ -5921,7 +5921,7 @@ class TestCLI(unittest.TestCase):
         damaged_health = target.health
 
         # Cast healing spell
-        test_cli.process_command("cast 1 2 heal")
+        test_cli.process_command("cast 2 3 heal")
 
         # Verify target healed
         self.assertGreater(target.health, damaged_health)
@@ -5932,7 +5932,7 @@ class TestCLI(unittest.TestCase):
         test_cli = CLI()
 
         # Process cast with too few arguments
-        test_cli.process_command("cast 0 1")
+        test_cli.process_command("cast 1 2")
 
         # Verify no entities were created or changed
         self.assertEqual(test_cli.entity_list, [])
@@ -5943,7 +5943,7 @@ class TestCLI(unittest.TestCase):
         test_cli = CLI()
 
         # Process cast without creating map
-        test_cli.process_command("cast 0 1 fireball")
+        test_cli.process_command("cast 1 2 fireball")
 
         # Verify map was not created
         self.assertFalse(test_cli.map_created)
@@ -5963,11 +5963,11 @@ class TestCLI(unittest.TestCase):
         test_cli.process_command("spawn goblin 1 0")
 
         # Process cast with nonexistent caster
-        test_cli.process_command("cast 0 1 fireball")
+        test_cli.process_command("cast 1 2 fireball")
 
         # Verify only target exists
         self.assertEqual(len(test_cli.entity_list), 1)
-        self.assertEqual(test_cli.entity_list[0].id, 0)
+        self.assertEqual(test_cli.entity_list[0].id, 1)
 
     # failure
     def test_cast_with_nonexistent_target(self):
@@ -5984,11 +5984,11 @@ class TestCLI(unittest.TestCase):
         test_cli.process_command("spawn mage 0 0")
 
         # Process cast with nonexistent target
-        test_cli.process_command("cast 0 1 fireball")
+        test_cli.process_command("cast 1 2 fireball")
 
         # Verify only caster exists
         self.assertEqual(len(test_cli.entity_list), 1)
-        self.assertEqual(test_cli.entity_list[0].id, 0)
+        self.assertEqual(test_cli.entity_list[0].id, 1)
 
     # failure
     def test_cast_with_nonexistent_spell(self):
@@ -6012,7 +6012,7 @@ class TestCLI(unittest.TestCase):
         starting_health = target.health
 
         # Process cast with nonexistent spell
-        test_cli.process_command("cast 0 1 notaspell")
+        test_cli.process_command("cast 1 2 notaspell")
 
         # Verify target was not damaged
         self.assertEqual(target.health, starting_health)
@@ -6039,7 +6039,7 @@ class TestCLI(unittest.TestCase):
         starting_health = target.health
 
         # Process cast with Warrior as caster
-        test_cli.process_command("cast 0 1 fireball")
+        test_cli.process_command("cast 1 2 fireball")
 
         # Verify target was not damaged
         self.assertEqual(target.health, starting_health)
@@ -6066,7 +6066,7 @@ class TestCLI(unittest.TestCase):
         starting_health = target.health
 
         # Process cast with target outside spell range
-        test_cli.process_command("cast 0 1 fireball")
+        test_cli.process_command("cast 1 2 fireball")
 
         # Verify target was not damaged
         self.assertEqual(target.health, starting_health)
@@ -6095,7 +6095,7 @@ class TestCLI(unittest.TestCase):
         reset_ent_stats(target, test_cli)
 
         # Cast spell with an over-time effect
-        test_cli.process_command("cast 0 1 frostbolt")
+        test_cli.process_command("cast 1 2 frostbolt")
 
         # Verify target received a temporary buff
         self.assertGreater(len(target.temp_buffs), 0)
@@ -6130,7 +6130,7 @@ class TestCLI(unittest.TestCase):
         target.health -= 20
 
         # Cast healing spell
-        test_cli.process_command("cast 0 1 heal")
+        test_cli.process_command("cast 1 2 heal")
 
         # Verify health was restored
         self.assertGreater(target.health, 0)

@@ -34,6 +34,85 @@ import command_line_interface as cli
 # Class for testing entities
 class TestEntity(unittest.TestCase):
 
+    # Repeated Test Functions
+    # Saves 100s to 1000s lines of code
+
+    # Create Test Entity
+    # Create a Entity for testing
+    def create_test_entity(
+        self, entity_class, entity_id=0, position=None, modifiers=None
+    ):
+        if position is None:
+            position = [0, 0]
+
+        if modifiers is None:
+            modifiers = {
+                "Flat_modifiers": {},
+                "Percent_modifiers": {},
+            }
+
+        entity = entity_class(entity_id, position, modifiers)
+
+        self.reset_entity(entity)
+
+        return entity
+
+    # Reset common entity test data
+    def reset_entity(self, entity):
+        entity.active_modifiers = {
+            "Flat_modifiers": {},
+            "Percent_modifiers": {},
+        }
+
+        entity.backpack = []
+
+        entity.inventory[0] = EQUIPMENT_TYPES["none_wep"]()
+        entity.inventory[1] = EQUIPMENT_TYPES["none_armor"]()
+        entity.inventory[2] = EQUIPMENT_TYPES["none_acc"]()
+
+    # Create CLI with a test grid
+    def create_test_cli(self):
+        active_cli = cli.CLI()
+        active_cli.grid = Grid(5, 5)
+
+        return active_cli
+
+    # Update entity stats and return stat dictionary
+    def update_and_get_stats(self, entity):
+        active_cli = self.create_test_cli()
+
+        entity.update_stats(active_cli)
+
+        return entity.get_stats()
+
+    # Assert common stats
+    def assert_base_stats(self, stat_dict, health, attack, defence, speed):
+        self.assertEqual(stat_dict["Health"], health)
+        self.assertEqual(stat_dict["Attack"], attack)
+        self.assertEqual(stat_dict["Defence"], defence)
+        self.assertEqual(stat_dict["Speed"], speed)
+
+    # Assert empty modifiers
+    def assert_empty_modifiers(self, entity):
+        self.assertDictEqual(
+            entity.active_modifiers,
+            {
+                "Flat_modifiers": {},
+                "Percent_modifiers": {},
+            },
+        )
+
+    # Create an equipment item
+    def create_item(self, item_name):
+        return EQUIPMENT_TYPES[item_name]()
+
+    # Create an attacker and defender
+    def create_combat_entities(self):
+        attacker = Warrior(0, [0, 0])
+        defender = Goblin(1, [1, 0])
+
+        return attacker, defender
+
     # Init for all entity types
     # Init warrior with base stats
     def test_warrior_init(self):

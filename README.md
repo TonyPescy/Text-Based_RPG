@@ -166,7 +166,7 @@ Tony Pescatore
 
 **Called as:** attack attacker_id defender_id
 
-**Contraints:** ids must be an integer within the current entity list and the defender must be within the attack range of the attacker.
+**Contraints:** ids must be an integer within the current entity list and the defender must be within the attack range of the attacker. 
 
 ### Cast
 **Description:** First entity will cast a spell on the other entity. This can do damage using the spell power and the spell damage modifier against the targets defence, it can heal them, and it can apply an effect on them. When a targets health reaches zero they will die (DEATH HAS NOT BEEN IMPLEMENTED YET).
@@ -174,6 +174,13 @@ Tony Pescatore
 **Called as:** cast caster_id target_id spell_name
 
 **Contraints:** ids must be an integer within the current entity list and the defender must be within the spell range of the caster. The spell must also exist in the valid spell list
+
+### Tick
+**Description:** Adavances to the next turn. Turns start at 1 and increase by 1 when tick is called.
+
+**Called as:** tick
+
+**Contraints:** Map must be created.
 
 ## Design Decisions
 [Table of Contents](#table-of-contents)
@@ -201,10 +208,15 @@ Tony Pescatore
 
 ### Spells
 - Spells are their own class each with their own spell attack ranges, spell damage modifiers, and spell effects.
-- Three types of spells exist
-    - **Offensive:** Purely damage based magic
-    - **Support:** Supports the targetted entity with healing
-    - **Control:** Deals lower damage but applies debuffs to targets
+- Three types of spells exist:
+    - **Offensive:** Purely damage based magic.
+    - **Support:** Supports the targetted entity with healing.
+    - **Control:** Deals lower damage but applies debuffs to targets.
+
+### Attacks
+- Currently there are two types of attacks that can be made, excluding spellcasting. The only difference currently is their attack ranges.
+    - **Melee:** Physical attacks made within 1 tile.
+    - **Ranged:** Physical attacks made within 3 tiles.
 
 ### Entities
 - Entities include both player and monster classes which use base stats and conditional modifiers to get their final stat values. Entities have the following stats: id, type, position, health, attack, defence, speed, inventory, and active_modifiers. These can be added to in some cases, such as with the player Mage class which adds mana and spell power. 
@@ -212,6 +224,7 @@ Tony Pescatore
 - The entity's inventory will be filled with 3 pieces of equipment with only 1 of each type being allowed to be eqipped at a time. 
 - Entities will have a dictionary of active modifiers which will contain two keys, Flat_modifiers and Percent_modifiers, which will make it significantly easier to calculate the entities final stats with these modifiers taken into account.
 - Entities will have 5 spaces open for their backpack, this is where they store their items in their inventory as well as any backup items and consumables.
+- When an entity dies they will remain on the map for 3 turns, for looting purposes, and will be given the "Dead" status as a temporary buff. This will prevent them from making any actions or being targetted, but will keep them present on the map.
 
 ### Equipment
 - The equipment class represents items that will be held within an entity's inventory. There are only 3 types, weapon, armor, and accessory, all of which can only have 1 equipped in a single slot at a time. These items will have modifiers that will be to calculate the final stat values for the entity that they are equipped to. 

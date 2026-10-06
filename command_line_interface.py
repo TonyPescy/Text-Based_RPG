@@ -19,7 +19,7 @@ import domain_library as dl
 from grid import Grid, Tile
 from entity import Entity
 from equipment import Consumable
-from spell import Spell, get_spell
+from spell import get_spell
 
 
 # Handles all Command Line Interface commands for the game
@@ -29,8 +29,9 @@ class CLI:
     def __init__(self):
         self.grid = None
         self.entity_list = []
-        self.entity_ids_issued = 0
+        self.entity_ids_issued = 1
         self.map_created = False  # Bool that checks to see if a map was already created
+        self.ticker = 1  # turns starts on 1
 
     # Reset Entity List Start
     # resets entity list back to empty to prevent errors with testing
@@ -40,11 +41,18 @@ class CLI:
         self.entity_list = []
 
     # Reset ID Issuer Tracker Start
-    # resets entity id issues number back to 0 to prevent errors with testing
+    # resets entity id issues number back to 1 to prevent errors with testing
     # Params: None
     # Return: None
     def reset_id_issuer_tracker(self):
-        self.entity_ids_issued = 0
+        self.entity_ids_issued = 1
+
+    # Reset Ticker Start
+    # resets ticker back to 1 to prevent errors with testing
+    # Params: None
+    # Return: None
+    def reset_ticker(self):
+        self.ticker = 1
 
     # Process Command Start
     # Handles all commands that user can write
@@ -76,6 +84,7 @@ class CLI:
             "move": self.process_move_command,
             "attack": self.process_attack_command,
             "cast": self.process_cast_command,
+            "tick": self.process_tick_command,
         }
 
         # Match handler to command
@@ -220,6 +229,10 @@ class CLI:
         if entity is None:
             print("error: inventory_failed - Player entity does not exist!")
             return
+        # Check to see if entity is dead
+        elif not entity.is_alive():
+            print("error: inventory_failed - Player entity is dead!")
+            return
 
         # Display inventory of entity
         print(f"Weapon: {entity.inventory[0].name}")
@@ -279,6 +292,10 @@ class CLI:
         # Error message for entity existence
         if not entity_exists:
             print("error: inspect_failed - Entity does not exist!")
+            return
+        # Check to see if entity is dead
+        elif not found_entity.is_alive():
+            print("error: inspect_failed - Player entity is dead!")
             return
 
         # update entity stats - in case changes occurred
@@ -384,6 +401,11 @@ class CLI:
         entity_x = entity.position[0]
         entity_y = entity.position[1]
 
+        # Ensure entity is alive
+        if not entity.is_alive():
+            print("error: pickup_failed - Entity is dead!")
+            return
+
         # Check for backpack space
         if len(entity.backpack) >= Entity.BACKPACK_SIZE:
             print("error: pickup_failed - Backpack if full!")
@@ -457,6 +479,11 @@ class CLI:
         item = dl.create_equipment(item_name.lower())
         entity = self.assign_entity_from_list(int(entity_id))
 
+        # Ensure entity is alive
+        if not entity.is_alive():
+            print("error: give_failed - Entity is dead!")
+            return
+
         # Check for backpack space
         if len(entity.backpack) >= Entity.BACKPACK_SIZE:
             print("error: give_failed - Backpack if full!")
@@ -499,6 +526,11 @@ class CLI:
         # Always valid as this is checked during spawning/moving of said entity
         entity_x = entity.position[0]
         entity_y = entity.position[1]
+
+        # Ensure entity is alive
+        if not entity.is_alive():
+            print("error: pickup_failed - Entity is dead!")
+            return
 
         # Find item in backpack
         item = None
@@ -566,8 +598,12 @@ class CLI:
         item = dl.create_equipment(item_name.lower())
         entity = self.assign_entity_from_list(int(entity_id))
 
+        # Ensure entity is alive
+        if not entity.is_alive():
+            print("error: swap_failed - Entity is dead!")
+            return
         # Check for correct slot for item assignment
-        if item.slot.lower() != slot.value.lower():
+        elif item.slot.lower() != slot.value.lower():
             print("error: swap_failed - Slot inccorect for item type!")
             return
         # Ensure item is in units backpack
@@ -617,6 +653,10 @@ class CLI:
 
         # Assign variables
         entity = self.assign_entity_from_list(int(entity_id))
+        # Ensure entity is alive
+        if not entity.is_alive():
+            print("error: use_failed - Entity is dead!")
+            return
         # Find item in backpack
         item = None
         for temp_item in entity.backpack:
@@ -651,6 +691,7 @@ class CLI:
         else:
             print("error: move_failed - Invalid command!")
             return
+
         # Map created?
         if not self.map_created:
             print("error: move_failed - Map does not exist!")
@@ -659,9 +700,11 @@ class CLI:
         elif not dl.are_valid_ints(x, y):
             print("error: move_failed - x and y are not valid integers!")
             return
+
         # assign proper typing
         x = int(x)
         y = int(y)
+
         # x and y exceeds current grid bounds
         if not Grid.is_valid_grid_position(self.grid, x, y):
             print("error: move_failed - x and y exceed current grid bounds!")
@@ -674,6 +717,7 @@ class CLI:
         elif not Grid.is_passable(self.grid, x, y):
             print(f"error: move_failed - Target tile ({x}, {y}) is impassable!")
             return
+
         # invalid entity type
         # ensure entity_id is valid and within list
         if not any(entity_id == str(entity.id) for entity in self.entity_list):
@@ -681,8 +725,13 @@ class CLI:
             return
         # Assign entity
         entity = self.assign_entity_from_list(int(entity_id))
+
+        # Ensure entity is alive
+        if not entity.is_alive():
+            print("error: move_failed - Entity is dead!")
+            return
         # Check if target grid position is within range of entity
-        if not Grid.is_within_range(
+        elif not Grid.is_within_range(
             self.grid, [entity.position[0], entity.position[1]], [x, y], entity.speed
         ):
             print(f"error: move_failed - Target: {x}, {y} is out of entity's range!")
@@ -733,6 +782,13 @@ class CLI:
         attacker_y = attacker.position[1]
         defender_x = defender.position[0]
         defender_y = defender.position[1]
+        # Ensure entity is alive
+        if not attacker.is_alive():
+            print("error: attack_failed - Attacker is dead!")
+            return
+        elif not defender.is_alive():
+            print("error: attack_failed - Defender is dead!")
+            return
         # Determine whether Entity can engage from range or just melee
         if attacker.attack_type == dl.AttackTypes.MELEE:  # Melee assignment
             attack_range = dl.MELEE_RANGE
@@ -792,8 +848,17 @@ class CLI:
         # Assign entities
         caster = self.assign_entity_from_list(int(caster_id))
         target = self.assign_entity_from_list(int(target_id))
+
+        # Ensure entities are alive
+        if not caster.is_alive():
+            print("error: cast_failed - Caster is dead!")
+            return
+        # CHANGE THIS LOGIC WHEN REVIVAL IS ADDED
+        elif not target.is_alive():
+            print("error: cast_failed - Target is dead!")
+            return
         # Ensure entity is a spell caster - currently only mage
-        if not caster.e_type.lower() == "mage":
+        elif not caster.e_type.lower() == "mage":
             print(
                 f"error: cast_failed - Caster is {caster.e_type}, which is not a valid spellcaster!"
             )
@@ -822,6 +887,39 @@ class CLI:
                 f"error: cast_failed - Target outside of range! {spell.name} Range: {spell_range}"
             )
             return
+
+    # Process Tick Command Start
+    # Increases turn ticker by 1 and updates all entities turn timers if they have one
+    # Params: command_pieces - list - list of strings that make up the command
+    # Returns: None
+    def process_tick_command(self, command_pieces):
+        # init entities to remove from list/grid
+        entities_to_remove = []
+        # Test for valid amount of command pieces
+        if not len(command_pieces) == 1:
+            print("error: tick_failed due to invalid arguments!")
+            return
+        elif not self.map_created:
+            print("error: tick_failed - Map does not exist!")
+        # Check to see if there are entities to update
+        if len(self.entity_list) > 0:
+            # Entites present, update them
+            for entity in self.entity_list:
+                temp_bool = entity.process_tick_on_entity()
+                # Check for bool determining if entity should be removed from the list
+                if temp_bool:
+                    # Remove if true
+                    entities_to_remove.append(entity)
+
+        # If there are entities to be removed from the game
+        if len(entities_to_remove) > 0:
+            for entity in entities_to_remove:
+                self.remove_entity_from_game(entity)
+
+        # Update ticker
+        self.ticker += 1
+        # Print success
+        print(f"ok: tick processed. Ticker: {self.ticker}!")
 
     # Spawn Entity For CLI
     # Contains logic for all entity spawning in the CLI
@@ -922,6 +1020,22 @@ class CLI:
                 entity = temp_entity
                 break
         return entity
+
+    # Remove Entity from Game
+    # Remove entity from play for the game
+    # Params:   entity - Entity - Entity to be removed from the game
+    # Returns:  None
+    def remove_entity_from_game(self, entity):
+        # Get grid position of entity
+        entity_x = entity.position[0]
+        entity_y = entity.position[1]
+
+        # Clear occupant from grid
+        self.grid.clear_occupant(entity_x, entity_y, entity.id)
+
+        # Remove entity from entity_list
+        self.entity_list.remove(entity)
+        print(f"Entity Removed: {entity.id}, Type: {entity.e_type}!")
 
     # Capitalize If String Start
     # Will capitalize and return string if it is a string

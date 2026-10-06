@@ -54,9 +54,16 @@ class Spell:
         if self.name == dl.SpellNames.HEAL.value:
             # only healing spell so it has special case
             damage = max(1, ((caster.spell_power * self.spell_power_modifier)))
-            # Apply heals
-            target.health = min(target.max_health, target.health + damage)
-            effect = f"Healed {target.id} for {damage} health!"
+            # checks fors targets death
+            if target.health > 0:
+                # Apply heals
+                target.health = min(target.max_health, target.health + damage)
+                effect = f"Healed {target.id} for {damage} health!"
+            # If target is dead
+            else:
+                effect = (
+                    f"Healed {target.id} for 0 health! - Cannot heal a dead entity!"
+                )
             # CHECK FOR EFFECTS FROM SUPPORT MAGIC HERE
             return effect
         # all other magic harms target with same calculations
@@ -66,9 +73,11 @@ class Spell:
             )
             # Subtract health from defender with max at 0 - prevents underflow
             target.health = max(0, (target.health - damage))
-            # Handle target death DEATH NOT IMPLEMENTED YET!!!
-            # HANDLE A KILL HERE
-        # Target is alive for debuffs to be added an    d debuffs exist
+            # Handle target death
+            if target.health == 0:
+                target.handle_death()
+
+        # Target is alive for debuffs to be added and debuffs exist
         # If spell has an effect
         if getattr(self, "over_time_effects", {}):
             # Store temp buff
@@ -79,11 +88,19 @@ class Spell:
                     "Turns": self.duration,
                 }
             )
-            # create effect message
-            effect = f"Dealt {damage} damage to {target.id}! Applied {self.name} effect to {target.id}!"
+            # Check for target death message
+            if target.health == 0:
+                effect = f"Dealt {damage} damage to {target.id}! Applied {self.name} effect to {target.id}! {target.id} has died!"
+            else:
+                # Create effect message
+                effect = f"Dealt {damage} damage to {target.id}! Applied {self.name} effect to {target.id}!"
         # No spell effect
         else:
-            effect = f"Dealt {damage} damage to {target.id}!"
+            # Check for is target is dead or not
+            if target.health == 0:
+                effect = f"Dealt {damage} damage to {target.id}! {target.id} has died!"
+            else:
+                effect = f"Dealt {damage} damage to {target.id}!"
         # return effect for success message
         return effect
 

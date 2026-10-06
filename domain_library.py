@@ -116,6 +116,14 @@ BASE_INVENTORY = [
     create_equipment("none_acc"),
 ]
 
+# Dead Status for corpses of entities - used in Temp Buffs on entity
+# Will need to be removed with revivals
+DEAD_STATUS = {
+    "Name": "Dead",
+    "Effects": {"Flat_modifiers": {}, "Percent_modifiers": {}},
+    "Turns": 3,
+}
+
 
 # Is Valid Entity Start # MOVE TO D_LIB
 # Checks to see input is a valid entity type

@@ -54,6 +54,15 @@ class Entity:
         self.attack_type = attack_type
         self.temp_buffs = []  # temp buffs list of dictionarys
 
+        # Temp Buffs Structure
+        """
+        {
+            "Name": consumable.name,
+            "Effects": consumable.over_time_effects,
+            "Turns": consumable.duration,
+        } x number of temp buffs
+        """
+
     # Get Stats Start
     # Gets all relevant stats of the entity and returns them
     # Params: None
@@ -92,7 +101,7 @@ class Entity:
     # Called when inventory is changed or if unit is positioned on a tile that modifies stats
     # Params: CLI - cli instance - Current active game objects/features
     # Return: None
-    def update_stats(self, cli):  # UPDATE TEST
+    def update_stats(self, cli):
         # starting health - used to set health after reset
         # starting_health = self.health
         # Clear active modifiers to avoid double counting of modifiers
@@ -271,6 +280,62 @@ class Entity:
         # add to backpack
         self.add_item_to_backpack(item)
 
+    # Update Temp Buffs
+    # Updates temp buffs with their duration due to CLI tick process
+    # Params: None
+    # Returns: buffs_to_be_removed - list - list of buff names to be removed
+    def update_temp_buffs(self):
+        # init to be removed list
+        buffs_to_be_removed = []
+        # check for empty temp_buffs
+        if self.temp_buffs == []:
+            return buffs_to_be_removed
+
+        for buff in self.temp_buffs:
+            # Process turn passing
+            buff["Turns"] -= 1
+            # Check for "Turns" = 0
+            if buff["Turns"] == 0:
+                # Mark for removal
+                buffs_to_be_removed.append(buff["Name"])
+        # Return list of buffs
+        return buffs_to_be_removed
+
+    # Remove Temp Buffs
+    # Removes buffs from entity that are in list provided
+    # List is checked beforehand and should be clean/valid
+    # Params: to_be_removed - list - List of buff names to be removed
+    # Returns: bool - bool - true if current entity should be removed from board
+    def remove_temp_buffs(self, to_be_removed):
+
+        # Iterate through list of names to be removed
+        for buff_name in to_be_removed:
+            # For each name iterate through list of temp buffs
+            for buff in self.temp_buffs:
+                # If name matches one to be removed - remove it
+                if buff_name == buff["Name"]:
+                    # Check for dead status for special case handling
+                    if buff["Name"] == "Dead":
+                        return True
+
+                    self.temp_buffs.remove(buff)
+                    print(f"Buff Removed: {buff["Name"]}!")
+                    break
+        return False
+
+    # Process Tick on Entity
+    # Processes turn tick on entity - temp buffs updates, ...
+    # Only temp buffs right now, may need updates in future with new functionality
+    # Params: None
+    # Returns: bool - bool - True if entity is to be removed after 3 turns of being Dead
+    def process_tick_on_entity(self):
+        # Update the buffs of the entity
+        buffs_to_remove = self.update_temp_buffs()
+        # If there are buffs to remove
+        if len(buffs_to_remove > 0):
+            # Remove them
+            return self.remove_temp_buffs(buffs_to_remove)
+
     # Add Item To Backpack
     # Adds provided item to backpack
     # Size Handling responses TBD
@@ -287,6 +352,14 @@ class Entity:
     def remove_item_from_backpack(self, item):
         self.backpack.remove(item)
 
+    # Handle Death
+    # Handles death of entity in combat
+    # Params:   None
+    # Returns:  None
+    def handle_death(self):
+        # Assign "Dead" to temp_buffs
+        self.temp_buffs.append(dl.DEAD_STATUS)
+
     # Attack Entity
     # Current entity attacks given entity
     # Called after all variables and entities have been validated
@@ -298,10 +371,23 @@ class Entity:
         damage = max(1, (self.attack - target.defence))
         # Subtract health from defender with max at 0 - prevents underflow
         target.health = max(0, (target.health - damage))
-        # Handle target death DEATH NOT IMPLEMENTED YET!!!
-        # HANDLE A KILL HERE
+        # Handle target death
+        if target.health == 0:
+            target.handle_death()
         # return damage for success message
         return damage
+
+    # Is Alive
+    # Checks entity to see if they are alive
+    # used for CLI command checks
+    # Params: None
+    # Retunrs: Bool - bool - True if entity is alive / False if entity is dead
+    def is_alive(self):
+        # check temp buffs for "Dead" status
+        for buff in self.temp_buffs:
+            if buff["Name"] == "Dead":
+                return False
+        return True
 
 
 # Warrior Class extend from Entity class
@@ -517,7 +603,7 @@ class Mage(Entity):
     # Called when inventory is changed or if unit is positioned on a tile that modifies stats
     # Params: CLI - cli instance - Current active game objects/features
     # Return: None
-    def update_stats(self, cli):  # UPDATE TESTS
+    def update_stats(self, cli):  # UPDATE TESTS for temp buff
         # starting health - used to set health after reset
         # starting_health = self.health
         # starting mana - used to set mana after reset
