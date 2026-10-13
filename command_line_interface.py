@@ -191,7 +191,7 @@ class CLI:
             # Validate e_id as int
             try:
                 e_id = int(command_pieces[1])
-            except:
+            except ValueError:
                 print("error: inventory - Entity id is not valid integer!")
                 return
         # Get player entity
@@ -309,25 +309,25 @@ class CLI:
         # display - handles special cases
         print(f"Coordinate: {x}, {y}")
         # Get tile
-        current_tile = self.game_state.get_game_tile(int(x), int(y))
+        current_tile_info = self.game_state.get_game_tile_info(int(x), int(y))
 
-        if current_tile is None:
+        if current_tile_info is None:
             print("error: tile_failed - No tile exists at this position!")
             return
         # Special case with shallowwater for proper capitalization
-        elif current_tile.t_type.lower() == "shallowwater":
+        elif current_tile_info.tile_type.lower() == "shallowwater":
             print("Type: ShallowWater")
         else:
-            print(f"Type: {current_tile.t_type.capitalize()}")
+            print(f"Type: {current_tile_info.tile_type.capitalize()}")
 
         # Passable
-        print(f"Passable: {current_tile.passable}")
+        print(f"Passable: {current_tile_info.passable}")
 
-        # occupants - special case for empty list (shoudl logic be changed to just one occupant this can be cleaner)
-        if len(current_tile.occupants) == 0:
+        # occupants - special case for empty list (should logic be changed to just one occupant this can be cleaner)
+        if len(current_tile_info.occupants) == 0:
             print("Occupants: None")
         else:
-            print(f"Occupants: {current_tile.occupants[0]}")
+            print(f"Occupants: {current_tile_info.occupants[0]}")
 
     # Process Pickup Item Command
     # Handles picking up of items at position of entity's id
@@ -375,10 +375,21 @@ class CLI:
             return
 
         # Find the item at the entity's location
-        e_tile = self.game_state.get_game_tile(entity_x, entity_y)
+        ent_tile_info = self.game_state.get_game_tile_info(entity_x, entity_y)
+
+        if ent_tile_info is None:
+            print("error: pickup_failed - No tile found!")
+            return
+
+        # Get tile item
         tile_item = None
 
-        for grid_item in e_tile.item_list:
+        for item in ent_tile_info.item_list:
+            if item.name.lower() == item_name.lower():
+                tile_item = item
+                break
+
+        """for grid_item in e_tile.item_list:
 
             # Tile contains an equipment class
             if isinstance(grid_item, type):
@@ -397,18 +408,24 @@ class CLI:
                 if grid_item.lower() == item_name.lower():
                     tile_item = grid_item
                     break
-
+        """
         # Ensure item is on the tile
         if tile_item is None:
             print("error: pickup_failed - Item not in tiles item list!")
             return
         else:  # item is present and there is backpack space - pickup
-            item = dl.create_equipment(item_name.lower())
-            entity.add_item_to_backpack(item)
             # Remove item from item_list in grid
-            self.grid.remove_item_from_tile_item_list(entity_x, entity_y, tile_item)
+            removed_item = self.game_state.remove_item_from_tile(
+                entity_x, entity_y, item_name
+            )
+            if removed_item is None:
+                print("error: pickup_failed - Item not found!")
+            # Add to backpack
+            entity.add_item_to_backpack(removed_item)
             # Success message
-            print(f"ok: picked_up {item.name} into backpack!")
+            print(
+                f"ok: picked_up {removed_item.name} into backpack!"
+            )  # change to get name when item is encapsulated
 
     # Process Give Item Command
     # Gives matching entity the provided item
@@ -441,7 +458,7 @@ class CLI:
         ):
             print("error: give_failed - Item name not found!")
             return
-        # Assign variables
+        # Create Item
         item = dl.create_equipment(item_name.lower())
 
         # Ensure entity is alive
@@ -566,7 +583,7 @@ class CLI:
             print("error: swap_failed - Item slot not valid inventory slot!")
             return
 
-        # Assign variables
+        # Create Item
         item = dl.create_equipment(item_name.lower())
 
         # Ensure entity is alive
@@ -887,8 +904,8 @@ class CLI:
 
         # If there are entities to be removed from the game
         if len(entities_to_remove) > 0:
-            for entity in entities_to_remove:
-                self.game_state.remove_entity_from_game(entity)
+            for entity_id in entities_to_remove:
+                self.game_state.remove_entity_from_game(entity_id)
 
         # Mark game state as unsaved
         self.game_state.mark_as_unsaved()
@@ -959,7 +976,7 @@ class CLI:
             print(f"ok: spawn_loot {item_name} at {x}, {y}!")
             return
 
-    # Assign Entity from list
+    """# Assign Entity from list
     # Assign entity with matching id from cli.entity_list
     # Entitys existence is confirmed prior to this being called - so will always return one
     # Params: e_id - int - Cleaned/valid int to look for in entity list
@@ -969,9 +986,9 @@ class CLI:
             if temp_entity.id == e_id:
                 entity = temp_entity
                 break
-        return entity
+        return entity"""
 
-    # Capitalize If String Start
+    """# Capitalize If String Start
     # Will capitalize and return string if it is a string
     # Params: value - Any - Value to be tested if a string
     # Returns: value - Any - value will be Capitalized if a string
@@ -980,7 +997,7 @@ class CLI:
         if isinstance(value, str):
             return value.capitalize()
         else:
-            return value
+            return value"""
 
 
 # Main to run the command line interface

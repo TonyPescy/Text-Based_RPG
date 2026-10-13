@@ -133,9 +133,9 @@ class GameState:
     # Get Game Tile
     # Returns tile in game grid
     # Params: x,y - ints - tile position
-    # Returns: tile_copy - Tile - copy of tile instance
-    def get_game_tile(self, x, y):
-        return self.__grid.grid[int(x)][int(y)].copy()
+    # Returns: TileInfo - all info about the current tile
+    def get_game_tile_info(self, x, y):
+        return self.__grid.get_tile_info(int(x), int(y))
 
     # Is Within Range
     # Returns bool if tile is within range
@@ -166,7 +166,7 @@ class GameState:
     # Process Tick For All Entities
     # Processes tick for all currnet entities
     # Params: None
-    # Returns: List - entities to remove
+    # Returns: List - entities ids to remove
     def process_tick_for_all_entities(self):
         entities_to_remove = []
         for entity in self.__entity_list:
@@ -174,14 +174,16 @@ class GameState:
             # Check for removal of entity
             if temp_bool:
                 # Remove if true
-                entities_to_remove.append(entity)
+                entities_to_remove.append(entity.id)
         return entities_to_remove
 
     # Remove Entity From Game
     # Removes given entity from the game
-    # Params: entity - Entity - entity to remove
+    # Params: entity_id - Entity.id - id of entity to remove
     # Returns: None
-    def remove_entity_from_game(self, entity):
+    def remove_entity_from_game(self, entity_id):
+        # Get entity
+        entity = self.get_entity_from_list(entity_id)
         # Get grid position of entity
         entity_x = entity.position[0]
         entity_y = entity.position[1]
@@ -256,9 +258,9 @@ class GameState:
     # Removes item from tiles item list
     # Params:   x/y - ints - tile position
     #           item_name - Item - name of item to remove
-    # Returns: None
+    # Returns: item removed from tile
     def remove_item_from_tile(self, x, y, item_name):
-        self.__grid.remove_item_from_tile_item_list(int(x), int(y), item_name)
+        return self.__grid.remove_item_from_tile_item_list(int(x), int(y), item_name)
 
     # Add Item From Tile
     # Adds item from tiles item list

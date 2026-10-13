@@ -40,19 +40,19 @@ class Entity:
         backpack,
         attack_type,
     ):
-        self.id = id
-        self.e_type = e_type
-        self.position = position
-        self.health = health
-        self.max_health = max_health
-        self.attack = attack
-        self.defence = defence
-        self.speed = speed
-        self.inventory = inventory
-        self.active_modifiers = active_modifiers
-        self.backpack = backpack
-        self.attack_type = attack_type
-        self.temp_buffs = []  # temp buffs list of dictionarys
+        self.__id = id
+        self.__e_type = e_type
+        self.__position = position
+        self.__health = health
+        self.__max_health = max_health
+        self.__attack = attack
+        self.__defence = defence
+        self.__speed = speed
+        self.__inventory = inventory
+        self.__active_modifiers = active_modifiers
+        self.__backpack = backpack
+        self.__attack_type = attack_type
+        self.__temp_buffs = []  # temp buffs list of dictionarys
 
         # Temp Buffs Structure
         """
@@ -70,14 +70,14 @@ class Entity:
     #       (int id, str e_type, tuple x/y coords, int health, int attack, int defence, int speed, list of two dictionaries active_modifiers)
     def get_stats(self):
         stat_dict = {
-            "Id": self.id,
-            "Type": self.e_type,
-            "Position": self.position,
-            "Health": self.health,
-            "Attack": self.attack,
-            "Defence": self.defence,
-            "Speed": self.speed,
-            "Active_modifiers": self.active_modifiers,
+            "Id": self.__id,
+            "Type": self.__e_type,
+            "Position": self.__position,
+            "Health": self.__health,
+            "Attack": self.__attack,
+            "Defence": self.__defence,
+            "Speed": self.__speed,
+            "Active_modifiers": self.__active_modifiers,
         }
         return stat_dict
 
@@ -88,11 +88,11 @@ class Entity:
     # Params: None
     # Return: None
     def reset_stats(self):
-        self.health = self.BASE_STATS["Health"]
-        self.max_health = self.BASE_STATS["Health"]
-        self.attack = self.BASE_STATS["Attack"]
-        self.defence = self.BASE_STATS["Defence"]
-        self.speed = self.BASE_STATS["Speed"]
+        self.__health = self.BASE_STATS["Health"]
+        self.__max_health = self.BASE_STATS["Health"]
+        self.__attack = self.BASE_STATS["Attack"]
+        self.__defence = self.BASE_STATS["Defence"]
+        self.__speed = self.BASE_STATS["Speed"]
 
     # Reset Stats End
 
@@ -105,12 +105,12 @@ class Entity:
         # starting health - used to set health after reset
         # starting_health = self.health
         # Clear active modifiers to avoid double counting of modifiers
-        self.active_modifiers["Flat_modifiers"] = {}
-        self.active_modifiers["Percent_modifiers"] = {}
+        self.__active_modifiers["Flat_modifiers"] = {}
+        self.__active_modifiers["Percent_modifiers"] = {}
         # Stats to be checked
         # stats = ("Health", "Attack", "Defence", "Speed")
         # Check all inventory slots for modifiers to add to active_modifiers of entity
-        for slot in self.inventory:
+        for slot in self.__inventory:  # HERE
             # Iterate through all stats modified within current slot
             for stat, modifier in slot.effects.items():
                 # Ignore stats that onlt affect Mage class
