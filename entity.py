@@ -99,9 +99,9 @@ class Entity:
     # Update Stats Start
     # Calculates final stats and updates entities stats based on their bases and modifiers
     # Called when inventory is changed or if unit is positioned on a tile that modifies stats
-    # Params: CLI - cli instance - Current active game objects/features
+    # Params: game_state - game state instance - Current active game objects/features
     # Return: None
-    def update_stats(self, cli):
+    def update_stats(self, game_state):
         # starting health - used to set health after reset
         # starting_health = self.health
         # Clear active modifiers to avoid double counting of modifiers
@@ -124,8 +124,8 @@ class Entity:
         x = self.position[0]
         y = self.position[1]
 
-        # Get current tile
-        tile = cli.grid.grid[x][y]
+        # Get current tile copy
+        tile = game_state.get_game_tile(x, y)
 
         # Handle modifiers for tile - split due to way tile modifiers are setup - could be cleaned up later
         for stat, modifier in tile.modifiers.items():

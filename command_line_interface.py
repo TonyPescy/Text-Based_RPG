@@ -20,6 +20,7 @@ from grid import Grid, Tile
 from entity import Entity
 from equipment import Consumable
 from spell import get_spell
+from game_state import GameState
 
 
 # Handles all Command Line Interface commands for the game
@@ -27,32 +28,7 @@ class CLI:
 
     # Initialize CLI
     def __init__(self):
-        self.grid = None
-        self.entity_list = []
-        self.entity_ids_issued = 1
-        self.map_created = False  # Bool that checks to see if a map was already created
-        self.ticker = 1  # turns starts on 1
-
-    # Reset Entity List Start
-    # resets entity list back to empty to prevent errors with testing
-    # Params: None
-    # Return: None
-    def reset_entity_list(self):
-        self.entity_list = []
-
-    # Reset ID Issuer Tracker Start
-    # resets entity id issues number back to 1 to prevent errors with testing
-    # Params: None
-    # Return: None
-    def reset_id_issuer_tracker(self):
-        self.entity_ids_issued = 1
-
-    # Reset Ticker Start
-    # resets ticker back to 1 to prevent errors with testing
-    # Params: None
-    # Return: None
-    def reset_ticker(self):
-        self.ticker = 1
+        self.game_state = GameState()
 
     # Process Command Start
     # Handles all commands that user can write
@@ -112,27 +88,24 @@ class CLI:
             print("error: map_init_failed due to invalid arguments.")
             return
         # Map already created
-        if self.map_created:
-            print("error: map_init_failed - Map is already created!")
-            return
+        if self.game_state.is_map_created():
+            # Reset map and continue
+            self.game_state.reset_map()
         # width and height are not valid ints
         elif not dl.are_valid_ints(width, height):
             print("error: map_init_failed - Width and height are not valid integers!")
+            return
         # width and heigth within bounds
         elif not Grid.within_bounds(width, height):
             print(
                 "error: map_init_failed - Width and height exceed bound minimum and maximum!"
             )
+            return
         # Valid inputs
-        else:
-            # Create grid with width and height
-            self.grid = Grid(width, height)
-            # mark Create map as True
-            self.map_created = True
-            # Set entity tracker for mapp
-            self.reset_id_issuer_tracker()
-            # Success message
-            print(f"ok: map_initialized width: {width} height: {height}!")
+        # Create grid with width and height
+        self.game_state.create_grid(width, height)
+        # Success message
+        print(f"ok: map_initialized width: {width} height: {height}!")
 
     # Process set command
     # Sets tile at given position
@@ -150,17 +123,13 @@ class CLI:
             return
 
         # checks if map was created
-        if not self.map_created:
+        if not self.game_state.is_map_created():
             print("error: tile_set_failed - Map does not exist!")
         # x and y are not valid ints
         elif not dl.are_valid_ints(x, y):
             print("error: set_tile_failed - x and y are not valid integers!")
-
-            """# x and y within bounds
-            elif not Grid.within_bounds(x, y):
-                print("error: set_tile_failed - x and y exceed bound minimum and maximum!")"""
         # x and y exceeds current grid bounds
-        elif not Grid.is_valid_grid_position(self.grid, x, y):
+        elif not self.game_state.is_valid_grid_position(self.grid, x, y):
             print("error: set_tile_failed - x and y exceed current grid bounds!")
         # tile is not valid
         elif not Tile.is_valid_tile(tile_type):
@@ -168,13 +137,20 @@ class CLI:
 
         else:
             # updates grid with new tile
-            self.grid.set_tile(x, y, tile_type)
+            self.game_state.set_game_grid_tile(x, y, tile_type)
+            # update entity if present
+            if self.game_state.is_grid_tile_occupied(x, y):
+                # update entity
+                self.game_state.update_entity(
+                    self.game_state.get_entity_id_from_tile(x, y)
+                )
+            else:
+                pass
             # success output -  with special case for shallowwater
             if tile_type.lower() == "shallowwater":
                 print(f"ok: tile_set {x}, {y} type: ShallowWater!")
             else:
                 print(f"ok: tile_set {x}, {y} type: {tile_type.capitalize()}!")
-            # update entity if present
 
     # Process Spawn Command Start
     # Spawns a unit at designated position
@@ -218,13 +194,8 @@ class CLI:
             except:
                 print("error: inventory - Entity id is not valid integer!")
                 return
-        # Ensure "player" entity exists
-        entity = None
-
-        for temp_entity in self.entity_list:
-            if temp_entity.id == e_id:
-                entity = temp_entity
-                break
+        # Get player entity
+        entity = self.game_state.get_entity_from_list(e_id)
 
         if entity is None:
             print("error: inventory_failed - Player entity does not exist!")
@@ -268,7 +239,7 @@ class CLI:
             return
 
         # Ensure entities exists
-        if not len(self.entity_list) > 0:
+        if not self.game_state.entities_exists():
             print("error: inspect_failed - No entities exist yet!")
             return
 
@@ -279,29 +250,20 @@ class CLI:
             print("error: inspect_failed - Entity id is not valid integer!")
             return
 
-        # Ensure entity exists
-        entity_exists = False
-        # Check list of entities for entity with given ID
-        for entity in self.entity_list:
-            if int(entity.id) == e_id:
-                # Set existence to true
-                entity_exists = True
-                # assign found entity
-                found_entity = entity
-                break
+        entity = self.game_state.get_entity_from_list(e_id)
         # Error message for entity existence
-        if not entity_exists:
+        if entity is None:
             print("error: inspect_failed - Entity does not exist!")
             return
         # Check to see if entity is dead
-        elif not found_entity.is_alive():
+        elif not entity.is_alive():
             print("error: inspect_failed - Player entity is dead!")
             return
 
         # update entity stats - in case changes occurred
-        found_entity.update_stats(self)
+        entity.update_stats(self)
         # get stats of entity
-        entity_stats = found_entity.get_stats()
+        entity_stats = entity.get_stats()
         # Display stats of entity
         for stat, value in entity_stats.items():
             if stat != "Active_modifiers":
@@ -332,7 +294,7 @@ class CLI:
             print("error: tile_failed - Invalid command!")
             return
         # Ensure map exists
-        if not self.map_created:
+        if not self.game_state.is_map_created():
             print("error: tile_failed - Map does not exist!")
             return
         # x and y are not valid ints
@@ -340,14 +302,14 @@ class CLI:
             print("error: tile_failed - x and y are not valid integers!")
             return
         # x and y exceeds current grid bounds
-        elif not self.grid.is_valid_grid_position(x, y):
+        elif not self.game_state.is_valid_grid_position(x, y):
             print("error: tile_failed - x and y exceed current grid bounds!")
             return
 
         # display - handles special cases
         print(f"Coordinate: {x}, {y}")
         # Get tile
-        current_tile = self.grid.grid[int(x)][int(y)]
+        current_tile = self.game_state.get_game_tile(int(x), int(y))
 
         if current_tile is None:
             print("error: tile_failed - No tile exists at this position!")
@@ -381,12 +343,14 @@ class CLI:
             print("error: pickup_failed - Invalid command!")
             return
 
+        entity = self.game_state.get_entity_from_list(entity_id)
+
         # Ensure map exists
-        if not self.map_created:
+        if not self.game_state.is_map_created():
             print("error: pickup_failed - Map does not exist!")
             return
         # ensure entity_id is valid and within list
-        elif not any(entity_id == str(entity.id) for entity in self.entity_list):
+        elif not any(entity_id == str(entity.id)):
             print("error: pickup_failed - Entity does not exist!")
             return
         # ensure item_name is valid
@@ -397,7 +361,6 @@ class CLI:
             return
 
         # Assign variables
-        entity = self.assign_entity_from_list(int(entity_id))
         entity_x = entity.position[0]
         entity_y = entity.position[1]
 
@@ -412,7 +375,7 @@ class CLI:
             return
 
         # Find the item at the entity's location
-        e_tile = self.grid.grid[entity_x][entity_y]
+        e_tile = self.game_state.get_game_tile(entity_x, entity_y)
         tile_item = None
 
         for grid_item in e_tile.item_list:
@@ -461,12 +424,15 @@ class CLI:
             print("error: give_failed - Invalid command!")
             return
 
+        # Get entity
+        entity = self.game_state.get_entity_from_list(entity_id)
+
         # Ensure map exists
-        if not self.map_created:
+        if not self.game_state.is_map_created():
             print("error: give_failed - Map does not exist!")
             return
         # ensure entity_id is valid and within list
-        elif not any(entity_id == str(entity.id) for entity in self.entity_list):
+        elif not any(entity_id == str(entity.id)):
             print("error: give_failed - Entity does not exist!")
             return
         # ensure item_name is valid
@@ -477,7 +443,6 @@ class CLI:
             return
         # Assign variables
         item = dl.create_equipment(item_name.lower())
-        entity = self.assign_entity_from_list(int(entity_id))
 
         # Ensure entity is alive
         if not entity.is_alive():
@@ -507,12 +472,16 @@ class CLI:
         else:
             print("error: drop_failed - Invalid command!")
             return
+
+        # Get Entity
+        entity = self.game_state.get_entity_from_list(entity_id)
+
         # Ensure map exists
-        if not self.map_created:
+        if not self.game_state.is_map_created():
             print("error: drop_failed - Map does not exist!")
             return
         # ensure entity_id is valid and within list
-        elif not any(entity_id == str(entity.id) for entity in self.entity_list):
+        elif not any(entity_id == str(entity.id)):
             print("error: drop_failed - Entity does not exist!")
             return
         # ensure item_name is valid
@@ -521,8 +490,7 @@ class CLI:
         ):
             print("error: drop_failed - Item name not found!")
             return
-        # Assign variables
-        entity = self.assign_entity_from_list(int(entity_id))
+
         # Always valid as this is checked during spawning/moving of said entity
         entity_x = entity.position[0]
         entity_y = entity.position[1]
@@ -544,7 +512,7 @@ class CLI:
             print("error: drop_failed - Item not in backpack!")
         else:  # Success case
             # Add item to the tile
-            self.grid.add_item_to_tile_item_list(entity_x, entity_y, item.name)
+            self.game_state.add_item_from_tile(entity_x, entity_y, item_name)
             # Remove item from entitys bag
             entity.remove_item_from_backpack(item)
             # Check if item was in entity's inventory
@@ -568,12 +536,16 @@ class CLI:
         else:
             print("error: swap_failed - Invalid command!")
             return
+
+        # Get Entity
+        entity = self.game_state.get_entity_from_list(entity_id)
+
         # Ensure map exists
-        if not self.map_created:
+        if not self.game_state.is_map_created():
             print("error: swap_failed - Map does not exist!")
             return
         # ensure entity_id is valid and within list
-        elif not any(entity_id == str(entity.id) for entity in self.entity_list):
+        elif not any(entity_id == str(entity.id)):
             print("error: swap_failed - Entity does not exist!")
             return
         # ensure item_name is valid
@@ -596,7 +568,6 @@ class CLI:
 
         # Assign variables
         item = dl.create_equipment(item_name.lower())
-        entity = self.assign_entity_from_list(int(entity_id))
 
         # Ensure entity is alive
         if not entity.is_alive():
@@ -640,8 +611,12 @@ class CLI:
         else:
             print("error: use_failed - Invalid command!")
             return
+
+        # Get Entity
+        entity = self.game_state.get_entity_from_list(entity_id)
+
         # ensure entity_id is valid and within list
-        if not any(entity_id == str(entity.id) for entity in self.entity_list):
+        if not any(entity_id == str(entity.id)):
             print("error: use_failed - Entity does not exist!")
             return
         # ensure item_name is valid
@@ -651,8 +626,6 @@ class CLI:
             print("error: use_failed - Item name not found!")
             return
 
-        # Assign variables
-        entity = self.assign_entity_from_list(int(entity_id))
         # Ensure entity is alive
         if not entity.is_alive():
             print("error: use_failed - Entity is dead!")
@@ -693,7 +666,7 @@ class CLI:
             return
 
         # Map created?
-        if not self.map_created:
+        if not self.game_state.is_map_created():
             print("error: move_failed - Map does not exist!")
             return
         # x and y are not valid ints
@@ -706,40 +679,41 @@ class CLI:
         y = int(y)
 
         # x and y exceeds current grid bounds
-        if not Grid.is_valid_grid_position(self.grid, x, y):
+        if not self.game_state.is_valid_grid_position(self.grid, x, y):
             print("error: move_failed - x and y exceed current grid bounds!")
             return
         # ensure grid location is empty
-        elif Grid.is_occupied(self.grid, x, y):
+        elif self.game_state.is_grid_tile_occupied(x, y):
             print(f"error: move_failed - Entity is already present at ({x}, {y})!")
             return
         # Ensure target tile is passable
-        elif not Grid.is_passable(self.grid, x, y):
+        elif not self.game_state.is_tile_passable(x, y):
             print(f"error: move_failed - Target tile ({x}, {y}) is impassable!")
             return
 
+        # Get Entity
+        entity = self.game_state.get_entity_from_list(entity_id)
+
         # invalid entity type
         # ensure entity_id is valid and within list
-        if not any(entity_id == str(entity.id) for entity in self.entity_list):
+        if not any(entity_id == str(entity.id)):
             print("error: move_failed - Entity does not exist!")
             return
-        # Assign entity
-        entity = self.assign_entity_from_list(int(entity_id))
 
         # Ensure entity is alive
         if not entity.is_alive():
             print("error: move_failed - Entity is dead!")
             return
         # Check if target grid position is within range of entity
-        elif not Grid.is_within_range(
-            self.grid, [entity.position[0], entity.position[1]], [x, y], entity.speed
+        elif not self.game_state.is_within_range(
+            [entity.position[0], entity.position[1]], [x, y], entity.speed
         ):
             print(f"error: move_failed - Target: {x}, {y} is out of entity's range!")
             return
         # Success Case
         else:
             # Move entity
-            self.move_entity(entity, x, y)
+            self.game_state.move_entity(entity, x, y)
             # Update stats for entity - may have moved to shallowwater tile
             entity.update_stats(self)
             print(f"ok: moved {entity_id} to {x}, {y}!")
@@ -759,8 +733,13 @@ class CLI:
         else:
             print("error: attack_failed due to invalid arguments.")
             return
+
+        # Get entities
+        attacker = self.game_state.get_entity_from_list(int(attacker_id))
+        defender = self.game_state.get_entity_from_list(int(defender_id))
+
         # Map created
-        if not self.map_created:
+        if not self.game_state.is_map_created():
             print("error: attack_failed - Map does not exist!")
             return
         # Valid ints for entity ids
@@ -768,15 +747,12 @@ class CLI:
             print("error: attack_failed - entity ids are not valid integers!")
             return
         # Valid entity ids in entity list
-        elif not any(attacker_id == str(entity.id) for entity in self.entity_list):
+        elif not (attacker is not None and attacker_id == str(attacker.id)):
             print("error: attack_failed - Attacking entity does not exist!")
             return
-        elif not any(defender_id == str(entity.id) for entity in self.entity_list):
+        elif not (defender is not None and defender_id == str(defender.id)):
             print("error: attack_failed - Defending entity does not exist!")
             return
-        # Assign entities
-        attacker = self.assign_entity_from_list(int(attacker_id))
-        defender = self.assign_entity_from_list(int(defender_id))
         # assign grid positions
         attacker_x = attacker.position[0]
         attacker_y = attacker.position[1]
@@ -796,7 +772,7 @@ class CLI:
             attack_range = dl.RANGED_RANGE
 
         # Determine if defender is within attack range
-        if self.grid.is_within_range(
+        if self.game_state.is_within_range(
             [attacker_x, attacker_y], [defender_x, defender_y], attack_range
         ):
             # Continue attack as defender is within attack range
@@ -824,15 +800,21 @@ class CLI:
         else:
             print("error: cast_failed due to invalid arguments.")
             return
+
+        # Get entities
+        caster = self.game_state.get_entity_from_list(int(caster_id))
+        target = self.game_state.get_entity_from_list(int(target_id))
+
         # Map created
-        if not self.map_created:
+        if not self.game_state.is_map_created():
             print("error: cast_failed - Map does not exist!")
             return
+
         # Valid ints for entity ids
-        elif not any(caster_id == str(entity.id) for entity in self.entity_list):
+        elif not any(caster_id == str(caster.id)):
             print("error: cast_failed - Casting entity does not exist!")
             return
-        elif not any(target_id == str(entity.id) for entity in self.entity_list):
+        elif not any(target_id == str(target.id)):
             print("error: cast_failed - Targeted entity does not exist!")
             return
         # Check for spell name within enums
@@ -845,9 +827,6 @@ class CLI:
         else:
             print("error: cast_failed - Spell does not exist!")
             return
-        # Assign entities
-        caster = self.assign_entity_from_list(int(caster_id))
-        target = self.assign_entity_from_list(int(target_id))
 
         # Ensure entities are alive
         if not caster.is_alive():
@@ -871,7 +850,7 @@ class CLI:
         target_y = target.position[1]
 
         # Determine if this spell is within range
-        if self.grid.is_within_range(
+        if self.game_state.is_within_range(
             [caster_x, caster_y], [target_x, target_y], spell_range
         ):
             # cast spell on target
@@ -899,28 +878,22 @@ class CLI:
         if not len(command_pieces) == 1:
             print("error: tick_failed due to invalid arguments!")
             return
-        elif not self.map_created:
+        elif not self.game_state.is_map_created():
             print("error: tick_failed - Map does not exist!")
             return
         # Check to see if there are entities to update
-        if len(self.entity_list) > 0:
-            # Entites present, update them
-            for entity in self.entity_list:
-                temp_bool = entity.process_tick_on_entity()
-                # Check for bool determining if entity should be removed from the list
-                if temp_bool:
-                    # Remove if true
-                    entities_to_remove.append(entity)
+        if self.game_state.entities_exists():
+            entities_to_remove = self.game_state.process_tick_for_all_entities()
 
         # If there are entities to be removed from the game
         if len(entities_to_remove) > 0:
             for entity in entities_to_remove:
-                self.remove_entity_from_game(entity)
+                self.game_state.remove_entity_from_game(entity)
 
-        # Update ticker
-        self.ticker += 1
-        # Print success
-        print(f"ok: tick processed. Ticker: {self.ticker}!")
+        # Mark game state as unsaved
+        self.game_state.mark_as_unsaved()
+        # Advance turn
+        self.game_state.advance_turn()
 
     # Spawn Entity For CLI
     # Contains logic for all entity spawning in the CLI
@@ -928,7 +901,7 @@ class CLI:
     #           entity_type - string - String used to create the correct entity type
     # Return: None
     def spawn_entity_for_cli(self, x, y, entity_type):
-        if not self.map_created:
+        if not self.game_state.is_map_created():
             print("error: spawn_failed - Map does not exist!")
             return
         # x and y are not valid ints
@@ -936,11 +909,11 @@ class CLI:
             print("error: spawn_failed - x and y are not valid integers!")
             return
         # x and y exceeds current grid bounds
-        elif not Grid.is_valid_grid_position(self.grid, x, y):
+        elif not self.game_state.is_valid_grid_position(self.grid, x, y):
             print("error: spawn_failed - x and y exceed current grid bounds!")
             return
         # ensure grid location is empty
-        elif Grid.is_occupied(self.grid, x, y):
+        elif self.game_state.is_grid_tile_occupied(x, y):
             print(f"error: spawn_failed - Entity is already present at ({x}, {y})!")
             return
         # invalid entity type
@@ -949,24 +922,12 @@ class CLI:
             return
         # All valid inputs
         else:
-            # updates grid with new entity and returns entity
-            entity = self.grid.spawn_entity(x, y, entity_type, self.entity_ids_issued)
+            # updates grid with new entity
+            self.game_state.spawn_entity(x, y, entity_type)
             # success output
-            print(f"ok: Spawned {entity_type} at {x}, {y}. id: {entity.id}!")
-            # Increment entity_ids_issued to account for new entity
-            self.entity_ids_issued += 1
-            # Add new entity to entity list
-            self.entity_list.append(entity)
-            # Add current max stats to the dict
-            if entity.e_type.lower() == "mage":  # spanws in with full health and mana
-                entity.max_health = entity.health
-                entity.max_mana = entity.mana
-            else:  # Not a mage - spawns with max/full hp
-                entity.max_health = entity.health
-            # Add temp buffs for entity
-            entity.temp_buffs = []
-            # update stats - spawning on tile with effect
-            entity.update_stats(self)
+            print(
+                f"ok: Spawned {entity_type} at {x}, {y}. id: {self.game_state.get_entity_id_from_tile(x, y)}!"
+            )
             return
 
     # Spawn Loot For CLI
@@ -976,7 +937,7 @@ class CLI:
     # Return: None
     def spawn_loot_for_cli(self, item_name, x, y):
         # checks if map was created
-        if not self.map_created:
+        if not self.game_state.is_map_created():
             print("error: spawn_failed - Map does not exist!")
             return
         # x and y are not valid ints
@@ -984,7 +945,7 @@ class CLI:
             print("error: spawn_failed - x and y are not valid integers!")
             return
         # x and y exceeds current grid bounds
-        elif not Grid.is_valid_grid_position(self.grid, x, y):
+        elif not self.game_state.is_valid_grid_position(self.grid, x, y):
             print("error: spawn_failed - x and y exceed current grid bounds!")
             return
         # ensure item_name is valid
@@ -994,21 +955,9 @@ class CLI:
             print("error: spawn_failed - Item name not found!")
             return
         else:  # Success
-            self.grid.add_item_to_tile_item_list(x, y, item_name)
+            self.game_state.spawn_loot(x, y, item_name)
             print(f"ok: spawn_loot {item_name} at {x}, {y}!")
             return
-
-    # Move Entity
-    # Contains logic to complete the full move of an entity
-    # Params:   entity - entity instance - Entity that will move
-    #           x,y - ints - cleaned valid ints with position to move entity to
-    # Returns: None
-    def move_entity(self, entity, x, y):
-        # Update tile occupancy for atincipated move
-        self.grid.occupy(x, y, entity.id)
-        self.grid.clear_occupant(entity.position[0], entity.position[1], entity.id)
-        # Change entity positions
-        entity.position = [x, y]
 
     # Assign Entity from list
     # Assign entity with matching id from cli.entity_list
@@ -1021,22 +970,6 @@ class CLI:
                 entity = temp_entity
                 break
         return entity
-
-    # Remove Entity from Game
-    # Remove entity from play for the game
-    # Params:   entity - Entity - Entity to be removed from the game
-    # Returns:  None
-    def remove_entity_from_game(self, entity):
-        # Get grid position of entity
-        entity_x = entity.position[0]
-        entity_y = entity.position[1]
-
-        # Clear occupant from grid
-        self.grid.clear_occupant(entity_x, entity_y, entity.id)
-
-        # Remove entity from entity_list
-        self.entity_list.remove(entity)
-        # print(f"Entity Removed: {entity.id}, Type: {entity.e_type}!")
 
     # Capitalize If String Start
     # Will capitalize and return string if it is a string

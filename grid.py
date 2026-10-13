@@ -270,6 +270,8 @@ class Grid:
         target_x = int(target_ordered_pair[0])
         target_y = int(target_ordered_pair[1])
 
+        range = int(range)
+
         # Priority Queue for A* - (estimated cost, distance, x, y)
         open_tile_list = []
         # Start at intial position
