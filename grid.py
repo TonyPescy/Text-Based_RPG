@@ -13,6 +13,7 @@ Purpose: Houses all functions necessary for proper grid/tile handling and logic 
 # imports
 import heapq
 import domain_library as dl
+import equipment
 import entity
 from enum import Enum
 from dataclasses import dataclass
@@ -221,10 +222,12 @@ class Grid:
     # Returns: None
     def add_item_to_tile_item_list(self, x, y, item_name):
         # fetch/create item
-        if item_name.lower() in dl.EQUIPMENT_TYPES:
-            item = dl.EQUIPMENT_TYPES.get(item_name.lower())()
-        else:
+        item = equipment.create_equipment(item_name.lower())
+
+        # Return if item is invalid
+        if item is None:
             return
+
         # Append to list
         self.__grid[int(x)][int(y)].add_item(item)
 

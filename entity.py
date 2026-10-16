@@ -12,7 +12,7 @@ Purpose: Houses all functions necessary for proper entity handling and logic in 
 
 # imports
 import domain_library as dl
-from equipment import Equipment
+from equipment import Equipment, create_equipment
 from dataclasses import dataclass
 
 
@@ -354,11 +354,11 @@ class Entity:
                 # self.__inventory.remove(item)
                 match item.slot.lower():
                     case "weapon":
-                        self.__inventory[0] = dl.create_equipment("none_wep")
+                        self.__inventory[0] = create_equipment("none_wep")
                     case "armor":
-                        self.__inventory[1] = dl.create_equipment("none_armor")
+                        self.__inventory[1] = create_equipment("none_armor")
                     case "accessory":
-                        self.__inventory[2] = dl.create_equipment("none_acc")
+                        self.__inventory[2] = create_equipment("none_acc")
                 continue
 
     # Equip Item Start

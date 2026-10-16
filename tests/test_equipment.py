@@ -78,7 +78,7 @@ class TestEquipment(unittest.TestCase):
     # Params: name - str - Name of the consumable
     # Returns: Consumable - Consumable object
     def get_consumable(self, name):
-        return dl.EQUIPMENT_TYPES[name]()
+        return equipment.create_equipment(name)
 
     # Use Consumable
     # Adds a consumable to the entity backpack and uses it through GameState

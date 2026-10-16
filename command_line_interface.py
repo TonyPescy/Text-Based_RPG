@@ -15,6 +15,7 @@ Purpose: Run all public facing functions that the player will use to interact wi
 # Could also update after these movements - pick one to reduce redundancy (Probs do the latter)
 
 # Imports
+import equipment
 import domain_library as dl
 from grid import Grid, Tile
 from entity import Entity, EntityInfo, MageInfo
@@ -376,9 +377,7 @@ class CLI:
             print("error: pickup_failed - Entity does not exist!")
             return
         # ensure item_name is valid
-        elif not any(
-            item_name.lower() == item_type.lower() for item_type in dl.EQUIPMENT_TYPES
-        ):
+        elif equipment.create_equipment(item_name) is None:
             print("error: pickup_failed - Item name not found!")
             return
 
@@ -480,9 +479,7 @@ class CLI:
             print("error: give_failed - Entity does not exist!")
             return
         # ensure item_name is valid
-        elif not any(
-            item_name.lower() == item_type.lower() for item_type in dl.EQUIPMENT_TYPES
-        ):
+        elif equipment.create_equipment(item_name) is None:
             print("error: give_failed - Item name not found!")
             return
 
@@ -535,9 +532,7 @@ class CLI:
             print("error: drop_failed - Entity does not exist!")
             return
         # ensure item_name is valid
-        elif not any(
-            item_name.lower() == item_type.lower() for item_type in dl.EQUIPMENT_TYPES
-        ):
+        elif equipment.create_equipment(item_name) is None:
             print("error: drop_failed - Item name not found!")
             return
 
@@ -604,9 +599,7 @@ class CLI:
             print("error: swap_failed - Entity does not exist!")
             return
         # ensure item_name is valid
-        elif not any(
-            item_name.lower() == item_type.lower() for item_type in dl.EQUIPMENT_TYPES
-        ):
+        elif equipment.create_equipment(item_name) is None:
             print("error: swap_failed - Item name not found!")
             return
         # Ensure slot is valid - blocks consumables from equipping also
@@ -644,7 +637,7 @@ class CLI:
 
         # Success message and stat update
         self.game_state.update_entity(entity_info.id)
-        print("Valid items:", ", ".join(dl.EQUIPMENT_TYPES))
+        print("Valid items:", ", ".join(equipment.get_equipment_names()))
         print(
             "Valid slots:",
             ", ".join(valid_slot.value for valid_slot in dl.EquipmentSlot),
@@ -677,9 +670,7 @@ class CLI:
             print("error: use_failed - Entity does not exist!")
             return
         # ensure item_name is valid
-        elif not any(
-            item_name.lower() == item_type.lower() for item_type in dl.EQUIPMENT_TYPES
-        ):
+        elif equipment.create_equipment(item_name) is None:
             print("error: use_failed - Item name not found!")
             return
 
@@ -1017,9 +1008,7 @@ class CLI:
             print("error: spawn_failed - x and y exceed current grid bounds!")
             return
         # ensure item_name is valid
-        elif not any(
-            item_name.lower() == item_type.lower() for item_type in dl.EQUIPMENT_TYPES
-        ):
+        elif equipment.create_equipment(item_name) is None:
             print("error: spawn_failed - Item name not found!")
             return
         else:  # Success

@@ -27,6 +27,7 @@ these functions are handled within the CLI prior to calling this function.
 import unittest
 import domain_library as dl
 from grid import Grid, Tile
+import equipment
 
 
 class TestGrid(unittest.TestCase):
@@ -498,8 +499,8 @@ class TestGrid(unittest.TestCase):
         # reset
         self.reset_tile_item_list(temp_grid, 0, 0)
         item_list = [
-            dl.create_equipment("ironsword"),
-            dl.create_equipment("magestaff"),
+            equipment.create_equipment("ironsword"),
+            equipment.create_equipment("magestaff"),
         ]
 
         temp_grid.set_tile_item_list(0, 0, item_list)

@@ -15,6 +15,7 @@ from grid import Grid
 from equipment import Consumable
 from spell import Spell, get_spell
 import domain_library as dl
+import equipment
 
 
 # GamesState Class to handle game state stats
@@ -313,7 +314,7 @@ class GameState:
     def add_item_to_backpack_based_on_info(self, entity_id, item_name):
         entity = self.get_entity_from_list(entity_id)
         # get Item from item name
-        item = dl.create_equipment(item_name.lower())
+        item = equipment.create_equipment(item_name.lower())
         entity.add_item_to_backpack(item)
 
     # Remove Item From Backpack From Info
@@ -342,7 +343,7 @@ class GameState:
     def equip_item_based_on_info(self, entity_id, item_name, slot):
         entity = self.get_entity_from_list(entity_id)
         # get Item from item name
-        item = dl.create_equipment(item_name.lower())
+        item = equipment.create_equipment(item_name.lower())
         entity.equip_item(item, slot)
         # Update entity stats
         self.update_entity(entity_id)
@@ -355,7 +356,7 @@ class GameState:
     def use_consumable(self, entity_id, item_name):
         entity = self.get_entity_from_list(entity_id)
         # get Item from item name
-        item = dl.create_equipment(item_name.lower())
+        item = equipment.create_equipment(item_name.lower())
         Consumable.use_consumable(item, entity, self)
         # Remove item from backpack
         entity.remove_item_from_backpack(item_name)

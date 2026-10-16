@@ -15,7 +15,7 @@ import equipment
 from enum import Enum
 
 # Constants
-# Equipment Types Dictionary - CHANGE TO MATCH SPELL NAMES
+"""# Equipment Types Dictionary - CHANGE TO MATCH SPELL NAMES
 EQUIPMENT_TYPES = {
     "ironsword": equipment.IronSword,
     "curseddagger": equipment.CursedDagger,
@@ -35,6 +35,8 @@ EQUIPMENT_TYPES = {
     "manapotion": equipment.ManaPotion,
     "turtlemasterpotion": equipment.TurtleMasterPotion,
 }
+
+"""
 
 
 # Enums for equipment slots
@@ -94,7 +96,7 @@ class SpellTypes(Enum):
     CONTROL = "Control"
 
 
-# Equipment Factory Start
+"""# Equipment Factory Start
 # Used to create all of the equipment based on item_name provided
 # Params: item_name - string - name of item to be created
 # Returns: Initialized matching item
@@ -106,14 +108,14 @@ def create_equipment(item_name):
     if equipment_type is None:
         return None  # Handle error on other end
 
-    return equipment_type()  # Return initialized item
+    return equipment_type()  # Return initialized item"""
 
 
 # Base Invetory for all Entities
 BASE_INVENTORY = [
-    create_equipment("none_wep"),
-    create_equipment("none_armor"),
-    create_equipment("none_acc"),
+    equipment.create_equipment("none_wep"),
+    equipment.create_equipment("none_armor"),
+    equipment.create_equipment("none_acc"),
 ]
 
 # Dead Status for corpses of entities - used in Temp Buffs on entity

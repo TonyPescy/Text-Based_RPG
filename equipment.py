@@ -478,3 +478,77 @@ class TurtleMasterPotion(Consumable):
             },
             duration=5,
         )
+
+
+# Create Equipment
+# Creates an equipment object based on the given equipment name
+# Params:   equipment_name - str - Name of equipment to create
+# Returns:  Equipment object if valid, otherwise None
+def create_equipment(equipment_name):
+    # Normalize equipment name
+    equipment_name = equipment_name.lower()
+
+    # Create equipment based on name
+    if equipment_name == "ironsword":
+        return IronSword()
+    elif equipment_name == "curseddagger":
+        return CursedDagger()
+    elif equipment_name == "magestaff":
+        return MageStaff()
+    elif equipment_name == "ironchestplate":
+        return IronChestplate()
+    elif equipment_name == "leathertunic":
+        return LeatherTunic()
+    elif equipment_name == "scoutarmor":
+        return ScoutArmor()
+    elif equipment_name == "ringofthesorcerer":
+        return RingOfTheSorcerer()
+    elif equipment_name == "amuletofvitality":
+        return AmuletOfVitality()
+    elif equipment_name == "ringofhaste":
+        return RingOfHaste()
+    elif equipment_name == "none_wep":
+        return NoneWeapon()
+    elif equipment_name == "none_armor":
+        return NoneArmor()
+    elif equipment_name == "none_acc":
+        return NoneAccessory()
+    elif equipment_name == "smallhealthpotion":
+        return SmallHealthPotion()
+    elif equipment_name == "greaterhealthpotion":
+        return GreaterHealthPotion()
+    elif equipment_name == "superiorhealthpotion":
+        return SuperiorHealthPotion()
+    elif equipment_name == "manapotion":
+        return ManaPotion()
+    elif equipment_name == "turtlemasterpotion":
+        return TurtleMasterPotion()
+
+    # Invalid equipment name
+    return None
+
+
+# Get Equipment Names
+# Gets all valid equipment names
+# Params: None
+# Returns: tuple - All valid equipment names
+def get_equipment_names():
+    return (
+        "ironsword",
+        "curseddagger",
+        "magestaff",
+        "ironchestplate",
+        "leathertunic",
+        "scoutarmor",
+        "ringofthesorcerer",
+        "amuletofvitality",
+        "ringofhaste",
+        "none_wep",
+        "none_armor",
+        "none_acc",
+        "smallhealthpotion",
+        "greaterhealthpotion",
+        "superiorhealthpotion",
+        "manapotion",
+        "turtlemasterpotion",
+    )

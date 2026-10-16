@@ -27,7 +27,7 @@ import unittest
 
 import domain_library as dl
 from entity import Warrior, Mage, Goblin, Skeleton, create_entity
-from equipment import Consumable
+import equipment
 from game_state import GameState
 
 
@@ -41,9 +41,9 @@ class TestEntity(unittest.TestCase):
     def setUp(self):
         # Each entity must receive fresh empty equipment slots.
         dl.BASE_INVENTORY = [
-            dl.create_equipment("none_wep"),
-            dl.create_equipment("none_armor"),
-            dl.create_equipment("none_acc"),
+            equipment.create_equipment("none_wep"),
+            equipment.create_equipment("none_armor"),
+            equipment.create_equipment("none_acc"),
         ]
 
     # Repeated Test Functions
@@ -104,7 +104,7 @@ class TestEntity(unittest.TestCase):
     # Params: item_name - str - item key
     # Returns: Equipment - created item
     def create_item(self, item_name):
-        return dl.create_equipment(item_name)
+        return equipment.create_equipment(item_name)
 
     # Init for all entity types
 

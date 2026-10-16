@@ -32,7 +32,7 @@ import equipment
 class TestDomainLibrary(unittest.TestCase):
 
     # Repeated Test Functions
-
+    """
     # Get Expected Equipment Types
     # Returns the expected class for each equipment dictionary key
     # Params: None
@@ -56,7 +56,7 @@ class TestDomainLibrary(unittest.TestCase):
             "superiorhealthpotion": equipment.SuperiorHealthPotion,
             "manapotion": equipment.ManaPotion,
             "turtlemasterpotion": equipment.TurtleMasterPotion,
-        }
+        }"""
 
     # Assert Enum Values
     # Checks that an enum contains the expected values in order
@@ -94,6 +94,7 @@ class TestDomainLibrary(unittest.TestCase):
             dl.are_valid_ints("zilch", 0),
         )
 
+    """
     # Equipment Dictionary Tests
 
     # Test equipment dictionary keys
@@ -168,7 +169,7 @@ class TestDomainLibrary(unittest.TestCase):
                     temp_equipment,
                     expected_class,
                 )
-
+    """
     # Base Inventory Tests
 
     # Test BASE_INVENTORY initialization

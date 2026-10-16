@@ -32,6 +32,7 @@ from unittest.mock import patch
 
 import domain_library as dl
 from game_state import GameState
+import equipment
 
 
 # Class for testing GameState
@@ -44,9 +45,9 @@ class TestGameState(unittest.TestCase):
     def setUp(self):
         # Reset shared inventory to prevent modifiers from carrying over.
         dl.BASE_INVENTORY = [
-            dl.create_equipment("none_wep"),
-            dl.create_equipment("none_armor"),
-            dl.create_equipment("none_acc"),
+            equipment.create_equipment("none_wep"),
+            equipment.create_equipment("none_armor"),
+            equipment.create_equipment("none_acc"),
         ]
 
         # Create a new game state.
