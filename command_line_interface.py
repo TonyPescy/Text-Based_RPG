@@ -159,9 +159,7 @@ class CLI:
     # Return: None
     def process_spawn_command(self, command_pieces):
         # Test for valid amount of command pieces and correct commands/typing
-        if len(command_pieces) == 4 and command_pieces[1].lower() in [  # SPAWN ENTITY
-            entity.value.lower() for entity in dl.EntityType
-        ]:
+        if len(command_pieces) == 4 and dl.is_valid_entity(command_pieces[1]):
             x = command_pieces[2]
             y = command_pieces[3]
             entity_type = command_pieces[1]
@@ -688,9 +686,7 @@ class CLI:
         if item == None:
             print("error: use_failed - Item not in backpack!")
         # Ensure that item is a consumable
-        elif not item.name.lower() in (
-            consumable.value for consumable in dl.ConsumableType
-        ):
+        elif not isinstance(item, equipment.ConsumableInfo):
             print("error: use_failed - Item is not a consumable!")
             return
         else:  # Success case
@@ -877,7 +873,7 @@ class CLI:
             print("error: cast_failed - Targeted entity does not exist!")
             return
         # Check for spell name within enums
-        elif any(spell_name.lower() == name.value.lower() for name in dl.SpellNames):
+        elif dl.is_valid_spell(spell_name):
             # Get spell info
             spell_info = self.game_state.get_spell_info(spell_name.lower())
         # Spell not found

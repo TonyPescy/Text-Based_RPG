@@ -52,23 +52,23 @@ class EquipmentSlotIndex(Enum):
     ARMOR = 1
     ACCESSORY = 2
 
+    """# Valid consumables Enums
+    class ConsumableType(Enum):
+        SMALL_HEALTH_POTION = "smallhealthpotion"
+        GREATER_HEALTH_POTION = "greaterhealthpotion"
+        SUPERIOR_HEALTH_POTION = "superiorhealthpotion"
+        MANA_POTION = "manapotion"
+        TURTLE_MASTER_POTION = "turtlemasterpotion"
 
-# Valid consumables Enums
-class ConsumableType(Enum):
-    SMALL_HEALTH_POTION = "smallhealthpotion"
-    GREATER_HEALTH_POTION = "greaterhealthpotion"
-    SUPERIOR_HEALTH_POTION = "superiorhealthpotion"
-    MANA_POTION = "manapotion"
-    TURTLE_MASTER_POTION = "turtlemasterpotion"
 
-
-# Entity Types Constant
-# Entity Constants enum
-class EntityType(Enum):
-    WARRIOR = "Warrior"
-    MAGE = "Mage"
-    SKELETON = "Skeleton"
-    GOBLIN = "Goblin"
+    # Entity Types Constant
+    # Entity Constants enum
+    class EntityType(Enum):
+        WARRIOR = "Warrior"
+        MAGE = "Mage"
+        SKELETON = "Skeleton"
+        GOBLIN = "Goblin"
+    """
 
 
 # Attack Types Constants Enums
@@ -82,11 +82,12 @@ MELEE_RANGE = 1
 RANGED_RANGE = 3  # May want to restrict to be 2-3 only not 1-3 so it doesnt completely outclass melee
 
 
-# Spell name enums
+"""# Spell name enums
 class SpellNames(Enum):
     FIREBALL = "Fireball"
     HEAL = "Heal"
     FROSTBOLT = "Frostbolt"
+"""
 
 
 # Spell Type enums
@@ -127,16 +128,39 @@ DEAD_STATUS = {
 }
 
 
-# Is Valid Entity Start # MOVE TO D_LIB
-# Checks to see input is a valid entity type
-# Params: entity_type - string - entity name
-# Returns: Bool
+# Is Valid Entity
+# Checks to see if input is a valid entity type
+# Params:   entity_type - str - Entity name
+# Returns:  bool
 def is_valid_entity(entity_type):
-    if entity_type.lower() in [e_type.value.lower() for e_type in EntityType]:
-        return True
-    else:
-        # print("error: Entity Type added is not a valid entity type!")
+    # Check if entity type is valid
+    if not isinstance(entity_type, str):
         return False
+
+    # Check if entity name is valid
+    return entity_type.lower() in (
+        "warrior",
+        "mage",
+        "skeleton",
+        "goblin",
+    )
+
+
+# Is Valid Spell
+# Checks if the given spell name is valid
+# Params:   spell_name - str - Name of spell
+# Returns:  bool
+def is_valid_spell(spell_name):
+    # Check if spell name is valid
+    if not isinstance(spell_name, str):
+        return False
+
+    # Check if spell name exists
+    return spell_name.lower() in (
+        "fireball",
+        "heal",
+        "frostbolt",
+    )
 
 
 # Are Valid Ints

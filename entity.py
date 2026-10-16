@@ -958,36 +958,42 @@ class Mage(Entity):
 
 
 # Entities Factory
-# Create Entity Start
+# Create Entity
 # Creates entity with base stats and values based on the entity
 # Holds base stats for all of the entities
-# Params: e_type - String - Type of entity to create
-#       x,y - int - Coordinates to spawn entity at
-#       e_id - int - id generated for entity based on current entity ID counter
-# Returns: Entity instance of the specified type
+# Params:   e_type - str - Type of entity to create
+#           x, y - int - Coordinates to spawn entity at
+#           e_id - int - ID generated for entity
+# Returns:  Entity instance of the specified type, or None if invalid
 def create_entity(e_type, x, y, e_id):
-    # ensure correct typing
+    # Ensure correct typing
     try:
-        # Convert to enum
-        e_type = dl.EntityType(str(e_type).capitalize())
+        e_type = str(e_type).lower()
         x = int(x)
         y = int(y)
-    except:
+    except (TypeError, ValueError):
         print(f"error: spawn_failed x ({x}) and/or y ({y}) are not integers!")
+        return None
 
-    match e_type:  # MATCH WITH ENUMS UPON THAT UPDATE
-        case dl.EntityType.WARRIOR:
+    # Create entity based on type
+    match e_type:
+        case "warrior":
             entity = Warrior(e_id, [x, y])
 
-        case dl.EntityType.MAGE:
+        case "mage":
             entity = Mage(e_id, [x, y])
 
-        case dl.EntityType.SKELETON:
+        case "skeleton":
             entity = Skeleton(e_id, [x, y])
 
-        case dl.EntityType.GOBLIN:
+        case "goblin":
             entity = Goblin(e_id, [x, y])
 
-    # Correct Entity information before returning to game state
+        case _:
+            # Invalid entity type
+            return None
+
+    # Correct entity information before returning to game state
     entity.__temp_buffs = []
+
     return entity

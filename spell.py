@@ -88,7 +88,7 @@ class Spell:
         caster_info = caster.get_info()
         target_info = target.get_info()
         # Calc damage/heals dealt by spell
-        if self.__name == dl.SpellNames.HEAL.value:
+        if self.__name.lower() == "heal":
             # only healing spell so it has special case
             damage = max(1, ((caster_info.spell_power * self.__spell_power_modifier)))
             # checks fors targets death
@@ -159,7 +159,7 @@ class Fireball(Spell):
     # Init with base stats
     def __init__(self):
         super().__init__(
-            dl.SpellNames.FIREBALL.value,
+            "Fireball",
             dl.SpellTypes.OFFENSIVE.value,
             25,
             4,
@@ -173,7 +173,7 @@ class Heal(Spell):
     # Init with base stats
     def __init__(self):
         super().__init__(
-            dl.SpellNames.HEAL.value,
+            "Heal",
             dl.SpellTypes.SUPPORT.value,
             30,
             2,
@@ -267,7 +267,7 @@ class EffectSpell(Spell):
 class Frostbolt(EffectSpell):
     def __init__(self):
         super().__init__(
-            dl.SpellNames.FROSTBOLT.value,
+            "Frostbolt",
             dl.SpellTypes.CONTROL.value,
             20,
             3,
@@ -278,22 +278,52 @@ class Frostbolt(EffectSpell):
         )
 
 
-# Spells Dictionary
+"""# Spells Dictionary
 SPELLS = {
     dl.SpellNames.FIREBALL.value: Fireball,
     dl.SpellNames.HEAL.value: Heal,
     dl.SpellNames.FROSTBOLT.value: Frostbolt,
-}
+}"""
+
+"""
+# Spells Factory
+# Creates a spell object based on the given spell name
+# Params:   spell_name - str - Name of spell to create
+# Returns:  Spell instance if valid, otherwise None
+def create_spell(spell_name):
+    # Normalize spell name
+    spell_name = str(spell_name).lower()
+
+    # Create spell based on name
+    match spell_name:
+        case "fireball":
+            return Fireball()
+        case "heal":
+            return Heal()
+        case "frostbolt":
+            return Frostbolt()
+        case _:
+            # Invalid spell name
+            return None
+"""
 
 
-# Get Spell
-# Finds corresponding spell from spell name provided
-# Provided name is validated prior to this being called
-# Params: spell_name - string - Validated name of spell
-# Returns spell - Spell/EffectSpell Instance - found spell
+# Get Spell - Spell Factory
+# Finds and creates a spell based on the provided spell name
+# Params:   spell_name - str - Name of spell
+# Returns:  Spell instance if found
+# Raises:   ValueError if spell is not found
 def get_spell(spell_name):
-    spell_class = SPELLS.get(spell_name.capitalize())
-    if spell_class:
-        return spell_class()
-    else:
-        raise ValueError(f"Spell not found: {spell_name}")
+    # Normalize spell name
+    spell_name = str(spell_name).lower()
+
+    # Create spell based on name
+    match spell_name:
+        case "fireball":
+            return Fireball()
+        case "heal":
+            return Heal()
+        case "frostbolt":
+            return Frostbolt()
+        case _:
+            raise ValueError(f"Spell not found: {spell_name}")
