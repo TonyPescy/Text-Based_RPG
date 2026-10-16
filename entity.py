@@ -13,6 +13,25 @@ Purpose: Houses all functions necessary for proper entity handling and logic in 
 # imports
 import domain_library as dl
 from equipment import Equipment
+from dataclasses import dataclass
+
+
+# Data class for entity stats
+@dataclass
+class EntityInfo:
+    id: int
+    e_type: str
+    position: tuple
+    health: int
+    max_health: int
+    attack: int
+    defence: int
+    speed: int
+    inventory: tuple
+    active_modifiers: tuple  # tuple of two dictionaries - flat and percent modifiers
+    backpack: tuple
+    attack_type: str
+    temp_buffs: tuple
 
 
 # Entity class with all methods needed for entities
@@ -63,25 +82,97 @@ class Entity:
         } x number of temp buffs
         """
 
-    # Get Stats Start
-    # Gets all relevant stats of the entity and returns them
+    # Get Info
+    # Gets all relevant info of the entity and returns them
     # Params: None
-    # Returns dictionary - Contains all stats needed for Command Line Interface commands
-    #       (int id, str e_type, tuple x/y coords, int health, int attack, int defence, int speed, list of two dictionaries active_modifiers)
-    def get_stats(self):
-        stat_dict = {
-            "Id": self.__id,
-            "Type": self.__e_type,
-            "Position": self.__position,
-            "Health": self.__health,
-            "Attack": self.__attack,
-            "Defence": self.__defence,
-            "Speed": self.__speed,
-            "Active_modifiers": self.__active_modifiers,
-        }
-        return stat_dict
+    # Returns: EntityInfo - all info for current entity
+    def get_info(self):
+        return EntityInfo(
+            id=self.__id,
+            e_type=self.__e_type,
+            position=self.__position,
+            health=self.__health,
+            max_health=self.__max_health,
+            attack=self.__attack,
+            defence=self.__defence,
+            speed=self.__speed,
+            inventory=tuple(item.get_info() for item in self.__inventory),
+            active_modifiers=tuple(
+                (
+                    (
+                        "Flat_modifiers",
+                        tuple(self.__active_modifiers["Flat_modifiers"].items()),
+                    ),
+                    (
+                        "Percent_modifiers",
+                        tuple(self.__active_modifiers["Percent_modifiers"].items()),
+                    ),
+                )
+            ),
+            backpack=tuple(item.get_info() for item in self.__backpack),
+            attack_type=self.__attack_type,
+            temp_buffs=tuple(
+                (
+                    ("Name", buff["Name"]),
+                    (
+                        "Effects",
+                        (
+                            (
+                                "Flat_modifiers",
+                                tuple(buff["Effects"]["Flat_modifiers"].items()),
+                            ),
+                            (
+                                "Percent_modifiers",
+                                tuple(buff["Effects"]["Percent_modifiers"].items()),
+                            ),
+                        ),
+                    ),
+                    ("Turns", buff["Turns"]),
+                )
+                for buff in self.__temp_buffs
+            ),
+        )
+
+    """
+        # Get Stats Start
+        # Gets all relevant stats of the entity and returns them
+        # Params: None
+        # Returns dictionary - Contains all stats needed for Command Line Interface commands
+        #       (int id, str e_type, tuple x/y coords, int health, int attack, int defence, int speed, list of two dictionaries active_modifiers)
+        def get_stats(self):
+            stat_dict = {
+                "Id": self.__id,
+                "Type": self.__e_type,
+                "Position": self.__position,
+                "Health": self.__health,
+                "Attack": self.__attack,
+                "Defence": self.__defence,
+                "Speed": self.__speed,
+                "Active_modifiers": self.__active_modifiers,
+            }
+            return stat_dict"""
 
     # Get Stats End
+
+    # Get Stat
+    # Gets given stat value of entity
+    # Only called on real objects within this file - editing the actual entity
+    # Params:   stat - string - stat to get
+    # Return:   value - int - stat value
+    def get_stat(self, stat):
+        match stat:
+            case "Health":
+                return self.__health
+
+                """case "Max Health":
+                return self.__max_health"""
+
+            case "Attack":
+                return self.__attack
+            case "Defence":
+                return self.__defence
+            case "Speed":
+                return self.__speed
 
     # Reset Stats Start
     # Resets entities stats to base values
@@ -103,32 +194,37 @@ class Entity:
     # Return: None
     def update_stats(self, game_state):
         # starting health - used to set health after reset
-        # starting_health = self.health
+        """starting_health = self.__health
+        if hasattr(self, "Mana"):
+            starting_mana = self.__mana"""
         # Clear active modifiers to avoid double counting of modifiers
         self.__active_modifiers["Flat_modifiers"] = {}
         self.__active_modifiers["Percent_modifiers"] = {}
         # Stats to be checked
         # stats = ("Health", "Attack", "Defence", "Speed")
         # Check all inventory slots for modifiers to add to active_modifiers of entity
-        for slot in self.__inventory:  # HERE
+        for slot in self.__inventory:
+            slot_info = slot.get_info()
             # Iterate through all stats modified within current slot
-            for stat, modifier in slot.effects.items():
-                # Ignore stats that onlt affect Mage class
-                if stat == "Mana" or stat == "Spell_power":
+            for stat, modifier in slot_info.effects:
+                # Ignore stats that only affect Mage class
+                if (
+                    stat == "Mana" or stat == "Spell_power"
+                ) and self.__e_type.lower() != "mage":
                     continue
                 # Handle modifiers split between flat and percent
                 self.handle_modifiers(stat, modifier)
 
         # Tile modifiers
         # Get entity grid position
-        x = self.position[0]
-        y = self.position[1]
+        x = self.__position[0]
+        y = self.__position[1]
 
         # Get current tile copy
-        tile = game_state.get_game_tile(x, y)
+        tile = game_state.get_game_tile_info(x, y)
 
         # Handle modifiers for tile - split due to way tile modifiers are setup - could be cleaned up later
-        for stat, modifier in tile.modifiers.items():
+        for stat, modifier in tile.modifiers:
             # Ignore stats that onlt affect Mage class
             if stat == "Mana" or stat == "Spell_power":
                 continue
@@ -136,7 +232,7 @@ class Entity:
             self.handle_modifiers(stat, modifier)
 
         # Handle temp buffs
-        for buff in self.temp_buffs:
+        for buff in self.__temp_buffs:
             for modifier_type, modifiers in buff["Effects"].items():
                 for stat, amount in modifiers.items():
 
@@ -157,6 +253,10 @@ class Entity:
 
         # Since stats will be changed and overwritten, we need the entity stats set to their bases
         self.reset_stats()
+        # Set health and mana if applicable back to normal
+        """self.__health = starting_health
+        if hasattr(self, "mana"):
+            self.__mana = starting_mana"""
         # Calculate the entities final stats
         self.calculate_final_stats()
         # Update max stats
@@ -177,20 +277,20 @@ class Entity:
         ):  # All percent based modifiers will end with "%"
             # Flat modifier
             # If a stat is already being modified by a flat modifier
-            if stat in self.active_modifiers["Flat_modifiers"]:
-                self.active_modifiers["Flat_modifiers"][stat] += int(modifier)
+            if stat in self.__active_modifiers["Flat_modifiers"]:
+                self.__active_modifiers["Flat_modifiers"][stat] += int(modifier)
             else:  # Stat is not already modified by a flat modifier
-                self.active_modifiers["Flat_modifiers"][stat] = int(modifier)
+                self.__active_modifiers["Flat_modifiers"][stat] = int(modifier)
 
         else:  # Is a percent modifier
             # Percent modifier
             # If a stat is already being modified by a percent modifier
-            if stat in self.active_modifiers["Percent_modifiers"]:
-                self.active_modifiers["Percent_modifiers"][stat] += int(
+            if stat in self.__active_modifiers["Percent_modifiers"]:
+                self.__active_modifiers["Percent_modifiers"][stat] += int(
                     modifier[: len(modifier) - 1]
                 )
             else:  # Stat is not already being modified by a percent modifier
-                self.active_modifiers["Percent_modifiers"][stat] = int(
+                self.__active_modifiers["Percent_modifiers"][stat] = int(
                     modifier[: len(modifier) - 1]
                 )
 
@@ -207,15 +307,15 @@ class Entity:
         for stat in stats:
             temp_value = self.BASE_STATS.get(stat, 0)
             # If flat values exist
-            if stat in self.active_modifiers["Flat_modifiers"]:
-                temp_value += self.active_modifiers["Flat_modifiers"][stat]
+            if stat in self.__active_modifiers["Flat_modifiers"]:
+                temp_value += self.__active_modifiers["Flat_modifiers"][stat]
             # If percent modifiers exist
-            if stat in self.active_modifiers["Percent_modifiers"]:
-                temp_percent_value = self.active_modifiers["Percent_modifiers"][stat]
+            if stat in self.__active_modifiers["Percent_modifiers"]:
+                temp_percent_value = self.__active_modifiers["Percent_modifiers"][stat]
                 temp_value += temp_value * (temp_percent_value / 100)
             # Update max stats
             if stat == "Health":
-                self.max_health = temp_value
+                self.__max_health = temp_value
 
     # Calculate Final Stats Start
     # Handles stat calculation for entities and updates them
@@ -226,16 +326,16 @@ class Entity:
         stats = ("Health", "Attack", "Defence", "Speed")
         # Iterate through all stats and add flat modifiers first, then calculate multiplicative modifiers
         for stat in stats:
-            temp_value = getattr(self, stat.lower())
+            temp_value = self.get_stat(stat)
             # If flat values exist
-            if stat in self.active_modifiers["Flat_modifiers"]:
-                temp_value += self.active_modifiers["Flat_modifiers"][stat]
+            if stat in self.__active_modifiers["Flat_modifiers"]:
+                temp_value += self.__active_modifiers["Flat_modifiers"][stat]
             # If percent modifiers exist
-            if stat in self.active_modifiers["Percent_modifiers"]:
-                temp_percent_value = self.active_modifiers["Percent_modifiers"][stat]
+            if stat in self.__active_modifiers["Percent_modifiers"]:
+                temp_percent_value = self.__active_modifiers["Percent_modifiers"][stat]
                 temp_value += temp_value * (temp_percent_value / 100)
             # Update entities stats with new stat before continuing to next stat
-            setattr(self, stat.lower(), temp_value)
+            self.update_single_stat(stat.lower(), temp_value)
 
     # Calculate Final Stats End
 
@@ -246,12 +346,19 @@ class Entity:
     # Returns:  None
     def update_inventory(self):
         # for item in inventory
-        for item in self.inventory.copy():  # copy to avoid skipping
+        for item in self.__inventory.copy():  # copy to avoid skipping
             # if item is in backpack - continue
-            if any(item == temp_item for temp_item in self.backpack):
+            if any(item == temp_item for temp_item in self.__backpack):
                 continue
             elif item.name != "None":  # no real item matches found - Remove
-                self.inventory.remove(item)
+                # self.__inventory.remove(item)
+                match item.slot.lower():
+                    case "weapon":
+                        self.__inventory[0] = dl.create_equipment("none_wep")
+                    case "armor":
+                        self.__inventory[1] = dl.create_equipment("none_armor")
+                    case "accessory":
+                        self.__inventory[2] = dl.create_equipment("none_acc")
                 continue
 
     # Equip Item Start
@@ -262,23 +369,25 @@ class Entity:
     def equip_item(self, item, slot):
         if not isinstance(item, Equipment):
             return
-        # Redundant code btw
-        if slot != item.slot.lower():
-            return
+        # Get info
+        item_info = item.get_info()
+        """# Redundant code btw
+        if slot != item_info.slot.lower():
+            return"""
         # match statement for slot
-        match slot:
+        match item_info.slot.lower():
             # weapon case
             case "weapon":
-                self.inventory[0] = item
+                self.__inventory[0] = item
             # armor case
             case "armor":
-                self.inventory[1] = item
+                self.__inventory[1] = item
             # accessory case
             case "accessory":
-                self.inventory[2] = item
+                self.__inventory[2] = item
 
         # add to backpack
-        self.add_item_to_backpack(item)
+        # self.add_item_to_backpack(item)
 
     # Update Temp Buffs
     # Updates temp buffs with their duration due to CLI tick process
@@ -288,10 +397,10 @@ class Entity:
         # init to be removed list
         buffs_to_be_removed = []
         # check for empty temp_buffs
-        if self.temp_buffs == []:
+        if self.__temp_buffs == []:
             return buffs_to_be_removed
 
-        for buff in self.temp_buffs:
+        for buff in self.__temp_buffs:
             # Process turn passing
             buff["Turns"] -= 1
             # Check for "Turns" = 0
@@ -311,14 +420,14 @@ class Entity:
         # Iterate through list of names to be removed
         for buff_name in to_be_removed:
             # For each name iterate through list of temp buffs
-            for buff in self.temp_buffs:
+            for buff in self.__temp_buffs:
                 # If name matches one to be removed - remove it
                 if buff_name == buff["Name"]:
                     # Check for dead status for special case handling
                     if buff["Name"] == "Dead":
                         return True
 
-                    self.temp_buffs.remove(buff)
+                    self.__temp_buffs.remove(buff)
                     print(f'Buff Removed: {buff["Name"]}!')
                     break
         return False
@@ -347,23 +456,35 @@ class Entity:
     # Params: item - Equipment Object - item to be added to the backpack
     # Returns: None
     def add_item_to_backpack(self, item):
-        self.backpack.append(item)
+        self.__backpack.append(item)
 
     # Remove Item From Backpack
     # Removes provided item from the backpack
     # Size Handling responses TBD - CLI?
-    # Params: item - Equipment Object - item to be removed from the backpack
+    # Params: item_name - str - name of the item to be removed from the backpack
     # Returns: None
-    def remove_item_from_backpack(self, item):
-        self.backpack.remove(item)
+    def remove_item_from_backpack(self, item_name):
+        for item in self.__backpack:
+            item_info = item.get_info()
+            if item_info.name == item_name:
+                self.__backpack.remove(item)
+                break
 
     # Handle Death
     # Handles death of entity in combat
     # Params:   None
     # Returns:  None
     def handle_death(self):
+        # self.__health = 0
         # Assign "Dead" to temp_buffs
-        self.temp_buffs.append(dl.DEAD_STATUS)
+        self.__temp_buffs.append(dl.DEAD_STATUS.copy())
+
+    # Move To
+    # Moves entity to given coordinates
+    # Params:   x, y - ints - coordinates
+    # Returns:  None
+    def move_to(self, x, y):
+        self.__position = [x, y]
 
     # Attack Entity
     # Current entity attacks given entity
@@ -373,11 +494,11 @@ class Entity:
     # Return:   damage - int - damage dealt to the defender
     def attack_entity(self, target):
         # Get damage dealt
-        damage = max(1, (self.attack - target.defence))
+        damage = max(1, (self.__attack - target.__defence))
         # Subtract health from defender with max at 0 - prevents underflow
-        target.health = max(0, (target.health - damage))
+        target.__health = max(0, (target.__health - damage))
         # Handle target death
-        if target.health == 0:
+        if target.__health == 0:
             target.handle_death()
         # return damage for success message
         return damage
@@ -389,10 +510,57 @@ class Entity:
     # Retunrs: Bool - bool - True if entity is alive / False if entity is dead
     def is_alive(self):
         # check temp buffs for "Dead" status
-        for buff in self.temp_buffs:
+        for buff in self.__temp_buffs:
             if buff["Name"] == "Dead":
                 return False
         return True
+
+    # Is Alive From Info
+    # Checks entity info temp buffs to see if they are alive
+    # Protects entity from being modified by CLI commands - is_alive still has use
+    # in functions where entity is being modified and is not just being checked by CLI commands
+    # Params: None
+    # Retunrs: Bool - bool - True if entity is alive / False if entity is dead
+    def is_alive_from_info(entity_info):
+        # check temp buffs for "Dead" status
+        for buff in entity_info.temp_buffs:
+            buff_info = dict(buff)
+            if buff_info["Name"] == "Dead":
+                return False
+        return True
+
+    # Update Single Stat
+    # Updates a single stat of the entity with given value
+    # Params:   stat - string - stat to be updated
+    #           value - int - value to be set to the stat
+    # Return:   None
+    def update_single_stat(self, stat, value):
+        match stat.lower():
+            case "health":
+                self.__health = value
+            case "max_health":
+                self.__max_health = value
+            case "attack":
+                self.__attack = value
+            case "defence":
+                self.__defence = value
+            case "speed":
+                self.__speed = value
+
+    # Add Temp Buff
+    # Adds temp buff to entity
+    # Params:   buff - dict - includes all buff attributes (name, effects, duration)
+    # Return:   None
+    def add_temp_buff(self, buff):
+        self.__temp_buffs.append(buff)
+
+    """# id
+    # Solves issues with accessing if of mage which inherits from Entity
+    # Params: None
+    # Returns: id of entity
+    @property
+    def id(self):
+        return self.__id"""
 
 
 # Warrior Class extend from Entity class
@@ -505,6 +673,26 @@ class Goblin(Entity):
         )
 
 
+# Data class for Mage stats
+@dataclass
+class MageInfo:
+    id: int
+    e_type: str
+    position: tuple
+    health: int
+    max_health: int
+    mana: int
+    max_mana: int
+    spell_power: int
+    attack: int
+    defence: int
+    speed: int
+    active_modifiers: tuple  # tuple of two dictionaries - flat and percent modifiers
+    backpack: tuple
+    attack_type: str
+    temp_buffs: tuple
+
+
 # Mage Class extend from Entity class
 class Mage(Entity):
     # Mage Constants
@@ -540,11 +728,36 @@ class Mage(Entity):
             dl.AttackTypes.MELEE,  # When not using spells using staff to attack physically
         )
         # New attributes
-        self.mana = self.BASE_STATS["Mana"]
-        self.max_mana = self.BASE_STATS["Mana"]
-        self.spell_power = self.BASE_STATS["Spell_power"]
+        self.__mana = self.BASE_STATS["Mana"]
+        self.__max_mana = self.BASE_STATS["Mana"]
+        self.__spell_power = self.BASE_STATS["Spell_power"]
+        self.__temp_buffs = []  # temp buffs list of dictionarys
 
-    # Get Stats Start
+    # Get Info
+    # Gets all relevant info of the entity and returns them
+    # Params: None
+    # Returns: MageStats - all info for current mage
+    def get_info(self):
+        entity_info = super().get_info()
+        return MageInfo(
+            id=entity_info.id,
+            e_type=entity_info.e_type,
+            position=entity_info.position,
+            health=entity_info.health,
+            max_health=entity_info.max_health,
+            mana=self.__mana,
+            max_mana=self.__max_mana,
+            spell_power=self.__spell_power,
+            attack=entity_info.attack,
+            defence=entity_info.defence,
+            speed=entity_info.speed,
+            active_modifiers=entity_info.active_modifiers,
+            backpack=entity_info.backpack,
+            attack_type=entity_info.attack_type,
+            temp_buffs=entity_info.temp_buffs,
+        )
+
+    """# Get Stats Start
     # Gets all relevant stats of the entity and returns them
     # Params: None
     # Returns dictionary - Contains all stats needed for Command Line Interface commands
@@ -561,7 +774,7 @@ class Mage(Entity):
             "Speed": self.speed,
             "Active_modifiers": self.active_modifiers,
         }
-        return stat_dict
+        return stat_dict"""
 
     # Get Stats End
 
@@ -570,14 +783,14 @@ class Mage(Entity):
     # Params: None
     # Return: None
     def reset_stats(self):
-        self.health = self.BASE_STATS["Health"]
-        self.max_health = self.BASE_STATS["Health"]
-        self.attack = self.BASE_STATS["Attack"]
-        self.defence = self.BASE_STATS["Defence"]
-        self.speed = self.BASE_STATS["Speed"]
-        self.mana = self.BASE_STATS["Mana"]
-        self.max_mana = self.BASE_STATS["Mana"]
-        self.spell_power = self.BASE_STATS["Spell_power"]
+        self.__health = self.BASE_STATS["Health"]
+        self.__max_health = self.BASE_STATS["Health"]
+        self.__attack = self.BASE_STATS["Attack"]
+        self.__defence = self.BASE_STATS["Defence"]
+        self.__speed = self.BASE_STATS["Speed"]
+        self.__mana = self.BASE_STATS["Mana"]
+        self.__max_mana = self.BASE_STATS["Mana"]
+        self.__spell_power = self.BASE_STATS["Spell_power"]
 
     # Reset Stats End
 
@@ -590,55 +803,60 @@ class Mage(Entity):
         stats = ("Health", "Attack", "Defence", "Speed", "Mana", "Spell_power")
         # Iterate through all stats and add flat modifiers first, then calculate multiplicative modifiers
         for stat in stats:
-            temp_value = getattr(self, stat.lower())
+            temp_value = self.get_stat(stat)
             # If flat values exist
-            if stat in self.active_modifiers["Flat_modifiers"]:
-                temp_value += self.active_modifiers["Flat_modifiers"][stat]
+            if stat in self._Entity__active_modifiers["Flat_modifiers"]:
+                temp_value += self._Entity__active_modifiers["Flat_modifiers"][stat]
             # If percent modifiers exist
-            if stat in self.active_modifiers["Percent_modifiers"]:
-                temp_percent_value = self.active_modifiers["Percent_modifiers"][stat]
+            if stat in self._Entity__active_modifiers["Percent_modifiers"]:
+                temp_percent_value = self._Entity__active_modifiers[
+                    "Percent_modifiers"
+                ][stat]
                 temp_value += temp_value * (temp_percent_value / 100)
             # Update entities stats with new stat before continuing to next stat
-            setattr(self, stat.lower(), temp_value)
+            self.update_single_stat(stat.lower(), temp_value)
 
     # Calculate Final Stats End
 
+    # NEEDS CLEANER IMPLEMENTATIO WITHOUT NAME MANGLING
     # Update Stats Start
     # Calculates final stats and updates entities stats based on their bases and modifiers
     # Called when inventory is changed or if unit is positioned on a tile that modifies stats
-    # Params: CLI - cli instance - Current active game objects/features
+    # Params: game_state - Game state from cli - Current active game objects/features
     # Return: None
-    def update_stats(self, cli):  # UPDATE TESTS for temp buff
-        # starting health - used to set health after reset
-        # starting_health = self.health
+    def update_stats(self, game_state):
+        super().update_stats(game_state)
+        """# starting health - used to set health after reset
+        # starting_health = self.__health
         # starting mana - used to set mana after reset
-        # starting_mana = self.mana
+        # starting_mana = self.__mana
         # Clear active modifiers to avoid double counting of modifiers
-        self.active_modifiers["Flat_modifiers"] = {}
-        self.active_modifiers["Percent_modifiers"] = {}
+        self._Entity__active_modifiers["Flat_modifiers"] = {}
+        self._Entity__active_modifiers["Percent_modifiers"] = {}
         # Stats to be checked
         # stats = ("Health", "Attack", "Defence", "Speed")
         # Check all inventory slots for modifiers to add to active_modifiers of entity
-        for slot in self.inventory:
+        for slot in self._Entity__inventory:
+            slot_info = slot.get_info()
             # Iterate through all stats modified within current slot
-            for stat, modifier in slot.effects.items():
+            for stat, modifier in slot_info.effects:
                 # Handle modifiers split between flat and percent
                 self.handle_modifiers(stat, modifier)
 
         # Tile modifiers
         # Get entity grid position
-        x = self.position[0]
-        y = self.position[1]
+        x = self._Entity__position[0]
+        y = self._Entity__position[1]
 
         # Get current tile
-        tile = cli.grid.grid[x][y]
+        tile = game_state.get_game_tile_info(x, y)
 
         # Handle modifiers for tile - split due to way tile modifiers are setup - FIX?
-        for stat, modifier in tile.modifiers.items():
+        for stat, modifier in tile.modifiers:
             self.handle_modifiers(stat, modifier)
 
         # Handle temp buffs
-        for buff in self.temp_buffs:
+        for buff in self.__temp_buffs:
             for modifier_type, modifiers in buff["Effects"].items():
                 for stat, amount in modifiers.items():
 
@@ -659,7 +877,7 @@ class Mage(Entity):
         # Calculate the entities final stats
         self.calculate_final_stats()
         # Update max stats
-        self.calculate_max_stats()
+        self.calculate_max_stats()"""
 
         # Update Stats End
 
@@ -674,18 +892,69 @@ class Mage(Entity):
         for stat in stats:
             temp_value = self.BASE_STATS.get(stat, 0)
             # If flat values exist
-            if stat in self.active_modifiers["Flat_modifiers"]:
-                temp_value += self.active_modifiers["Flat_modifiers"][stat]
+            if stat in self._Entity__active_modifiers["Flat_modifiers"]:
+                temp_value += self._Entity__active_modifiers["Flat_modifiers"][stat]
             # If percent modifiers exist
-            if stat in self.active_modifiers["Percent_modifiers"]:
-                temp_percent_value = self.active_modifiers["Percent_modifiers"][stat]
+            if stat in self._Entity__active_modifiers["Percent_modifiers"]:
+                temp_percent_value = self._Entity__active_modifiers[
+                    "Percent_modifiers"
+                ][stat]
                 temp_value += temp_value * (temp_percent_value / 100)
             # Update max stats
             if stat == "Health":
-                self.max_health = temp_value
+                self.__max_health = temp_value
 
             elif stat == "Mana":
-                self.max_mana = temp_value
+                self.__max_mana = temp_value
+
+    # Update Single Stat
+    # Updates a single stat of the entity with given value
+    # Params:   stat - string - stat to be updated
+    #           value - int - value to be set to the stat
+    # Return:   None
+    def update_single_stat(self, stat, value):
+        match stat.lower():
+            case "health":
+                self.__health = value
+            case "max_health":
+                self.__max_health = value
+            case "mana":
+                self.__mana = value
+            case "max_mana":
+                self.__max_mana = value
+            case "attack":
+                self.__attack = value
+            case "defence":
+                self.__defence = value
+            case "speed":
+                self.__speed = value
+            case "spell_power":
+                self.__spell_power = value
+
+    # Get Stat
+    # Gets given stat value of entity
+    # Only called on real objects within this file - editing the actual entity
+    # Params:   stat - string - stat to get
+    # Return:   value - int - stat value
+    def get_stat(self, stat):
+        match stat:
+            case "Health":
+                return self.__health
+
+                """case "Max Health":
+                return self.__max_health"""
+
+            case "Mana":
+                return self.__mana
+            case "Spell_power":
+                return self.__spell_power
+
+            case "Attack":
+                return self.__attack
+            case "Defence":
+                return self.__defence
+            case "Speed":
+                return self.__speed
 
 
 # Entities Factory
@@ -708,13 +977,17 @@ def create_entity(e_type, x, y, e_id):
 
     match e_type:  # MATCH WITH ENUMS UPON THAT UPDATE
         case dl.EntityType.WARRIOR:
-            return Warrior(e_id, [x, y])
+            entity = Warrior(e_id, [x, y])
 
         case dl.EntityType.MAGE:
-            return Mage(e_id, [x, y])
+            entity = Mage(e_id, [x, y])
 
         case dl.EntityType.SKELETON:
-            return Skeleton(e_id, [x, y])
+            entity = Skeleton(e_id, [x, y])
 
         case dl.EntityType.GOBLIN:
-            return Goblin(e_id, [x, y])
+            entity = Goblin(e_id, [x, y])
+
+    # Correct Entity information before returning to game state
+    entity.__temp_buffs = []
+    return entity

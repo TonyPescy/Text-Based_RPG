@@ -60,7 +60,7 @@ class Grid:
                     temp_col.append(Tile("Floor", True, []))
 
                 # After row was completed add row to grid
-                self.grid.append(temp_col)
+                self.__grid.append(temp_col)
 
     # Is Occupied Start
     # Checks grid location at given x,y to see if it is occupied
@@ -77,7 +77,10 @@ class Grid:
             )
             return None
 
-        if len(self.__grid[x][y].__occupants) == 0:  # empty list of occupants
+        # Get tile info at position
+        tile_info = self.__grid[x][y].get_info()
+
+        if len(tile_info.occupants) == 0:  # empty list of occupants
             return False
         else:
             return True
@@ -91,7 +94,7 @@ class Grid:
     #       e_ID - int - entity ID value
     # Return: None
     def occupy(self, x, y, e_ID):
-        self.__grid[x][y].__occupants.append(e_ID)
+        self.__grid[x][y].occupy_tile(e_ID)
 
     # Occupy End
 
@@ -102,10 +105,7 @@ class Grid:
     #       e_ID - int - id number of occupant to remove at given tile
     # Return: None
     def clear_occupant(self, x, y, e_ID):
-        # functionality with multiple occupants
-        for occupant in self.__grid[x][y].__occupants:
-            if occupant == e_ID:
-                self.__grid[x][y].__occupants.remove(occupant)
+        self.__grid[x][y].remove_occupant(e_ID)
 
     # Clear Occupant End
 
@@ -115,7 +115,8 @@ class Grid:
     # Params: x,y - int - grid position to clear
     # Returns: Bool - if tile is passable
     def is_passable(self, x, y):
-        return self.__grid[x][y].__passable
+        tile_info = self.__grid[x][y].get_info()
+        return tile_info.passable
 
     # Is Passable End
 
@@ -153,8 +154,8 @@ class Grid:
     # checks to see if x and y are valid in current grid
     # Params: x/y - ints - grid positon
     # Returns: Bool
-    def is_valid_grid_position(self, x, y):
-        if int(self.__width) > int(x) >= 0 and int(self.__height) > int(y) >= 0:
+    def is_valid_grid_position(grid_info, x, y):
+        if int(grid_info.width) > int(x) >= 0 and int(grid_info.height) > int(y) >= 0:
             return True
         else:
             return False
@@ -173,9 +174,11 @@ class Grid:
         # cast to int
         x = int(x)
         y = int(y)
+        # Get old tile info to preserve occupants
+        old_tile_info = self.__grid[x][y].get_info()
         # update temp_tile to have correct occupants
-        for occupant in self.__grid[x][y].__occupants:
-            temp_tile.__occupants.append(occupant)
+        for occupant in old_tile_info.occupants:
+            temp_tile.occupy_tile(occupant)
         # set tile on grid
         self.__grid[x][y] = temp_tile
 
@@ -188,11 +191,11 @@ class Grid:
         # typing fix
         x = int(x)
         y = int(y)
-        # spawn/get entity
+        # spawn/get entity - immutabble copy of entity is returned to game state for updating
         new_entity = entity.create_entity(entity_type, x, y, entity_ids_issued)
 
         # occupy position on map
-        self.occupy(x, y, new_entity.id)
+        self.occupy(x, y, entity_ids_issued)
 
         # return updated grid
         return new_entity
@@ -223,7 +226,7 @@ class Grid:
         else:
             return
         # Append to list
-        self.__grid[int(x)][int(y)].__item_list.append(item)
+        self.__grid[int(x)][int(y)].add_item(item)
 
     # Remove Item From Tile List Start
     # Removes the provided item from the current grids
@@ -241,7 +244,7 @@ class Grid:
     # Returns: None
     def set_tile_item_list(self, x, y, item_list):
         for item in item_list:
-            self.__grid[x][y].__item_list.append(item)
+            self.__grid[x][y].add_item(item)
 
     # Clear Tile Item List Start
     # Clears the current grid positions item list
@@ -249,7 +252,7 @@ class Grid:
     # Params: x,y - ints - grid position of tile
     # Returns: None
     def clear_tile_item_list(self, x, y):
-        self.__grid[x][y].__item_list.clear()
+        self.__grid[x][y].clear_item_list()
 
     # Is Within Range
     # Returns bool based on if provided tile location is within the range of the entity
@@ -380,10 +383,12 @@ class Grid:
             # Create ordered pair for neighbor
             next_position = [next_x, next_y]
 
+            grid_info = self.get_info()
+
             # Check valid grid position and passable tile
-            if self.is_valid_grid_position(next_x, next_y) and self.is_passable(
-                next_x, next_y
-            ):
+            if Grid.is_valid_grid_position(
+                grid_info, next_x, next_y
+            ) and self.is_passable(next_x, next_y):
                 neighbors.append(next_position)
 
         return neighbors
@@ -437,7 +442,7 @@ class Tile:
             passable=self.__passable,
             occupants=tuple(self.__occupants),
             modifiers=tuple(self.__modifiers.items()),  # Items() for key-value pairs
-            item_list=tuple(self.__item_list),
+            item_list=tuple(item.get_info().name for item in self.__item_list),
         )
 
     # Is Valid Tile Start
@@ -510,11 +515,11 @@ class Tile:
 
     # Get Item From List
     # Gets the item from the tiles item list
-    # Params: name - string - item name
+    # Params: item_name - string - item name
     # Return: item - item instance - matchning item in list
-    def get_item_from_list(self, name):
+    def get_item_from_list(self, item_name):
         for item in self.__item_list:
-            if item.name.lower() == name.lower():
+            if item.name.lower() == item_name.lower():
                 return item
             else:
                 continue
@@ -526,11 +531,41 @@ class Tile:
     # Returns: item instance or None
     def remove_item(self, item_name):
         for item in self.__item_list:
-            if item.name.lower() == item_name.lower():
+            item_info = item.get_info()
+            if item_info.name.lower() == item_name.lower():
                 self.__item_list.remove(item)
-                return item
+                return item_info
 
         return None
+
+    # Add Item
+    # Adds item to the tiles item list
+    # Params: item - Item - item instance to add
+    # Returns: None
+    def add_item(self, item):
+        self.__item_list.append(item)
+
+    # Clear Item List
+    # Clears the tiles item list
+    # Params: None
+    # Returns: None
+    def clear_item_list(self):
+        self.__item_list.clear()
+
+    # Occupy Tile
+    # Adds entity id to the tile to be occupied
+    # Params: entity_id - int - id of entity to occupy tile
+    # Returns: None
+    def occupy_tile(self, entity_id):
+        self.__occupants.append(entity_id)
+
+    # Remove Occupant
+    # Removes entity id from the tile to be unoccupied
+    # Params: entity_id - int - id of entity to unoccupy tile
+    # Returns: None
+    def remove_occupant(self, entity_id):
+        if entity_id in self.__occupants:
+            self.__occupants.remove(entity_id)
 
 
 # Direction Enum - used within A* pathfinding for manhattan distance calcs

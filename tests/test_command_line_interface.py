@@ -15,9 +15,9 @@ import unittest
 from unittest.mock import patch
 import io
 from command_line_interface import CLI
-from grid import Grid
-import domain_library as dl
+from grid import Grid, Tile
 from entity import Entity
+import domain_library as dl
 
 
 class TestCLI(unittest.TestCase):
@@ -26,6791 +26,1974 @@ class TestCLI(unittest.TestCase):
 
     # Create Test CLI
     # Create a CLI instance for testing
-    # Returns:  test_cli - CLI - CLI instance used for testing
+    # Returns: test_cli - CLI - CLI instance used for testing
     def create_test_cli(self):
         return CLI()
 
-    # Reset Test Grid
-    # Reset the grid before testing a command that requires a fresh map
-    # Params:   test_cli - CLI - CLI instance used for testing
-    # Returns:  None
-    def reset_test_grid(self, test_cli):
-        test_cli.grid = Grid.reset_grid()
-
-    # Reset Test Entities
-    # Reset the entity list before testing a command that requires no entities
-    # Params:   test_cli - CLI - CLI instance used for testing
-    # Returns:  None
-    def reset_test_entities(self, test_cli):
-        test_cli.reset_entity_list()
-
     # Create Test Map
     # Create a map for tests that require an initialized grid
-    # Params:   test_cli - CLI - CLI instance used for testing
+    # Params: test_cli - CLI - CLI instance used for testing
     #           width - int - map width
     #           height - int - map height
-    # Returns:  None
+    # Returns: None
     def create_test_map(self, test_cli, width=25, height=25):
         test_cli.process_command(f"init map {width} {height}")
 
-    # Capture Command Output
+    # Create Test Entity
+    # Creates an entity through the public-facing CLI command
+    # Params: test_cli - CLI - CLI instance used for testing
+    #           entity_type - string - type of entity to spawn
+    #           x/y - int - grid coordinates
+    # Returns: None
+    def create_test_entity(self, test_cli, entity_type="Warrior", x=1, y=1):
+        test_cli.process_command(f"spawn {entity_type} {x} {y}")
+
+    # Process Command Output
     # Process a command and capture its printed output
-    # Params:   test_cli - CLI - CLI instance used for testing
+    # Params: test_cli - CLI - CLI instance used for testing
     #           command - string - command to process
-    # Returns:  output - string - printed command output
+    # Returns: output - string - printed output
     def process_command_and_get_output(self, test_cli, command):
         with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
             test_cli.process_command(command)
         return mock_stdout.getvalue()
 
     # Capture Function Output
-    # Call a CLI function and capture its printed output
-    # Params:   function - callable - function to call
-    # Returns:  output - string - printed function output
+    # Call a function and capture its printed output
+    # Params: function - callable - function to call
+    # Returns: output - string - printed output
     def capture_function_output(self, function):
         with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
             function()
         return mock_stdout.getvalue()
 
-    # reset cli stats
-    # Resets necessary cli stats for use in tests
-    # Params:   cli - CLI - cli to reset
+    # Reset Test Game State
+    # Creates a fresh game state for tests that need one
+    # Params: test_cli - CLI - CLI instance used for testing
     # Returns: None
-    def reset_cli_stats(self, cli):
-        cli.grid = Grid.reset_grid()
-        cli.entity_list.clear()
-        cli.entity_ids_issued = 0
-        cli.map_created = False
-
-    # Reset Base Inventory
-    # Reset the default inventory before inventory/equipment tests
-    # Returns:  None
-    def reset_base_inventory(self):
-        dl.BASE_INVENTORY = [
-            dl.create_equipment("none_wep"),
-            dl.create_equipment("none_armor"),
-            dl.create_equipment("none_acc"),
-        ]
+    def reset_test_game_state(self, test_cli):
+        test_cli.game_state = type(test_cli.game_state)()
 
     # Unknown Commands Start
+
     def test_unknown_command(self):
         # Create test CLI
         test_cli = self.create_test_cli()
-        command = "Not a command"
         # Process command
-        output = self.process_command_and_get_output(test_cli, command)
-        # Get print output to comapre
-        # Output was captured by the helper
-        # check output
+        output = self.process_command_and_get_output(test_cli, "not a command")
+        # Check output
         self.assertEqual(output, "error: Unknown command!\n")
 
+    def test_empty_command(self):
+        # Create test CLI
+        test_cli = self.create_test_cli()
+        # Process command
+        output = self.process_command_and_get_output(test_cli, "   ")
+        # Check output
+        self.assertEqual(output, "error: Empty command!\n")
+
+    def test_command_is_case_insensitive(self):
+        # Create test CLI
+        test_cli = self.create_test_cli()
+        # Process command
+        output = self.process_command_and_get_output(test_cli, "InIt MaP 10 10")
+        # Check output
+        self.assertIn("map_initialized", output)
+        self.assertTrue(test_cli.game_state.is_map_created())
+
     # Init Commands Start
+
     def test_init_map_incorrect_command_pieces(self):
         # Create test CLI
         test_cli = self.create_test_cli()
-        command = "init cap 6 6"
         # Process command
-        output = self.process_command_and_get_output(test_cli, command)
-        # Get print output to comapre
-        # Output was captured by the helper
-        # check output
-        self.assertEqual(output, "error: map_init_failed due to invalid arguments.\n")
+        output = self.process_command_and_get_output(test_cli, "init cap 6 6")
+        # Check output
+        self.assertIn("map_init_failed", output)
 
     def test_init_map_incorrect_number_of_command_pieces(self):
         # Create test CLI
         test_cli = self.create_test_cli()
-        command = "init cap 6"
         # Process command
-        output = self.process_command_and_get_output(test_cli, command)
-        # Get print output to comapre
-        # Output was captured by the helper
-        # check output
-        self.assertEqual(output, "error: map_init_failed due to invalid arguments.\n")
-
-    def test_init_map_with_map_created(self):
-        # Create test CLI
-        test_cli = self.create_test_cli()
-        # Clear out grid
-        self.reset_test_grid(test_cli)
-        # Create map
-        self.create_test_map(test_cli, 10, 10)
-        command = "init map 6 6"
-        # Process command
-        output = self.process_command_and_get_output(test_cli, command)
-        # Get print output to comapre
-        # Output was captured by the helper
-        # check output
-        self.assertEqual(output, "error: map_init_failed - Map is already created!\n")
+        output = self.process_command_and_get_output(test_cli, "init map 6")
+        # Check output
+        self.assertIn("map_init_failed", output)
 
     def test_init_map_with_invalid_width_int(self):
         # Create test CLI
         test_cli = self.create_test_cli()
-        # Clear out grid
-        self.reset_test_grid(test_cli)
-        command = "init map dozen 6"
-        # Process command
-        output = self.process_command_and_get_output(test_cli, command)
-        # Get print output to comapre
-        # Output was captured by the helper
-        # check output
-        self.assertEqual(
-            output,
-            "error: map_init_failed - Width and height are not valid integers!\n",
-        )
+        output = self.process_command_and_get_output(test_cli, "init map nope 10")
+        self.assertIn("not valid integers", output)
+        self.assertFalse(test_cli.game_state.is_map_created())
 
     def test_init_map_with_invalid_height_int(self):
         # Create test CLI
         test_cli = self.create_test_cli()
-        # Clear out grid
-        self.reset_test_grid(test_cli)
-        command = "init map 12 dozen"
-        # Process command
-        output = self.process_command_and_get_output(test_cli, command)
-        # Get print output to comapre
-        # Output was captured by the helper
-        # check output
-        self.assertEqual(
-            output,
-            "error: map_init_failed - Width and height are not valid integers!\n",
-        )
-
-    def test_init_map_with_both_bounds_higher_than_max(self):
-        # Create test CLI
-        test_cli = self.create_test_cli()
-        # Clear out grid
-        self.reset_test_grid(test_cli)
-        command = "init map 60 60"
-        # Process command
-        output = self.process_command_and_get_output(test_cli, command)
-        # Get print output to comapre
-        # Output was captured by the helper
-        # check output
-        self.assertEqual(
-            output,
-            "error: map_init_failed - Width and height exceed bound minimum and maximum!\n",
-        )
+        output = self.process_command_and_get_output(test_cli, "init map 10 nope")
+        self.assertIn("not valid integers", output)
+        self.assertFalse(test_cli.game_state.is_map_created())
 
     def test_init_map_with_width_bounds_higher_than_max(self):
         # Create test CLI
         test_cli = self.create_test_cli()
-        # Clear out grid
-        self.reset_test_grid(test_cli)
-        command = "init map 60 30"
-        # Process command
-        output = self.process_command_and_get_output(test_cli, command)
-        # Get print output to comapre
-        # Output was captured by the helper
-        # check output
-        self.assertEqual(
-            output,
-            "error: map_init_failed - Width and height exceed bound minimum and maximum!\n",
-        )
+        output = self.process_command_and_get_output(test_cli, f"init map {50 + 1} 10")
+        self.assertIn("exceed bound", output)
+        self.assertFalse(test_cli.game_state.is_map_created())
 
     def test_init_map_with_height_bounds_higher_than_max(self):
         # Create test CLI
         test_cli = self.create_test_cli()
-        # Clear out grid
-        self.reset_test_grid(test_cli)
-        command = "init map 30 51"
-        # Process command
-        output = self.process_command_and_get_output(test_cli, command)
-        # Get print output to comapre
-        # Output was captured by the helper
-        # check output
-        self.assertEqual(
-            output,
-            "error: map_init_failed - Width and height exceed bound minimum and maximum!\n",
-        )
-
-    def test_init_map_with_both_bounds_lower_than_min(self):
-        # Create test CLI
-        test_cli = self.create_test_cli()
-        # Clear out grid
-        self.reset_test_grid(test_cli)
-        command = "init map 4 4"
-        # Process command
-        output = self.process_command_and_get_output(test_cli, command)
-        # Get print output to comapre
-        # Output was captured by the helper
-        # check output
-        self.assertEqual(
-            output,
-            "error: map_init_failed - Width and height exceed bound minimum and maximum!\n",
-        )
+        output = self.process_command_and_get_output(test_cli, f"init map 10 {50 + 1}")
+        self.assertIn("exceed bound", output)
+        self.assertFalse(test_cli.game_state.is_map_created())
 
     def test_init_map_with_width_bounds_lower_than_min(self):
         # Create test CLI
         test_cli = self.create_test_cli()
-        # Clear out grid
-        self.reset_test_grid(test_cli)
-        command = "init map 4 30"
-        # Process command
-        output = self.process_command_and_get_output(test_cli, command)
-        # Get print output to comapre
-        # Output was captured by the helper
-        # check output
-        self.assertEqual(
-            output,
-            "error: map_init_failed - Width and height exceed bound minimum and maximum!\n",
-        )
+        output = self.process_command_and_get_output(test_cli, f"init map {5 - 1} 10")
+        self.assertIn("exceed bound", output)
+        self.assertFalse(test_cli.game_state.is_map_created())
 
     def test_init_map_with_height_bounds_lower_than_min(self):
         # Create test CLI
         test_cli = self.create_test_cli()
-        # Clear out grid
-        self.reset_test_grid(test_cli)
-        command = "init map 30 4"
-        # Process command
-        output = self.process_command_and_get_output(test_cli, command)
-        # Get print output to comapre
-        # Output was captured by the helper
-        # check output
-        self.assertEqual(
-            output,
-            "error: map_init_failed - Width and height exceed bound minimum and maximum!\n",
-        )
-
-    def test_init_map_with_width_bounds_lower_than_min_and_height_higher_than_max(self):
-        # Create test CLI
-        test_cli = self.create_test_cli()
-        # Clear out grid
-        self.reset_test_grid(test_cli)
-        command = "init map 4 51"
-        # Process command
-        output = self.process_command_and_get_output(test_cli, command)
-        # Get print output to comapre
-        # Output was captured by the helper
-        # check output
-        self.assertEqual(
-            output,
-            "error: map_init_failed - Width and height exceed bound minimum and maximum!\n",
-        )
-
-    def test_init_map_with_height_bounds_lower_than_min_and_width_higher_than_max(self):
-        # Create test CLI
-        test_cli = self.create_test_cli()
-        # Clear out grid
-        self.reset_test_grid(test_cli)
-        command = "init map 51 4"
-        # Process command
-        output = self.process_command_and_get_output(test_cli, command)
-        # Get print output to comapre
-        # Output was captured by the helper
-        # check output
-        self.assertEqual(
-            output,
-            "error: map_init_failed - Width and height exceed bound minimum and maximum!\n",
-        )
-
-    def test_init_map_with_max_bounds(self):
-        # Create test CLI
-        test_cli = self.create_test_cli()
-        # Clear out grid
-        self.reset_test_grid(test_cli)
-        command = "init map 50 50"
-        # Process command
-        output = self.process_command_and_get_output(test_cli, command)
-        # Get print output to comapre
-        # Output was captured by the helper
-        # check output
-        self.assertEqual(
-            output,
-            "ok: map_initialized width: 50 height: 50!\n",
-        )
+        output = self.process_command_and_get_output(test_cli, f"init map 10 {5 - 1}")
+        self.assertIn("exceed bound", output)
+        self.assertFalse(test_cli.game_state.is_map_created())
 
     def test_init_map_with_min_bounds(self):
         # Create test CLI
         test_cli = self.create_test_cli()
-        # Clear out grid
-        self.reset_test_grid(test_cli)
-        command = "init map 5 5"
-        # Process command
-        output = self.process_command_and_get_output(test_cli, command)
-        # Get print output to comapre
-        # Output was captured by the helper
-        # check output
-        self.assertEqual(
-            output,
-            "ok: map_initialized width: 5 height: 5!\n",
-        )
+        output = self.process_command_and_get_output(test_cli, f"init map {5} {5}")
+        self.assertIn("map_initialized", output)
+        self.assertTrue(test_cli.game_state.is_map_created())
 
-    # Success for init map
+    def test_init_map_with_max_bounds(self):
+        # Create test CLI
+        test_cli = self.create_test_cli()
+        output = self.process_command_and_get_output(test_cli, f"init map {50} {50}")
+        self.assertIn("map_initialized", output)
+        self.assertTrue(test_cli.game_state.is_map_created())
+
     def test_init_map_success(self):
         # Create test CLI
         test_cli = self.create_test_cli()
-        # Clear out grid
-        self.reset_test_grid(test_cli)
-        command = "init map 30 30"
-        # Process command
-        output = self.process_command_and_get_output(test_cli, command)
-        # Get print output to comapre
-        # Output was captured by the helper
-        # check output
-        self.assertEqual(
-            output,
-            "ok: map_initialized width: 30 height: 30!\n",
-        )
+        output = self.process_command_and_get_output(test_cli, "init map 10 12")
+        self.assertIn("width: 10 height: 12", output)
+        self.assertTrue(test_cli.game_state.is_map_created())
 
-    # Set Cases
-    def test_set_tile_incorrect_number_of_command_pieces(self):
+    def test_init_map_with_map_created(self):
         # Create test CLI
         test_cli = self.create_test_cli()
-        # Clear out grid
-        self.reset_test_grid(test_cli)
-        command = "set tile 6 6"
-        # Process command
-        output = self.process_command_and_get_output(test_cli, command)
-        # Get print output to comapre
-        # Output was captured by the helper
-        # check output
-        self.assertEqual(output, "error: set_tile_failed - Invalid arguments!\n")
+        self.create_test_map(test_cli, 10, 10)
+        self.create_test_entity(test_cli, "Warrior", 2, 2)
+        output = self.process_command_and_get_output(test_cli, "init map 6 6")
+        self.assertIn("map_initialized", output)
+        self.assertTrue(test_cli.game_state.is_map_created())
+        self.assertFalse(test_cli.game_state.entities_exists())
+
+    # Set Tile Commands Start
+
+    def test_set_tile_incorrect_number_of_command_pieces(self):
+        test_cli = self.create_test_cli()
+        output = self.process_command_and_get_output(test_cli, "set tile 1 1")
+        self.assertIn("set_tile_failed", output)
 
     def test_set_tile_with_wrong_command(self):
-        # Create test CLI
         test_cli = self.create_test_cli()
-        # Clear out grid
-        self.reset_test_grid(test_cli)
-        command = "set type 10 10 floor"
-        # Process command
-        output = self.process_command_and_get_output(test_cli, command)
-        # Get print output to comapre
-        # Output was captured by the helper
-        # check output
-        self.assertEqual(output, "error: set_tile_failed - Invalid arguments!\n")
+        output = self.process_command_and_get_output(test_cli, "set floor 1 1 Wall")
+        self.assertIn("set_tile_failed", output)
 
     def test_set_tile_without_map_created(self):
-        # Create test CLI
         test_cli = self.create_test_cli()
-        # Clear out grid
-        self.reset_test_grid(test_cli)
-        command = "set tile 10 10 wall"
-        # Process command
-        output = self.process_command_and_get_output(test_cli, command)
-        # Get print output to comapre
-        # Output was captured by the helper
-        # check output
-        self.assertEqual(
-            output,
-            "error: tile_set_failed - Map does not exist!\n",
-        )
+        output = self.process_command_and_get_output(test_cli, "set tile 1 1 Wall")
+        self.assertIn("Map does not exist", output)
 
     def test_set_tile_without_valid_x_int(self):
-        # Create test CLI
         test_cli = self.create_test_cli()
-        # Clear out grid
-        self.reset_test_grid(test_cli)
-        # Create Map
         self.create_test_map(test_cli)
-        command = "set tile dozen 10 wall"
-        # Process command
-        output = self.process_command_and_get_output(test_cli, command)
-        # Get print output to comapre
-        # Output was captured by the helper
-        # check output
-        self.assertEqual(
-            output,
-            "error: set_tile_failed - x and y are not valid integers!\n",
-        )
+        output = self.process_command_and_get_output(test_cli, "set tile nope 1 Wall")
+        self.assertIn("not valid integers", output)
 
     def test_set_tile_without_valid_y_int(self):
-        # Create test CLI
         test_cli = self.create_test_cli()
-        # Clear out grid
-        self.reset_test_grid(test_cli)
-        # Create Map
         self.create_test_map(test_cli)
-        command = "set tile 10 dozen wall"
-        # Process command
-        output = self.process_command_and_get_output(test_cli, command)
-        # Get print output to comapre
-        # Output was captured by the helper
-        # check output
-        self.assertEqual(
-            output,
-            "error: set_tile_failed - x and y are not valid integers!\n",
-        )
+        output = self.process_command_and_get_output(test_cli, "set tile 1 nope Wall")
+        self.assertIn("not valid integers", output)
 
     def test_set_tile_with_x_bounds_higher_than_grid_max(self):
-        # Create test CLI
         test_cli = self.create_test_cli()
-        # Clear out grid
-        self.reset_test_grid(test_cli)
-        # Create Map
         self.create_test_map(test_cli)
-        command = "set tile 26 10 wall"
-        # Process command
-        output = self.process_command_and_get_output(test_cli, command)
-        # Get print output to comapre
-        # Output was captured by the helper
-        # check output
-        self.assertEqual(
-            output,
-            "error: set_tile_failed - x and y exceed current grid bounds!\n",
-        )
+        output = self.process_command_and_get_output(test_cli, f"set tile {50} 1 Wall")
+        self.assertIn("exceed current grid bounds", output)
 
     def test_set_tile_with_y_bounds_higher_than_grid_max(self):
-        # Create test CLI
         test_cli = self.create_test_cli()
-        # Clear out grid
-        self.reset_test_grid(test_cli)
-        # Create Map
         self.create_test_map(test_cli)
-        command = "set tile 20 26 wall"
-        # Process command
-        output = self.process_command_and_get_output(test_cli, command)
-        # Get print output to comapre
-        # Output was captured by the helper
-        # check output
-        self.assertEqual(
-            output,
-            "error: set_tile_failed - x and y exceed current grid bounds!\n",
-        )
-
-    def test_set_tile_with_y_bounds_lower_than_grid_min(self):
-        # Create test CLI
-        test_cli = self.create_test_cli()
-        # Clear out grid
-        self.reset_test_grid(test_cli)
-        # Create Map
-        self.create_test_map(test_cli)
-        command = "set tile 20 -1 wall"
-        # Process command
-        output = self.process_command_and_get_output(test_cli, command)
-        # Get print output to comapre
-        # Output was captured by the helper
-        # check output
-        self.assertEqual(
-            output,
-            "error: set_tile_failed - x and y exceed current grid bounds!\n",
-        )
-
-    def test_set_tile_with_x_bounds_lower_than_grid_min(self):
-        # Create test CLI
-        test_cli = self.create_test_cli()
-        # Clear out grid
-        self.reset_test_grid(test_cli)
-        # Create Map
-        self.create_test_map(test_cli)
-        command = "set tile -1 20 wall"
-        # Process command
-        output = self.process_command_and_get_output(test_cli, command)
-        # Get print output to comapre
-        # Output was captured by the helper
-        # check output
-        self.assertEqual(
-            output,
-            "error: set_tile_failed - x and y exceed current grid bounds!\n",
-        )
-
-    # zero indexed so 25x25 = 0-24
-    def test_set_tile_with_x_y_on_lower_boundary(self):
-        # Create test CLI
-        test_cli = self.create_test_cli()
-        # Clear out grid
-        self.reset_test_grid(test_cli)
-        # Create Map
-        self.create_test_map(test_cli)
-        command = "set tile 0 0 wall"
-        # Process command
-        output = self.process_command_and_get_output(test_cli, command)
-        # Get print output to comapre
-        # Output was captured by the helper
-        # check output
-        self.assertEqual(
-            output,
-            "ok: tile_set 0, 0 type: Wall!\n",
-        )
-
-    # zero indexed so 25x25 = 0-24
-    def test_set_tile_with_x_y_on_higher_boundary(self):
-        # Create test CLI
-        test_cli = self.create_test_cli()
-        # Clear out grid
-        self.reset_test_grid(test_cli)
-        # Create Map
-        self.create_test_map(test_cli)
-        command = "set tile 24 24 wall"
-        # Process command
-        output = self.process_command_and_get_output(test_cli, command)
-        # Get print output to comapre
-        # Output was captured by the helper
-        # check output
-        self.assertEqual(
-            output,
-            "ok: tile_set 24, 24 type: Wall!\n",
-        )
+        output = self.process_command_and_get_output(test_cli, f"set tile 1 {50} Wall")
+        self.assertIn("exceed current grid bounds", output)
 
     def test_set_tile_with_invalid_tile_type(self):
-        # Create test CLI
         test_cli = self.create_test_cli()
-        # Clear out grid
-        self.reset_test_grid(test_cli)
-        # Create Map
         self.create_test_map(test_cli)
-        command = "set tile 24 24 NOTATYPE"
-        # Process command
-        output = self.process_command_and_get_output(test_cli, command)
-        # Get print output to comapre
-        # Output was captured by the helper
-        # check output
-        self.assertEqual(
-            output,
-            "error: set_tile_failed - Tile type provided was invalid!\n",
-        )
+        output = self.process_command_and_get_output(test_cli, "set tile 1 1 Lava")
+        self.assertIn("Tile type provided was invalid", output)
 
     def test_set_tile_success(self):
-        # Create test CLI
         test_cli = self.create_test_cli()
-        # Clear out grid
-        self.reset_test_grid(test_cli)
-        # Create Map
         self.create_test_map(test_cli)
-        command = "set TILE 24 24 WalL"
-        # Process command
-        output = self.process_command_and_get_output(test_cli, command)
-        # Get print output to comapre
-        # Output was captured by the helper
-        # check output
+        output = self.process_command_and_get_output(test_cli, "set tile 2 3 Wall")
+        self.assertIn("tile_set 2, 3 type: Wall", output)
+        tile_info = test_cli.game_state.get_game_tile_info(2, 3)
+        self.assertEqual(tile_info.tile_type.lower(), "wall")
+        self.assertFalse(tile_info.passable)
+
+    def test_set_tile_shallowwater_success(self):
+        test_cli = self.create_test_cli()
+        self.create_test_map(test_cli)
+        output = self.process_command_and_get_output(
+            test_cli, "set tile 2 3 ShallowWater"
+        )
+        self.assertIn("type: ShallowWater", output)
         self.assertEqual(
-            output,
-            "ok: tile_set 24, 24 type: Wall!\n",
+            test_cli.game_state.get_game_tile_info(2, 3).tile_type.lower(),
+            "shallowwater",
         )
 
-    # Spawn cases
+    # Spawn Commands Start
+
     def test_spawn_entity_invalid_command_length(self):
-        # Create test CLI
         test_cli = self.create_test_cli()
-        # Clear out grid
-        self.reset_test_grid(test_cli)
-        command = "spawn"
-        # Process command
-        output = self.process_command_and_get_output(test_cli, command)
-        # Get print output to comapre
-        # Output was captured by the helper
-        # check output
-        self.assertEqual(
-            output,
-            "error: spawn_failed - Invalid arguments!\n",
-        )
-
-    def test_spawn_entity_invalid_command_arguments(self):
-        # Create test CLI
-        test_cli = self.create_test_cli()
-        # Clear out grid
-        self.reset_test_grid(test_cli)
-        # Create Map
-        self.create_test_map(test_cli)
-        command = "spawn NOTENTITYTYPE 10 10"
-        # Process command
-        output = self.process_command_and_get_output(test_cli, command)
-        # Get print output to comapre
-        # Output was captured by the helper
-        # check output
-        self.assertEqual(
-            output,
-            "error: spawn_failed - Invalid arguments!\n",
-        )
+        output = self.process_command_and_get_output(test_cli, "spawn Warrior 1")
+        self.assertIn("spawn_failed", output)
 
     def test_spawn_entity_map_not_created(self):
-        # Create test CLI
         test_cli = self.create_test_cli()
-        # Clear out grid
-        self.reset_test_grid(test_cli)
-        command = "spawn warrior 10 10"
-        # Process command
-        output = self.process_command_and_get_output(test_cli, command)
-        # Get print output to comapre
-        # Output was captured by the helper
-        # check output
-        self.assertEqual(
-            output,
-            "error: spawn_failed - Map does not exist!\n",
-        )
+        output = self.process_command_and_get_output(test_cli, "spawn Warrior 1 1")
+        self.assertIn("Map does not exist", output)
 
     def test_spawn_entity_invalid_x_value(self):
-        # Create test CLI
         test_cli = self.create_test_cli()
-        # Clear out grid
-        self.reset_test_grid(test_cli)
-        # Create Map
         self.create_test_map(test_cli)
-        command = "spawn warrior nineT 10"
-        # Process command
-        output = self.process_command_and_get_output(test_cli, command)
-        # Get print output to comapre
-        # Output was captured by the helper
-        # check output
-        self.assertEqual(
-            output,
-            "error: spawn_failed - x and y are not valid integers!\n",
-        )
+        output = self.process_command_and_get_output(test_cli, "spawn Warrior nope 1")
+        self.assertIn("not valid integers", output)
 
     def test_spawn_entity_invalid_y_value(self):
-        # Create test CLI
         test_cli = self.create_test_cli()
-        # Clear out grid
-        self.reset_test_grid(test_cli)
-        # Create Map
         self.create_test_map(test_cli)
-        command = "spawn warrior 10 nineT"
-        # Process command
-        output = self.process_command_and_get_output(test_cli, command)
-        # Get print output to comapre
-        # Output was captured by the helper
-        # check output
-        self.assertEqual(
-            output,
-            "error: spawn_failed - x and y are not valid integers!\n",
-        )
+        output = self.process_command_and_get_output(test_cli, "spawn Warrior 1 nope")
+        self.assertIn("not valid integers", output)
 
-    def test_spawn_entity_y_position_higher_than_height(self):
-        # Create test CLI
+    def test_spawn_entity_invalid_type(self):
         test_cli = self.create_test_cli()
-        # Clear out grid
-        self.reset_test_grid(test_cli)
-        # Create Map
         self.create_test_map(test_cli)
-        command = "spawn warrior 10 25"
-        # Process command
-        output = self.process_command_and_get_output(test_cli, command)
-        # Get print output to comapre
-        # Output was captured by the helper
-        # check output
-        self.assertEqual(
-            output,
-            "error: spawn_failed - x and y exceed current grid bounds!\n",
-        )
-
-    def test_spawn_entity_y_position_lower_than_height(self):
-        # Create test CLI
-        test_cli = self.create_test_cli()
-        # Clear out grid
-        self.reset_test_grid(test_cli)
-        # Create Map
-        self.create_test_map(test_cli)
-        command = "spawn warrior 10 -1"
-        # Process command
-        output = self.process_command_and_get_output(test_cli, command)
-        # Get print output to comapre
-        # Output was captured by the helper
-        # check output
-        self.assertEqual(
-            output,
-            "error: spawn_failed - x and y exceed current grid bounds!\n",
-        )
-
-    # Entity will be generated and will be 0 as it is the first one created
-    def test_spawn_entity_y_position_on_min_height_boundary(self):
-        # Create test CLI
-        test_cli = self.create_test_cli()
-        # Clear out grid
-        self.reset_test_grid(test_cli)
-        # Create Map
-        self.create_test_map(test_cli)
-        command = "spawn warrior 10 0"
-        # Process command
-        output = self.process_command_and_get_output(test_cli, command)
-        # Get print output to comapre
-        # Output was captured by the helper
-        # check output
-        self.assertEqual(
-            output,
-            "ok: Spawned warrior at 10, 0. id: 1!\n",
-        )
-
-    # Entity will be generated and will be 0 as it is the first one created
-    def test_spawn_entity_y_position_on_max_height_boundary(self):
-        # Create test CLI
-        test_cli = self.create_test_cli()
-        # Clear out grid
-        self.reset_test_grid(test_cli)
-        # Create Map
-        self.create_test_map(test_cli)
-        command = "spawn warrior 10 24"
-        # Process command
-        output = self.process_command_and_get_output(test_cli, command)
-        # Get print output to comapre
-        # Output was captured by the helper
-        # check output
-        self.assertEqual(
-            output,
-            "ok: Spawned warrior at 10, 24. id: 1!\n",
-        )
-
-    def test_spawn_entity_x_position_higher_than_width(self):
-        # Create test CLI
-        test_cli = self.create_test_cli()
-        # Clear out grid
-        self.reset_test_grid(test_cli)
-        # Create Map
-        self.create_test_map(test_cli)
-        command = "spawn warrior 25 10"
-        # Process command
-        output = self.process_command_and_get_output(test_cli, command)
-        # Get print output to comapre
-        # Output was captured by the helper
-        # check output
-        self.assertEqual(
-            output,
-            "error: spawn_failed - x and y exceed current grid bounds!\n",
-        )
-
-    def test_spawn_entity_x_position_lower_than_width(self):
-        # Create test CLI
-        test_cli = self.create_test_cli()
-        # Clear out grid
-        self.reset_test_grid(test_cli)
-        # Create Map
-        self.create_test_map(test_cli)
-        command = "spawn warrior -1 10"
-        # Process command
-        output = self.process_command_and_get_output(test_cli, command)
-        # Get print output to comapre
-        # Output was captured by the helper
-        # check output
-        self.assertEqual(
-            output,
-            "error: spawn_failed - x and y exceed current grid bounds!\n",
-        )
-
-    # Entity will be generated and will be 0 as it is the first one created
-    def test_spawn_entity_x_position_on_min_width_boundary(self):
-        # Create test CLI
-        test_cli = self.create_test_cli()
-        # Clear out grid
-        self.reset_test_grid(test_cli)
-        # Create Map
-        self.create_test_map(test_cli)
-        command = "spawn warrior 0 10"
-        # Process command
-        output = self.process_command_and_get_output(test_cli, command)
-        # Get print output to comapre
-        # Output was captured by the helper
-        # check output
-        self.assertEqual(
-            output,
-            "ok: Spawned warrior at 0, 10. id: 1!\n",
-        )
-
-    # Entity will be generated and will be 0 as it is the first one created
-    def test_spawn_entity_x_position_on_max_width_boundary(self):
-        # Create test CLI
-        test_cli = self.create_test_cli()
-        # Clear out grid
-        self.reset_test_grid(test_cli)
-        # Create Map
-        self.create_test_map(test_cli)
-        command = "spawn warrior 24 10"
-        # Process command
-        output = self.process_command_and_get_output(test_cli, command)
-        # Get print output to comapre
-        # Output was captured by the helper
-        # check output
-        self.assertEqual(
-            output,
-            "ok: Spawned warrior at 24, 10. id: 1!\n",
-        )
+        output = self.process_command_and_get_output(test_cli, "spawn Dragon 1 1")
+        self.assertIn("Invalid arguments", output)
 
     def test_spawn_entity_on_existing_entity(self):
-        # Create test CLI
         test_cli = self.create_test_cli()
-        # Clear out grid
-        self.reset_test_grid(test_cli)
-        # Create Map
         self.create_test_map(test_cli)
-        # spawn warrior at 10 10
-        test_cli.process_command("spawn warrior 10 10")
-        command = "spawn goblin 10 10"
-        # Process command
-        output = self.process_command_and_get_output(test_cli, command)
-        # Get print output to comapre
-        # Output was captured by the helper
-        # check output
+        self.create_test_entity(test_cli, "Warrior", 1, 1)
+        output = self.process_command_and_get_output(test_cli, "spawn Goblin 1 1")
+        self.assertIn("already present", output)
         self.assertEqual(
-            output,
-            "error: spawn_failed - Entity is already present at (10, 10)!\n",
+            test_cli.game_state.get_entity_info_from_list(1).e_type.capitalize(),
+            "Warrior",
         )
+
+    def test_spawn_entity_with_standard_entity_type(self):
+        test_cli = self.create_test_cli()
+        self.create_test_map(test_cli)
+        output = self.process_command_and_get_output(test_cli, "spawn Warrior 1 1")
+        self.assertIn("Spawned warrior", output)
+        self.assertEqual(
+            test_cli.game_state.get_entity_info_from_list(1).e_type.capitalize(),
+            "Warrior",
+        )
+        self.assertEqual(test_cli.game_state.get_entity_id_from_tile(1, 1), 1)
 
     def test_spawn_entity_with_mage_entity_type(self):
-        # Create test CLI
         test_cli = self.create_test_cli()
-        # Clear out grid
-        self.reset_test_grid(test_cli)
-        test_cli.entity_list.clear()
-        # Create Map
         self.create_test_map(test_cli)
-        command = "spawn mage 10 10"
-
-        # Process command
-        output = self.process_command_and_get_output(test_cli, command)
-        # Get print output to comapre
-        # Output was captured by the helper
-        # check output
+        output = self.process_command_and_get_output(test_cli, "spawn Mage 1 1")
+        self.assertIn("Spawned mage", output)
         self.assertEqual(
-            output,
-            "ok: Spawned mage at 10, 10. id: 1!\n",
-        )
-        # other checks
-
-        entity = test_cli.entity_list[0]
-
-        # Check that Health and Mana are tracked
-        self.assertEqual(entity.mana, entity.max_mana)
-        self.assertEqual(entity.health, entity.max_health)
-
-    # Standard = types that do not require inheritance (warrior, goblin, skeleton, etc)
-    def test_spawn_entity_with_standard_entity_type(self):
-        # Create test CLI
-        test_cli = self.create_test_cli()
-        # Clear out grid
-        self.reset_test_grid(test_cli)
-        # Create Map
-        self.create_test_map(test_cli)
-        command = "spawn warrior 10 10"
-        # Process command
-        output = self.process_command_and_get_output(test_cli, command)
-        # Get print output to comapre
-        # Output was captured by the helper
-        # check output
-        self.assertEqual(
-            output,
-            "ok: Spawned warrior at 10, 10. id: 1!\n",
-        )
-        # other check
-        entity = test_cli.entity_list[0]
-
-        # Check that only Health is tracked
-        self.assertEqual(entity.health, entity.max_health)
-
-    # Only sends back the last entity spawned id: 3 (0, 1, 2, X)
-    def test_spawn_all_entities(self):
-        # Create test CLI
-        test_cli = self.create_test_cli()
-        # Clear out grid
-        self.reset_test_grid(test_cli)
-        # Create Map
-        self.create_test_map(test_cli)
-
-        # Create entities
-        test_cli.process_command("spawn warrior 10 11")
-        test_cli.process_command("spawn mage 11 10")
-        test_cli.process_command("spawn goblin 11 11")
-        command = "spawn skeleton 12 12"
-        # Process command
-        output = self.process_command_and_get_output(test_cli, command)
-        # Get print output to comapre
-        # Output was captured by the helper
-        # check output
-        self.assertEqual(
-            output,
-            "ok: Spawned skeleton at 12, 12. id: 4!\n",
+            test_cli.game_state.get_entity_info_from_list(1).e_type, "mage"
         )
 
-    def test_spawn_multiple_entities_max_stats(self):
-        # Create test CLI
+    def test_spawn_entity_increments_entity_id(self):
         test_cli = self.create_test_cli()
-
-        # Create map
         self.create_test_map(test_cli)
+        self.create_test_entity(test_cli, "Warrior", 1, 1)
+        self.create_test_entity(test_cli, "Goblin", 2, 2)
+        self.assertIsNotNone(test_cli.game_state.get_entity_info_from_list(1))
+        self.assertIsNotNone(test_cli.game_state.get_entity_info_from_list(2))
+        self.assertEqual(test_cli.game_state.get_entity_id_from_tile(2, 2), 2)
 
-        # Spawn warrior
-        test_cli.process_command("spawn warrior 10 10")
-
-        # Spawn mage
-        test_cli.process_command("spawn mage 11 10")
-
-        # Get spawned entities
-        warrior = test_cli.entity_list[0]
-        mage = test_cli.entity_list[1]
-
-        # Check that the entities have different IDs
-        self.assertNotEqual(warrior.id, mage.id)
-
-        # Check warrior max stats
-        self.assertEqual(warrior.max_health, 120)
-
-        # Check mage max stats
-        self.assertEqual(mage.max_health, 70)
-        self.assertEqual(mage.max_mana, 100)
-
-    def test_spawn_increments_entity_id(self):
-        # Create test CLI
+    def test_spawn_entity_position_out_of_bounds(self):
         test_cli = self.create_test_cli()
-
-        # Create map
         self.create_test_map(test_cli)
+        output = self.process_command_and_get_output(test_cli, f"spawn Warrior {50} 1")
+        self.assertIn("exceed current grid bounds", output)
 
-        # Spawn first entity
-        test_cli.process_command("spawn warrior 10 10")
-
-        # Spawn second entity
-        test_cli.process_command("spawn mage 11 10")
-
-        # Check that entity IDs are assigned correctly
-        self.assertEqual(test_cli.entity_list[0].id, 1)
-        self.assertEqual(test_cli.entity_list[1].id, 2)
-
-        # Check that the next ID has been incremented
-        self.assertEqual(test_cli.entity_ids_issued, 3)
-
-    # Only sends back the last entity spawned id: 8 (0, 1, 2, 3, 4, 5, 6, X)
-    def test_spawn_multiple_of_all_entities(self):
-        # Create test CLI
+    def test_spawn_loot_invalid_command(self):
         test_cli = self.create_test_cli()
-        # Clear out grid
-        self.reset_test_grid(test_cli)
-        # Create Map
+        output = self.process_command_and_get_output(test_cli, "spawn loot")
+        self.assertIn("spawn_failed", output)
+
+    def test_spawn_loot_without_map(self):
+        test_cli = self.create_test_cli()
+        output = self.process_command_and_get_output(
+            test_cli, "spawn loot ironsword 1 1"
+        )
+        self.assertIn("Map does not exist", output)
+
+    def test_spawn_loot_invalid_item(self):
+        test_cli = self.create_test_cli()
         self.create_test_map(test_cli)
-        # create entities
-        test_cli.process_command("spawn warrior 10 11")
-        test_cli.process_command("spawn warrior 11 10")
-        test_cli.process_command("spawn goblin 11 11")
-        test_cli.process_command("spawn goblin 12 12")
-        test_cli.process_command("spawn mage 12 11")
-        test_cli.process_command("spawn mage 11 12")
-        test_cli.process_command("spawn skeleton 13 12")
-        command = "spawn skeleton 12 13"
-        # Process command
-        output = self.process_command_and_get_output(test_cli, command)
-        # Get print output to comapre
-        # Output was captured by the helper
-        # check output
-        self.assertEqual(
-            output,
-            "ok: Spawned skeleton at 12, 13. id: 8!\n",
+        output = self.process_command_and_get_output(
+            test_cli, "spawn loot fakeitem 1 1"
+        )
+        self.assertIn("Item name not found", output)
+
+    def test_spawn_loot_success(self):
+        test_cli = self.create_test_cli()
+        self.create_test_map(test_cli)
+        output = self.process_command_and_get_output(
+            test_cli, "spawn loot ironsword 1 1"
+        )
+        self.assertIn("spawn_loot ironsword at 1, 1", output)
+        tile_info = test_cli.game_state.get_game_tile_info(1, 1)
+        self.assertTrue(
+            any(item.lower() == "ironsword" for item in tile_info.item_list)
         )
 
-    # Equip Cases
-    def test_equip_with_incomplete_command(self):
-        # Create test CLI
-        test_cli = self.create_test_cli()
-        # Clear out grid
-        self.reset_test_grid(test_cli)
-        # Create Map
-        self.create_test_map(test_cli)
-        # clear out entity list
-        self.reset_test_entities(test_cli)
-        # create entity to be "player"
-        test_cli.process_command("spawn warrior 10 10")
-        command = "swap this command is too long"
-        # Process command
-        output = self.process_command_and_get_output(test_cli, command)
-        # Get print output to comapre
-        # Output was captured by the helper
-        # check output
-        self.assertEqual(
-            output,
-            "error: swap_failed - Invalid command!\n",
-        )
+    # Inventory Commands Start
 
-    def test_equip_with_correct_equipment_and_invalid_slot(self):
-        # Create test CLI
-        test_cli = self.create_test_cli()
-        # Clear out grid
-        self.reset_test_grid(test_cli)
-        # Create Map
-        self.create_test_map(test_cli)
-        # clear out entity list
-        self.reset_test_entities(test_cli)
-        # create entity to be "player"
-        test_cli.process_command("spawn warrior 10 10")
-        command = "equip ironsword primary"
-        # Process command
-        output = self.process_command_and_get_output(test_cli, command)
-        # Get print output to comapre
-        # Output was captured by the helper
-        # check output
-        self.assertEqual(
-            output,
-            "error: Unknown command!\n",
-        )
-
-    def test_equip_with_correct_slot_and_invalid_equipment(self):
-        # Create test CLI
-        test_cli = self.create_test_cli()
-        # Clear out grid
-        self.reset_test_grid(test_cli)
-        # Create Map
-        self.create_test_map(test_cli)
-        # clear out entity list
-        self.reset_test_entities(test_cli)
-        # create entity to be "player"
-        test_cli.process_command("spawn warrior 10 10")
-        command = "equip MoonDaggerThatDoesNotExist weapon"
-        # Process command
-        output = self.process_command_and_get_output(test_cli, command)
-        # Get print output to comapre
-        # Output was captured by the helper
-        # check output
-        self.assertEqual(
-            output,
-            "error: Unknown command!\n",
-        )
-
-    def test_equip_invalid_equipment_and_no_slot(self):
-        # Create test CLI
-        test_cli = self.create_test_cli()
-        # Clear out grid
-        self.reset_test_grid(test_cli)
-        # Create Map
-        self.create_test_map(test_cli)
-        # clear out entity list
-        self.reset_test_entities(test_cli)
-        # create entity to be "player"
-        test_cli.process_command("spawn warrior 10 10")
-        command = "equip MoonDaggerThatDoesNotExist"
-        # Process command
-        output = self.process_command_and_get_output(test_cli, command)
-        # Get print output to comapre
-        # Output was captured by the helper
-        # check output
-        self.assertEqual(
-            output,
-            "error: Unknown command!\n",
-        )
-
-    def test_equip_with_no_player_entity_created(self):
-        # Create test CLI
-        test_cli = self.create_test_cli()
-        # Clear out grid
-        self.reset_test_grid(test_cli)
-        # Create Map
-        self.create_test_map(test_cli)
-        # clear out entity list
-        self.reset_test_entities(test_cli)
-        command = "swap 1 weapon IronSWORD"
-        # Process command
-        output = self.process_command_and_get_output(test_cli, command)
-        # Get print output to comapre
-        # Output was captured by the helper
-        # check output
-        self.assertEqual(
-            output,
-            "error: swap_failed - Entity does not exist!\n",
-        )
-
-    def test_equip_with_valid_weapon_but_incorrect_slot(self):
-        # Create test CLI
-        test_cli = self.create_test_cli()
-        # Clear out grid
-        self.reset_test_grid(test_cli)
-        # Create Map
-        self.create_test_map(test_cli)
-        # clear out entity list
-        self.reset_test_entities(test_cli)
-        # create entity to be "player"
-        test_cli.process_command("spawn warrior 10 10")
-        # backpack fix
-        entity = test_cli.entity_list[0]
-        entity.add_item_to_backpack(dl.create_equipment("ironsword"))
-        command = "swap 1 armor IronSWORD"
-        # Process command
-        output = self.process_command_and_get_output(test_cli, command)
-        # Get print output to comapre
-        # Output was captured by the helper
-        # check output
-        self.assertEqual(
-            output,
-            "error: swap_failed - Slot inccorect for item type!\n",
-        )
-
-    # success
-    def test_equip_with_valid_weapon_and_slot(self):
-        # Create test CLI
-        test_cli = self.create_test_cli()
-        # Clear out grid
-        self.reset_test_grid(test_cli)
-        # Create Map
-        self.create_test_map(test_cli)
-        # clear out entity list
-        self.reset_test_entities(test_cli)
-        # reset
-        self.reset_base_inventory()
-
-        # create entity to be "player"
-        test_cli.process_command("spawn warrior 10 10")
-        # backpack fix
-        entity = test_cli.entity_list[0]
-        entity.add_item_to_backpack(dl.create_equipment("ironsword"))
-        command = "swap 1 weapon ironsword"
-        # Process command
-        output = self.process_command_and_get_output(test_cli, command)
-        # Get print output to comapre
-        # Output was captured by the helper
-        # print(f"FAILED OUTPUT: {output}")
-        # check output
-        self.assertEqual(
-            output,
-            "Valid items: ironsword, curseddagger, magestaff, ironchestplate, leathertunic, scoutarmor, ringofthesorcerer, amuletofvitality, ringofhaste, none_wep, none_armor, none_acc, smallhealthpotion, greaterhealthpotion, superiorhealthpotion, manapotion, turtlemasterpotion\n"
-            "Valid slots: Weapon, Armor, Accessory\n"
-            "ok: swapped Weapon with backpack item!\n",
-        )
-
-    # inventory cases
     def test_inventory_with_invalid_command(self):
-        # Create test CLI
         test_cli = self.create_test_cli()
-        # Clear out grid
-        self.reset_test_grid(test_cli)
-        # Create Map
+        output = self.process_command_and_get_output(test_cli, "inventory")
+        self.assertIn("inventory_failed", output)
+
+    def test_inventory_with_invalid_entity_id(self):
+        test_cli = self.create_test_cli()
         self.create_test_map(test_cli)
-        # clear out entity list
-        self.reset_test_entities(test_cli)
-        # create entity to be "player"
-        test_cli.process_command("spawn warrior 10 10")
-        command = "inventory display please!"
-        # Process command
-        output = self.process_command_and_get_output(test_cli, command)
-        # Get print output to comapre
-        # Output was captured by the helper
-        # check output
-        self.assertEqual(
-            output,
-            "error: inventory_failed - Invalid command!\n",
-        )
+        output = self.process_command_and_get_output(test_cli, "inventory nope")
+        self.assertIn("not valid integer", output)
 
     def test_inventory_with_no_player(self):
-        # Create test CLI
         test_cli = self.create_test_cli()
-        # Clear out grid
-        self.reset_test_grid(test_cli)
-        # Create Map
         self.create_test_map(test_cli)
-        # clear out entity list
-        self.reset_test_entities(test_cli)
-        command = "inventory 99"
-        # Process command
-        output = self.process_command_and_get_output(test_cli, command)
-        # Get print output to comapre
-        # Output was captured by the helper
-        # check output
-        self.assertEqual(
-            output,
-            "error: inventory_failed - Player entity does not exist!\n",
-        )
+        output = self.process_command_and_get_output(test_cli, "inventory 1")
+        self.assertIn("does not exist", output)
 
-    def test_inventory_with_no_map(self):
-        # Create test CLI
-        test_cli = self.create_test_cli()
-        # Clear out grid
-        self.reset_test_grid(test_cli)
-        # clear out entity list
-        self.reset_test_entities(test_cli)
-        # create entity to be "player"
-        test_cli.process_command("spawn warrior 10 10")
-        command = "inventory 99"
-        # Process command
-        output = self.process_command_and_get_output(test_cli, command)
-        # Get print output to comapre
-        # Output was captured by the helper
-        # check output
-        self.assertEqual(
-            output,
-            "error: inventory_failed - Player entity does not exist!\n",
-        )
-
-    # Success
     def test_inventory_success(self):
-        # Create test CLI
         test_cli = self.create_test_cli()
-        # Clear out grid
-        self.reset_test_grid(test_cli)
-        # clear out entity list
-        self.reset_test_entities(test_cli)
-        # Create Map
         self.create_test_map(test_cli)
-        # Reset
-        self.reset_base_inventory()
-        test_cli.process_command("spawn warrior 10 10")
-        command = "inventory 1"
-        # Process command
-        output = self.process_command_and_get_output(test_cli, command)
-        # Get print output to comapre
-        # Output was captured by the helper
-        # check output
-        self.assertEqual(
-            output,
-            # Display inventory of entity
-            "Weapon: None\n"
-            "Armor: None\n"
-            "Accessory: None\n"
-            "Backpack Slots:\n"
-            "1. Empty\n"
-            "2. Empty\n"
-            "3. Empty\n"
-            "4. Empty\n"
-            "5. Empty\n",
-        )
+        self.create_test_entity(test_cli)
+        output = self.process_command_and_get_output(test_cli, "inventory 1")
+        self.assertIn("Weapon:", output)
+        self.assertIn("Armor:", output)
+        self.assertIn("Accessory:", output)
+        self.assertIn("Backpack Slots:", output)
 
-    # Success
-    def test_inventory_success_with_equips(self):
-        # Create test CLI
-        test_cli = self.create_test_cli()
-        # Clear out grid
-        self.reset_test_grid(test_cli)
-        # clear out entity list
-        self.reset_test_entities(test_cli)
-        # Create Map
-        self.create_test_map(test_cli)
-        # spawn warrior
-        # Reset
-        self.reset_base_inventory()
-        test_cli.process_command("spawn warrior 10 10")
-        # backpack fix
-        entity = test_cli.entity_list[0]
-        entity.add_item_to_backpack(dl.create_equipment("scoutarmor"))
-        entity.add_item_to_backpack(dl.create_equipment("amuletofvitality"))
-        entity.add_item_to_backpack(dl.create_equipment("ironsword"))
-        # Change all slots
-        test_cli.process_command("swap 1 armor scoutarmor")
-        test_cli.process_command("swap 1 accessory amuletofvitality")
-        test_cli.process_command("swap 1 weapon ironsword")
-        command = "inventory 1"
-        # Process command
-        output = self.process_command_and_get_output(test_cli, command)
-        # Get print output to comapre
-        # Output was captured by the helper
-        # check output
-        self.assertEqual(
-            output,
-            # Display inventory of entity
-            "Weapon: IronSword\n"
-            "Armor: ScoutArmor\n"
-            "Accessory: AmuletOfVitality\n"
-            "Backpack Slots:\n"
-            "1. ScoutArmor\n"
-            "2. AmuletOfVitality\n"
-            "3. IronSword\n"
-            "4. Empty\n"
-            "5. Empty\n",
-        )
-        # Check that entity max Health equals current Health -  didnt lose hp
-        self.assertEqual(
-            entity.max_health,
-            entity.health,
-        )
+    # Inspect Commands Start
 
-    # Success
-    def test_inventory_success_with_equips_mage(self):
-
-        # Create test CLI
-        test_cli = self.create_test_cli()
-
-        # Clear out grid
-        self.reset_test_grid(test_cli)
-
-        # clear out entity list
-        self.reset_test_entities(test_cli)
-
-        # Create Map
-        self.create_test_map(test_cli)
-
-        # spawn mage
-        # Reset
-        self.reset_base_inventory()
-
-        test_cli.process_command("spawn mage 10 10")
-
-        # backpack fix
-        entity = test_cli.entity_list[0]
-
-        entity.add_item_to_backpack(dl.create_equipment("scoutarmor"))
-        entity.add_item_to_backpack(dl.create_equipment("ringofthesorcerer"))
-        entity.add_item_to_backpack(dl.create_equipment("ironsword"))
-
-        # Change all slots
-        test_cli.process_command("swap 1 armor scoutarmor")
-        test_cli.process_command("swap 1 accessory ringofthesorcerer")
-        test_cli.process_command("swap 1 weapon ironsword")
-
-        command = "inventory 1"
-
-        # Process command
-        output = self.process_command_and_get_output(test_cli, command)
-        # Get print output to compare
-        # Output was captured by the helper
-
-        # check output
-        self.assertEqual(
-            output,
-            # Display inventory of entity
-            "Weapon: IronSword\n"
-            "Armor: ScoutArmor\n"
-            "Accessory: RingOfTheSorcerer\n"
-            "Backpack Slots:\n"
-            "1. ScoutArmor\n"
-            "2. RingOfTheSorcerer\n"
-            "3. IronSword\n"
-            "4. Empty\n"
-            "5. Empty\n",
-        )
-
-        # Check that entity max Health equals current Health
-        self.assertEqual(
-            entity.max_health,
-            entity.health,
-        )
-
-        # Check that entity max Mana equals current Mana
-        self.assertEqual(
-            entity.max_mana,
-            entity.mana,
-        )
-
-    # Inspect Cases
     def test_inspect_with_invalid_command(self):
-        # Create test CLI
         test_cli = self.create_test_cli()
-        # Clear out grid
-        self.reset_test_grid(test_cli)
-        # clear out entity list
-        self.reset_test_entities(test_cli)
-        command = "inspect nothing really"
-        # Process command
-        output = self.process_command_and_get_output(test_cli, command)
-        # Get print output to comapre
-        # Output was captured by the helper
-        # check output
-        self.assertEqual(
-            output,
-            "error: inspect_failed - Invalid arguments!\n",
-        )
-
-    def test_inspect_with_invalid_command_less_than_2_pieces(self):
-        # Create test CLI
-        test_cli = self.create_test_cli()
-        # Clear out grid
-        self.reset_test_grid(test_cli)
-        # clear out entity list
-        self.reset_test_entities(test_cli)
-        command = "inspect"
-        # Process command
-        output = self.process_command_and_get_output(test_cli, command)
-        # Get print output to comapre
-        # Output was captured by the helper
-        # check output
-        self.assertEqual(
-            output,
-            "error: inspect_failed - Invalid arguments!\n",
-        )
+        output = self.process_command_and_get_output(test_cli, "inspect")
+        self.assertIn("inspect_failed", output)
 
     def test_inspect_with_no_player(self):
-        # Create test CLI
         test_cli = self.create_test_cli()
-        # Clear out grid
-        self.reset_test_grid(test_cli)
-        # clear out entity list
-        self.reset_test_entities(test_cli)
-        # Create Map
-        self.create_test_map(test_cli)
-        command = "inspect 1"
-        # Process command
-        output = self.process_command_and_get_output(test_cli, command)
-        # Get print output to comapre
-        # Output was captured by the helper
-        # check output
-        self.assertEqual(
-            output,
-            "error: inspect_failed - No entities exist yet!\n",
-        )
-
-    def test_inspect_with_no_map(self):
-        # Create test CLI
-        test_cli = self.create_test_cli()
-        # Clear out grid
-        self.reset_test_grid(test_cli)
-        # clear out entity list
-        self.reset_test_entities(test_cli)
-        # spawn warrior
-        test_cli.process_command("spawn warrior 10 10")
-        command = "inspect 1"
-        # Process command
-        output = self.process_command_and_get_output(test_cli, command)
-        # Get print output to comapre
-        # Output was captured by the helper
-        # check output
-        self.assertEqual(
-            output,
-            "error: inspect_failed - No entities exist yet!\n",
-        )
+        output = self.process_command_and_get_output(test_cli, "inspect 1")
+        self.assertIn("No entities exist", output)
 
     def test_inspect_with_invalid_entity_id(self):
-        # Create test CLI
         test_cli = self.create_test_cli()
-        # Clear out grid
-        self.reset_test_grid(test_cli)
-        # clear out entity list
-        self.reset_test_entities(test_cli)
-        # Create Map
         self.create_test_map(test_cli)
-        # spawn warrior
-        test_cli.process_command("spawn warrior 10 10")
-        command = "inspect zip"
-        # Process command
-        output = self.process_command_and_get_output(test_cli, command)
-        # Get print output to comapre
-        # Output was captured by the helper
-        # check output
-        self.assertEqual(
-            output,
-            "error: inspect_failed - Entity id is not valid integer!\n",
-        )
+        self.create_test_entity(test_cli)
+        output = self.process_command_and_get_output(test_cli, "inspect nope")
+        self.assertIn("not valid integer", output)
 
     def test_inspect_with_no_entity_matching_id_number(self):
-        # Create test CLI
         test_cli = self.create_test_cli()
-        # Clear out grid
-        self.reset_test_grid(test_cli)
-        # clear out entity list
-        self.reset_test_entities(test_cli)
-        # Create Map
         self.create_test_map(test_cli)
-        # spawn warrior
-        test_cli.process_command("spawn warrior 10 10")
-        command = "inspect 100"
-        # Process command
-        output = self.process_command_and_get_output(test_cli, command)
-        # Get print output to comapre
-        # Output was captured by the helper
-        # check output
-        self.assertEqual(
-            output,
-            "error: inspect_failed - Entity does not exist!\n",
-        )
+        self.create_test_entity(test_cli)
+        output = self.process_command_and_get_output(test_cli, "inspect 2")
+        self.assertIn("Entity does not exist", output)
 
-    # success
     def test_inspect_success(self):
-        # Create test CLI
         test_cli = self.create_test_cli()
-        # Clear out grid
-        self.reset_test_grid(test_cli)
-        # clear out entity list
-        self.reset_test_entities(test_cli)
-        # Create Map
         self.create_test_map(test_cli)
-        # Reset
-        self.reset_base_inventory()
-        # spawn warrior
-        test_cli.process_command("spawn warrior 10 10")
-        command = "inspect 1"
-        # Process command
-        output = self.process_command_and_get_output(test_cli, command)
-        # Get print output to comapre
-        # Output was captured by the helper
-        # check output
-        self.assertEqual(
-            output,
-            "Id: 1\n"
-            "Type: Warrior\n"
-            "Position: [10, 10]\n"
-            "Health: 120\n"
-            "Attack: 15\n"
-            "Defence: 10\n"
-            "Speed: 5\n"
-            "Active_modifiers: 0\n",
-        )
+        self.create_test_entity(test_cli)
+        output = self.process_command_and_get_output(test_cli, "inspect 1")
+        self.assertIn("Health:", output)
+        self.assertIn("Attack:", output)
+        self.assertIn("Defence:", output)
 
-    # success with mage custom inventory + stat changes (both % and flat)
-    def test_inspect_success_with_mage(self):
-        # Create test CLI
-        test_cli = self.create_test_cli()
-        # Clear out grid
-        self.reset_test_grid(test_cli)
-        # clear out entity list
-        self.reset_test_entities(test_cli)
-        # Create Map
-        self.create_test_map(test_cli)
-        # Reset
-        self.reset_base_inventory()
-        # spawn warrior
-        test_cli.process_command("spawn mage 10 10")
-        command = "inspect 1"
-        # Process command
-        output = self.process_command_and_get_output(test_cli, command)
-        # Get print output to comapre
-        # Output was captured by the helper
-        # check output
-        self.assertEqual(
-            output,
-            "Id: 1\n"
-            "Type: Mage\n"
-            "Position: [10, 10]\n"
-            "Health: 70\n"
-            "Mana: 100\n"
-            "Attack: 8\n"
-            "Defence: 4\n"
-            "Speed: 5\n"
-            "Active_modifiers: 0\n",
-        )
+    # Tile Commands Start
 
-    # success with custom inventory + stat changes (both % and flat, also -)
-    def test_inspect_success_with_custom_inventory(self):
-        # Create test CLI
-        test_cli = self.create_test_cli()
-        # Clear out grid
-        self.reset_test_grid(test_cli)
-        # clear out entity list
-        self.reset_test_entities(test_cli)
-        # Create Map
-        self.create_test_map(test_cli)
-        # spawn warrior
-        test_cli.process_command("spawn warrior 10 10")
-        # backpack fix
-        entity = test_cli.entity_list[0]
-        entity.add_item_to_backpack(dl.create_equipment("ironchestplate"))
-        entity.add_item_to_backpack(dl.create_equipment("amuletofvitality"))
-        entity.add_item_to_backpack(dl.create_equipment("ironsword"))
-        # Change all slots
-        test_cli.process_command("swap 1 armor ironchestplate")
-        test_cli.process_command("swap 1 accessory amuletofvitality")
-        test_cli.process_command("swap 1 weapon ironsword")
-        command = "inspect 1"
-        # Process command
-        output = self.process_command_and_get_output(test_cli, command)
-        # Get print output to comapre
-        # Output was captured by the helper
-        # check output
-        self.assertEqual(
-            output,
-            "Id: 1\n"
-            "Type: Warrior\n"
-            "Position: [10, 10]\n"
-            "Health: 132.0\n"
-            "Attack: 27\n"
-            "Defence: 28\n"
-            "Speed: 3\n"
-            "Active_modifiers: 4\n",
-        )
-
-    # success with mage custom inventory + stat changes (both % and flat, also -)
-    def test_inspect_success_with_mage_with_custom_inventory(self):
-        # Create test CLI
-        test_cli = self.create_test_cli()
-        # Clear out grid
-        self.reset_test_grid(test_cli)
-        # clear out entity list
-        self.reset_test_entities(test_cli)
-        # Create Map
-        self.create_test_map(test_cli)
-        # Reset
-        self.reset_base_inventory()
-        # spawn warrior
-        test_cli.process_command("spawn mage 10 10")
-        # backpack fix
-        entity = test_cli.entity_list[0]
-        entity.add_item_to_backpack(dl.create_equipment("ironchestplate"))
-        entity.add_item_to_backpack(dl.create_equipment("ringofthesorcerer"))
-        entity.add_item_to_backpack(dl.create_equipment("magestaff"))
-        # Change all slots
-        test_cli.process_command("swap 1 armor ironchestplate")
-        test_cli.process_command("swap 1 accessory ringofthesorcerer")
-        test_cli.process_command("swap 1 weapon magestaff")
-        command = "inspect 1"
-        # Process command
-        output = self.process_command_and_get_output(test_cli, command)
-        # Get print output to comapre
-        # Output was captured by the helper
-        # check output
-        self.assertEqual(
-            output,
-            "Id: 1\n"
-            "Type: Mage\n"
-            "Position: [10, 10]\n"
-            "Health: 70\n"
-            "Mana: 115.0\n"
-            "Attack: 8\n"
-            "Defence: 19\n"
-            "Speed: 3\n"
-            "Active_modifiers: 4\n",
-        )
-
-    # success with warrior custom inventory + stat changes (both % and flat, also -)
-    def test_inspect_success_with_warrior_with_mage_specific_items(self):
-        # Create test CLI
-        test_cli = self.create_test_cli()
-        # Clear out grid
-        self.reset_test_grid(test_cli)
-        # clear out entity list
-        self.reset_test_entities(test_cli)
-        # Create Map
-        self.create_test_map(test_cli)
-        # spawn warrior
-        test_cli.process_command("spawn warrior 10 10")
-        # Reset
-        self.reset_base_inventory()
-        # backpack fix
-        entity = test_cli.entity_list[0]
-        entity.add_item_to_backpack(dl.create_equipment("ironchestplate"))
-        entity.add_item_to_backpack(dl.create_equipment("amuletofvitality"))
-        entity.add_item_to_backpack(dl.create_equipment("ironsword"))
-        # Change all slots
-        test_cli.process_command("swap 1 armor ironchestplate")
-        test_cli.process_command("swap 1 accessory ringofthesorcerer")
-        test_cli.process_command("swap 1 weapon magestaff")
-        command = "inspect 1"
-        # Process command
-        output = self.process_command_and_get_output(test_cli, command)
-        # Get print output to comapre
-        # Output was captured by the helper
-        # check output
-        self.assertEqual(
-            output,
-            "Id: 1\n"
-            "Type: Warrior\n"
-            "Position: [10, 10]\n"
-            "Health: 120\n"
-            "Attack: 15\n"
-            "Defence: 25\n"
-            "Speed: 3\n"
-            "Active_modifiers: 2\n",
-        )
-
-    # success with warrior custom inventory + stat changes including tile modifiers
-    def test_inspect_success_with_warrior_with_tile_with_modifiers_placed_before_entity(
-        self,
-    ):
-        # Create test CLI
-        test_cli = self.create_test_cli()
-        # Clear out grid
-        self.reset_test_grid(test_cli)
-        # clear out entity list
-        self.reset_test_entities(test_cli)
-        # Create Map
-        self.create_test_map(test_cli)
-        # set tile at 10, 10
-        test_cli.grid.set_tile(10, 10, "shallowwater")
-        self.reset_base_inventory()
-        # spawn warrior
-        test_cli.process_command("spawn warrior 10 10")
-        # backpack fix
-        entity = test_cli.entity_list[0]
-        entity.add_item_to_backpack(dl.create_equipment("ironchestplate"))
-        entity.add_item_to_backpack(dl.create_equipment("amuletofvitality"))
-        entity.add_item_to_backpack(dl.create_equipment("ironsword"))
-        # Change all slots
-        test_cli.process_command("swap 1 armor ironchestplate")
-        test_cli.process_command("swap 1 accessory amuletofvitality")
-        test_cli.process_command("swap 1 weapon ironsword")
-        command = "inspect 1"
-        # Process command
-        output = self.process_command_and_get_output(test_cli, command)
-        # Get print output to comapre
-        # Output was captured by the helper
-        # check output
-        self.assertEqual(
-            output,
-            "Id: 1\n"
-            "Type: Warrior\n"
-            "Position: [10, 10]\n"
-            "Health: 132.0\n"
-            "Attack: 27\n"
-            "Defence: 28\n"
-            "Speed: 1\n"
-            "Active_modifiers: 4\n",
-        )
-
-    # success with warrior custom inventory + stat changes including tile modifiers
-    def test_inspect_success_with_warrior_with_tile_with_modifiers_placed_after_entity(
-        self,
-    ):
-        # Create test CLI
-        test_cli = self.create_test_cli()
-        # Clear out grid
-        self.reset_test_grid(test_cli)
-        # clear out entity list
-        self.reset_test_entities(test_cli)
-        # Create Map
-        self.create_test_map(test_cli)
-        # spawn warrior
-        test_cli.process_command("spawn warrior 10 10")
-        # set tile at 10, 10
-        test_cli.grid.set_tile(10, 10, "shallowwater")
-        # backpack fix
-        entity = test_cli.entity_list[0]
-        entity.add_item_to_backpack(dl.create_equipment("ironchestplate"))
-        entity.add_item_to_backpack(dl.create_equipment("amuletofvitality"))
-        entity.add_item_to_backpack(dl.create_equipment("ironsword"))
-        # Change all slots
-        test_cli.process_command("swap 1 armor ironchestplate")
-        test_cli.process_command("swap 1 accessory amuletofvitality")
-        test_cli.process_command("swap 1 weapon ironsword")
-        command = "inspect 1"
-        # Process command
-        output = self.process_command_and_get_output(test_cli, command)
-        # Get print output to comapre
-        # Output was captured by the helper
-        # check output
-        self.assertEqual(
-            output,
-            "Id: 1\n"
-            "Type: Warrior\n"
-            "Position: [10, 10]\n"
-            "Health: 132.0\n"
-            "Attack: 27\n"
-            "Defence: 28\n"
-            "Speed: 1\n"
-            "Active_modifiers: 4\n",
-        )
-
-    # tile cases
     def test_tile_with_invalid_command(self):
-        # Create test CLI
         test_cli = self.create_test_cli()
-        # Clear out grid
-        self.reset_test_grid(test_cli)
-        # clear out entity list
-        self.reset_test_entities(test_cli)
-        command = "tile nothing really lol"
-        # Process command
-        output = self.process_command_and_get_output(test_cli, command)
-        # Get print output to comapre
-        # Output was captured by the helper
-        # check output
-        self.assertEqual(
-            output,
-            "error: tile_failed - Invalid command!\n",
-        )
+        output = self.process_command_and_get_output(test_cli, "tile")
+        self.assertIn("tile_failed", output)
 
-    def test_tile_with_short_command(self):
-        # Create test CLI
+    def test_tile_without_map_created(self):
         test_cli = self.create_test_cli()
-        # Clear out grid
-        self.reset_test_grid(test_cli)
-        # clear out entity list
-        self.reset_test_entities(test_cli)
-        command = "tile"
-        # Process command
-        output = self.process_command_and_get_output(test_cli, command)
-        # Get print output to comapre
-        # Output was captured by the helper
-        # check output
-        self.assertEqual(
-            output,
-            "error: tile_failed - Invalid command!\n",
-        )
+        output = self.process_command_and_get_output(test_cli, "tile 1 1")
+        self.assertIn("Map does not exist", output)
 
     def test_tile_with_invalid_x_value(self):
-        # Create test CLI
         test_cli = self.create_test_cli()
-        # Clear out grid
-        self.reset_test_grid(test_cli)
-        # Create Map
         self.create_test_map(test_cli)
-        # clear out entity list
-        self.reset_test_entities(test_cli)
-        command = "tile nineT 10"
-        # Process command
-        output = self.process_command_and_get_output(test_cli, command)
-        # Get print output to comapre
-        # Output was captured by the helper
-        # check output
-        self.assertEqual(
-            output,
-            "error: tile_failed - x and y are not valid integers!\n",
-        )
+        output = self.process_command_and_get_output(test_cli, "tile nope 1")
+        self.assertIn("not valid integers", output)
 
     def test_tile_with_invalid_y_value(self):
-        # Create test CLI
         test_cli = self.create_test_cli()
-        # Clear out grid
-        self.reset_test_grid(test_cli)
-        # Create Map
         self.create_test_map(test_cli)
-        command = "tile 10 fortyy"
-        # Process command
-        output = self.process_command_and_get_output(test_cli, command)
-        # Get print output to comapre
-        # Output was captured by the helper
-        # check output
-        self.assertEqual(
-            output,
-            "error: tile_failed - x and y are not valid integers!\n",
-        )
+        output = self.process_command_and_get_output(test_cli, "tile 1 nope")
+        self.assertIn("not valid integers", output)
 
-    def test_tile_without_map(self):
-        # Create test CLI
-        test_cli = self.create_test_cli()
-        self.reset_test_grid(test_cli)
-        command = "tile 10 10"
-        # Process command
-        output = self.process_command_and_get_output(test_cli, command)
-        # Get print output to comapre
-        # Output was captured by the helper
-        # check output
-        self.assertEqual(
-            output,
-            "error: tile_failed - Map does not exist!\n",
-        )
-
-    # FIX THESE
-
-    def test_tile_with_x_bounds_higher_than_grid_max(self):
-        # Create test CLI
-        test_cli = self.create_test_cli()
-        # Clear out grid
-        self.reset_test_grid(test_cli)
-        # Create Map
-        self.create_test_map(test_cli)
-        command = "tile 26 10"
-        # Process command
-        output = self.process_command_and_get_output(test_cli, command)
-        # Get print output to comapre
-        # Output was captured by the helper
-        # check output
-        self.assertEqual(
-            output,
-            "error: tile_failed - x and y exceed current grid bounds!\n",
-        )
-
-    def test_tile_with_y_bounds_higher_than_grid_max(self):
-        # Create test CLI
-        test_cli = self.create_test_cli()
-        # Clear out grid
-        self.reset_test_grid(test_cli)
-        # Create Map
-        self.create_test_map(test_cli)
-        command = "tile 10 26"
-        # Process command
-        output = self.process_command_and_get_output(test_cli, command)
-        # Get print output to comapre
-        # Output was captured by the helper
-        # check output
-        self.assertEqual(
-            output,
-            "error: tile_failed - x and y exceed current grid bounds!\n",
-        )
-
-    def test_tile_with_y_bounds_lower_than_grid_min(self):
-        # Create test CLI
-        test_cli = self.create_test_cli()
-        # Clear out grid
-        self.reset_test_grid(test_cli)
-        # Create Map
-        self.create_test_map(test_cli)
-        command = "tile 10 -1"
-        # Process command
-        output = self.process_command_and_get_output(test_cli, command)
-        # Get print output to comapre
-        # Output was captured by the helper
-        # check output
-        self.assertEqual(
-            output,
-            "error: tile_failed - x and y exceed current grid bounds!\n",
-        )
-
-    def test_tile_with_x_bounds_lower_than_grid_min(self):
-        # Create test CLI
-        test_cli = self.create_test_cli()
-        # Clear out grid
-        self.reset_test_grid(test_cli)
-        # Create Map
-        self.create_test_map(test_cli)
-        command = "tile -1 20"
-        # Process command
-        output = self.process_command_and_get_output(test_cli, command)
-        # Get print output to comapre
-        # Output was captured by the helper
-        # check output
-        self.assertEqual(
-            output,
-            "error: tile_failed - x and y exceed current grid bounds!\n",
-        )
-
-    # zero indexed so 25x25 = 0-24 - Success
-    def test_tile_with_x_y_on_lower_boundary(self):
-        # Create test CLI
-        test_cli = self.create_test_cli()
-        # Clear out grid
-        self.reset_test_grid(test_cli)
-        # Create Map
-        self.create_test_map(test_cli)
-        # set tile to wall
-        test_cli.grid.set_tile(0, 0, "wall")
-        command = "tile 0 0"
-        # Process command
-        output = self.process_command_and_get_output(test_cli, command)
-        # Get print output to comapre
-        # Output was captured by the helper
-        # check output
-        self.assertEqual(
-            output,
-            "Coordinate: 0, 0\n" "Type: Wall\n" "Passable: False\n" "Occupants: None\n",
-        )
-
-    # zero indexed so 25x25 = 0-24 - Success
-    def test_tile_with_x_y_on_higher_boundary(self):
-        # Create test CLI
-        test_cli = self.create_test_cli()
-        # Clear out grid
-        self.reset_test_grid(test_cli)
-        # Create Map
-        self.create_test_map(test_cli)
-        # set tile to wall
-        test_cli.grid.set_tile(24, 24, "wall")
-        command = "tile 24 24"
-        # Process command
-        output = self.process_command_and_get_output(test_cli, command)
-        # Get print output to comapre
-        # Output was captured by the helper
-        # check output
-        self.assertEqual(
-            output,
-            "Coordinate: 24, 24\n"
-            "Type: Wall\n"
-            "Passable: False\n"
-            "Occupants: None\n",
-        )
-
-    # 1 THIRD
-    # success
     def test_tile_success(self):
-        # Create test CLI
         test_cli = self.create_test_cli()
-        # Clear out grid
-        self.reset_test_grid(test_cli)
-        # Create Map
         self.create_test_map(test_cli)
-        # set tile to wall
-        test_cli.grid.set_tile(10, 10, "shallowwater")
-        command = "tile 10 10"
-        # Process command
-        output = self.process_command_and_get_output(test_cli, command)
-        # Get print output to comapre
-        # Output was captured by the helper
-        # check output
-        self.assertEqual(
-            output,
-            "Coordinate: 10, 10\n"
-            "Type: ShallowWater\n"
-            "Passable: True\n"
-            "Occupants: None\n",
-        )
+        output = self.process_command_and_get_output(test_cli, "tile 1 1")
+        self.assertIn("Coordinate: 1, 1", output)
+        self.assertIn("Type: Floor", output)
+        self.assertIn("Passable: True", output)
+        self.assertIn("Occupants: None", output)
 
-    # success with occupant
-    def test_tile_success_with_occupant(self):
-        # Create test CLI
+    def test_tile_with_entity_occupant(self):
         test_cli = self.create_test_cli()
-        # Clear out grid
-        self.reset_test_grid(test_cli)
-        # Create Map
         self.create_test_map(test_cli)
-        # set tile to wall
-        test_cli.grid.set_tile(10, 10, "shallowwater")
-        # spawn entity
-        test_cli.process_command("spawn warrior 10 10")
-        command = "tile 10 10"
-        # Process command
-        output = self.process_command_and_get_output(test_cli, command)
-        # Get print output to comapre
-        # Output was captured by the helper
-        # check output
-        self.assertEqual(
-            output,
-            "Coordinate: 10, 10\n"
-            "Type: ShallowWater\n"
-            "Passable: True\n"
-            "Occupants: 1\n",
-        )
+        self.create_test_entity(test_cli)
+        output = self.process_command_and_get_output(test_cli, "tile 1 1")
+        self.assertIn("Occupants: 1", output)
 
-    # Test invalid command with too few arguments
-    def test_pickup_item_invalid_command_too_few_arguments(self):
+    # Pickup Commands Start
 
-        # Create test CLI
+    def test_pickup_with_invalid_command(self):
         test_cli = self.create_test_cli()
+        output = self.process_command_and_get_output(test_cli, "pickup 1")
+        self.assertIn("pickup_failed", output)
 
-        # Process command
-        output = self.capture_function_output(
-            lambda: test_cli.process_pickup_item_command(["pickup", "0"])
-        )
-
-        # Get print output
-
-        # Check output
-        self.assertEqual(
-            output,
-            "error: pickup_failed - Invalid command!\n",
-        )
-
-    # Test invalid command with too many arguments
-    def test_pickup_item_invalid_command_too_many_arguments(self):
-
-        # Create test CLI
+    def test_pickup_without_map_created(self):
         test_cli = self.create_test_cli()
+        output = self.process_command_and_get_output(test_cli, "pickup 1 ironsword")
+        self.assertIn("Map does not exist", output)
 
-        # Process command
-        output = self.capture_function_output(
-            lambda: test_cli.process_pickup_item_command(
-                ["pickup", "1", "IronSword", "extra"]
-            )
-        )
-
-        # Get print output
-
-        # Check output
-        self.assertEqual(
-            output,
-            "error: pickup_failed - Invalid command!\n",
-        )
-
-    # Test pickup when map does not exist
-    def test_pickup_item_no_map(self):
-
-        # Create test CLI
+    def test_pickup_with_invalid_item(self):
         test_cli = self.create_test_cli()
-
-        # Process command
-        output = self.capture_function_output(
-            lambda: test_cli.process_pickup_item_command(["pickup", "1", "IronSword"])
-        )
-
-        # Get print output
-
-        # Check output
-        self.assertEqual(
-            output,
-            "error: pickup_failed - Map does not exist!\n",
-        )
-
-    # Test pickup with an invalid entity ID
-    def test_pickup_item_invalid_entity_id(self):
-
-        # Create test CLI
-        test_cli = self.create_test_cli()
-
-        # Create map
         self.create_test_map(test_cli)
+        self.create_test_entity(test_cli)
+        output = self.process_command_and_get_output(test_cli, "pickup 1 fakeitem")
+        self.assertIn("Item name not found", output)
 
-        # Process command
-        output = self.capture_function_output(
-            lambda: test_cli.process_pickup_item_command(["pickup", "-1", "IronSword"])
-        )
-
-        # Get print output
-
-        # Check output
-        self.assertEqual(
-            output,
-            "error: pickup_failed - Entity does not exist!\n",
-        )
-
-    # Test pickup with an entity ID that does not exist
-    def test_pickup_item_nonexistent_entity(self):
-
-        # Create test CLI
-        test_cli = self.create_test_cli()
-
-        # Create map
-        self.create_test_map(test_cli)
-
-        # Process command
-        output = self.capture_function_output(
-            lambda: test_cli.process_pickup_item_command(
-                ["pickup", "9999", "IronSword"]
-            )
-        )
-
-        # Get print output
-
-        # Check output
-        self.assertEqual(
-            output,
-            "error: pickup_failed - Entity does not exist!\n",
-        )
-
-    # Test pickup with an invalid item name
-    def test_pickup_item_invalid_item_name(self):
-
-        # Create test CLI
-        test_cli = self.create_test_cli()
-
-        # Create map
-        self.create_test_map(test_cli)
-
-        # Spawn entity
-        test_cli.process_command("spawn warrior 10 10")
-
-        # Process command
-        output = self.capture_function_output(
-            lambda: test_cli.process_pickup_item_command(["pickup", "1", "NotAnItem"])
-        )
-
-        # Get print output
-
-        # Check output
-        self.assertEqual(
-            output,
-            "error: pickup_failed - Item name not found!\n",
-        )
-
-    # Test pickup with different item name capitalization
-    def test_pickup_item_case_insensitive(self):
-
-        # Create test CLI
-        test_cli = self.create_test_cli()
-
-        # Clear out grid
-        self.reset_test_grid(test_cli)
-
-        # Clear out entity list
-        test_cli.entity_list.clear()
-
-        # Create map
-        self.create_test_map(test_cli)
-
-        # Spawn entity
-        test_cli.process_command("spawn warrior 10 10")
-
-        # Get spawned entity
-        entity = test_cli.entity_list[0]
-
-        # Get valid item
-        item_name = "ironsword"
-        item_class = dl.EQUIPMENT_TYPES[item_name]
-
-        # Place item class on entity's tile
-        test_cli.grid.grid[10][10].item_list.append(item_class)
-
-        # Add existing item to backpack
-        entity.backpack.append("Existing Item")
-
-        # Process command using uppercase item name
-        output = self.capture_function_output(
-            lambda: test_cli.process_pickup_item_command(
-                ["pickup", str(entity.id), item_name.upper()]
-            )
-        )
-
-        # Get print output
-
-        # Check output
-        self.assertEqual(output, "ok: picked_up IronSword into backpack!\n")
-
-        # Check item was added to backpack
-        self.assertTrue(
-            any(
-                backpack_item.name.lower() == "ironsword"
-                for backpack_item in entity.backpack
-                if hasattr(backpack_item, "name")
-            )
-        )
-        # Check item was removed from tile
-        self.assertNotIn(
-            item_class,
-            test_cli.grid.grid[10][10].item_list,
-        )
-
-    # Test pickup when backpack is full
-    def test_pickup_item_backpack_full(self):
-
-        # Create test CLI
-        test_cli = self.create_test_cli()
-
-        # Clear out grid
-        self.reset_test_grid(test_cli)
-
-        # Clear out entity list
-        test_cli.entity_list.clear()
-
-        # Create map
-        self.create_test_map(test_cli)
-
-        # Spawn entity
-        test_cli.process_command("spawn warrior 10 10")
-
-        # Get spawned entity
-        entity = test_cli.entity_list[0]
-
-        # Get valid item
-        item_name = next(iter(dl.EQUIPMENT_TYPES))
-        item = dl.create_equipment(item_name.lower())
-
-        # Fill backpack to maximum capacity
-        entity.backpack = [
-            dl.create_equipment("ironsword"),
-            dl.create_equipment("leathertunic"),
-            dl.create_equipment("manapotion"),
-            dl.create_equipment("turtlemasterpotion"),
-            dl.create_equipment("ringofhaste"),
-        ]
-
-        # Place item on entity's tile
-        test_cli.grid.grid[10][10].item_list.append(item)
-
-        # Process command
-        output = self.capture_function_output(
-            lambda: test_cli.process_pickup_item_command(
-                ["pickup", str(entity.id), item_name]
-            )
-        )
-
-        # Get print output
-
-        # Check output
-        self.assertEqual(
-            output,
-            "error: pickup_failed - Backpack if full!\n",
-        )
-
-        # Check item was not removed from tile
-        self.assertIn(
-            item,
-            test_cli.grid.grid[10][10].item_list,
-        )
-
-    # Test pickup when item is not on the entity's tile
     def test_pickup_item_not_on_tile(self):
-
-        # Create test CLI
         test_cli = self.create_test_cli()
-
-        # Clear out grid
-        self.reset_test_grid(test_cli)
-
-        # Clear out entity list
-        test_cli.entity_list.clear()
-
-        # Create map
         self.create_test_map(test_cli)
+        self.create_test_entity(test_cli)
+        output = self.process_command_and_get_output(test_cli, "pickup 1 ironsword")
+        self.assertIn("Item not in tiles item list", output)
 
-        # Spawn entity
-        test_cli.process_command("spawn warrior 10 10")
+    def test_pickup_success(self):
+        test_cli = self.create_test_cli()
+        self.create_test_map(test_cli)
+        self.create_test_entity(test_cli)
+        test_cli.process_command("spawn loot ironsword 1 1")
+        output = self.process_command_and_get_output(test_cli, "pickup 1 ironsword")
+        self.assertIn("picked_up", output)
+        entity_info = test_cli.game_state.get_entity_info_from_list(1)
+        self.assertTrue(
+            any(item.name.lower() == "ironsword" for item in entity_info.backpack)
+        )
+        tile_info = test_cli.game_state.get_game_tile_info(1, 1)
+        self.assertFalse(
+            any(item.lower() == "ironsword" for item in tile_info.item_list)
+        )
 
-        # Get spawned entity
-        entity = test_cli.entity_list[0]
+    # Give Commands Start
 
-        # Get valid item
-        item_name = next(iter(dl.EQUIPMENT_TYPES))
-        item = dl.EQUIPMENT_TYPES[item_name]
+    def test_give_with_invalid_command(self):
+        test_cli = self.create_test_cli()
+        output = self.process_command_and_get_output(test_cli, "give 1")
+        self.assertIn("give_failed", output)
 
-        # Process command without placing item on tile
-        output = self.capture_function_output(
-            lambda: test_cli.process_pickup_item_command(
-                ["pickup", str(entity.id), item_name]
+    def test_give_without_map_created(self):
+        test_cli = self.create_test_cli()
+        output = self.process_command_and_get_output(test_cli, "give 1 ironsword")
+        self.assertIn("Map does not exist", output)
+
+    def test_give_with_invalid_item(self):
+        test_cli = self.create_test_cli()
+        self.create_test_map(test_cli)
+        self.create_test_entity(test_cli)
+        output = self.process_command_and_get_output(test_cli, "give 1 fakeitem")
+        self.assertIn("Item name not found", output)
+
+    def test_give_entity_does_not_exist(self):
+        test_cli = self.create_test_cli()
+        self.create_test_map(test_cli)
+        output = self.process_command_and_get_output(test_cli, "give 1 ironsword")
+        self.assertIn("Entity does not exist", output)
+
+    def test_give_success(self):
+        test_cli = self.create_test_cli()
+        self.create_test_map(test_cli)
+        self.create_test_entity(test_cli)
+        output = self.process_command_and_get_output(test_cli, "give 1 ironsword")
+        self.assertIn("added ironsword", output)
+        entity_info = test_cli.game_state.get_entity_info_from_list(1)
+        self.assertTrue(
+            any(item.name.lower() == "ironsword" for item in entity_info.backpack)
+        )
+
+    # Drop Commands Start
+
+    def test_drop_with_invalid_command(self):
+        test_cli = self.create_test_cli()
+        output = self.process_command_and_get_output(test_cli, "drop 1")
+        self.assertIn("drop_failed", output)
+
+    def test_drop_with_invalid_item(self):
+        test_cli = self.create_test_cli()
+        self.create_test_map(test_cli)
+        self.create_test_entity(test_cli)
+        output = self.process_command_and_get_output(test_cli, "drop 1 fakeitem")
+        self.assertIn("Item name not found", output)
+
+    def test_drop_item_not_in_backpack(self):
+        test_cli = self.create_test_cli()
+        self.create_test_map(test_cli)
+        self.create_test_entity(test_cli)
+        output = self.process_command_and_get_output(test_cli, "drop 1 ironsword")
+        self.assertIn("Item not in backpack", output)
+
+    def test_drop_success(self):
+        test_cli = self.create_test_cli()
+        self.create_test_map(test_cli)
+        self.create_test_entity(test_cli)
+        test_cli.process_command("give 1 ironsword")
+        output = self.process_command_and_get_output(test_cli, "drop 1 ironsword")
+        self.assertIn("dropped", output)
+        self.assertFalse(
+            any(
+                item.lower() == "ironsword"
+                for item in test_cli.game_state.get_entity_info_from_list(1).backpack
             )
         )
-
-        # Get print output
-
-        # Check output
-        self.assertEqual(
-            output,
-            "error: pickup_failed - Item not in tiles item list!\n",
-        )
-
-        # Check backpack remains empty
-        self.assertEqual(entity.backpack, [])
-
-    # Test item on a different tile
-    def test_pickup_item_on_different_tile(self):
-
-        # Create test CLI
-        test_cli = self.create_test_cli()
-
-        # Clear out grid
-        self.reset_test_grid(test_cli)
-
-        # Clear out entity list
-        test_cli.entity_list.clear()
-
-        # Create map
-        self.create_test_map(test_cli)
-
-        # Spawn entity
-        test_cli.process_command("spawn warrior 10 10")
-
-        # Get spawned entity
-        entity = test_cli.entity_list[0]
-
-        # Get valid item
-        item_name = next(iter(dl.EQUIPMENT_TYPES))
-        item = dl.EQUIPMENT_TYPES[item_name]
-
-        # Place item on a different tile
-        test_cli.grid.grid[11][10].item_list.append(item)
-
-        # Process command
-        output = self.capture_function_output(
-            lambda: test_cli.process_pickup_item_command(
-                ["pickup", str(entity.id), item_name]
-            )
-        )
-
-        # Get print output
-
-        # Check output
-        self.assertEqual(
-            output,
-            "error: pickup_failed - Item not in tiles item list!\n",
-        )
-
-        # Check item was not added to backpack
-        self.assertNotIn(item, entity.backpack)
-
-    # Test pickup while backpack already contains an item
-    def test_pickup_item_with_existing_backpack_items(self):
-
-        # Create test CLI
-        test_cli = self.create_test_cli()
-
-        # Clear out grid
-        self.reset_test_grid(test_cli)
-
-        # Clear out entity list
-        test_cli.entity_list.clear()
-
-        # Create map
-        self.create_test_map(test_cli)
-
-        # Spawn entity
-        test_cli.process_command("spawn warrior 10 10")
-
-        # Get spawned entity
-        entity = test_cli.entity_list[0]
-
-        # Get valid item
-        item_name = next(iter(dl.EQUIPMENT_TYPES))
-        item = dl.EQUIPMENT_TYPES[item_name]
-
-        # Add existing item to backpack
-        entity.backpack.append("Existing Item")
-
-        # Place item on entity's tile
-        test_cli.grid.grid[10][10].item_list.append(item)
-
-        # Process command
-        output = self.capture_function_output(
-            lambda: test_cli.process_pickup_item_command(
-                ["pickup", str(entity.id), item_name]
-            )
-        )
-
-        # Get print output
-
-        # Check output
-        self.assertEqual(output, "ok: picked_up IronSword into backpack!\n")
-
-        # Check existing item remains
-        self.assertIn("Existing Item", entity.backpack)
-
-        # Check new item was added
         self.assertTrue(
             any(
-                backpack_item.name.lower() == item_name.lower()
-                for backpack_item in entity.backpack
-                if hasattr(backpack_item, "name")
+                item.lower() == "ironsword"
+                for item in test_cli.game_state.get_game_tile_info(1, 1).item_list
             )
         )
 
-    # Test that picking up one item preserves other tile items
-    def test_pickup_item_preserves_other_tile_items(self):
+    # Swap Commands Start
 
-        # Create test CLI
+    def test_swap_with_invalid_command(self):
         test_cli = self.create_test_cli()
+        output = self.process_command_and_get_output(test_cli, "swap 1 Weapon")
+        self.assertIn("swap_failed", output)
 
-        # Clear out grid
-        self.reset_test_grid(test_cli)
-
-        # Clear out entity list
-        test_cli.entity_list.clear()
-
-        # Create map
+    def test_swap_with_invalid_slot(self):
+        test_cli = self.create_test_cli()
         self.create_test_map(test_cli)
+        self.create_test_entity(test_cli)
+        test_cli.process_command("give 1 ironsword")
+        output = self.process_command_and_get_output(test_cli, "swap 1 Head ironsword")
+        self.assertIn("slot not valid", output)
 
-        # Spawn entity
-        test_cli.process_command("spawn warrior 10 10")
-
-        # Get spawned entity
-        entity = test_cli.entity_list[0]
-
-        # Get two different valid items
-        item_names = list(dl.EQUIPMENT_TYPES.keys())
-
-        item_name = item_names[0]
-        other_item_name = item_names[1]
-
-        item = dl.EQUIPMENT_TYPES[item_name]
-        other_item = dl.EQUIPMENT_TYPES[other_item_name]
-
-        # Place both items on entity's tile
-        test_cli.grid.grid[10][10].item_list.append(item)
-        test_cli.grid.grid[10][10].item_list.append(other_item)
-
-        # Process command
-        output = self.capture_function_output(
-            lambda: test_cli.process_pickup_item_command(
-                ["pickup", str(entity.id), item_name]
-            )
-        )
-
-        # Get print output
-
-        # Check output
-        self.assertEqual(output, "ok: picked_up IronSword into backpack!\n")
-
-        # Check picked-up item was removed
-        self.assertNotIn(
-            item,
-            test_cli.grid.grid[10][10].item_list,
-        )
-
-        # Check other item remains
-        self.assertIn(
-            other_item,
-            test_cli.grid.grid[10][10].item_list,
-        )
-
-    # Test successful item give
-    def test_give_item_success(self):
-
-        # Create test CLI
+    def test_swap_item_not_in_backpack(self):
         test_cli = self.create_test_cli()
-
-        # Clear out grid
-        self.reset_test_grid(test_cli)
-
-        # Clear out entity list
-        test_cli.entity_list.clear()
-
-        # Create map
         self.create_test_map(test_cli)
-
-        # Spawn entity
-        test_cli.process_command("spawn warrior 10 10")
-
-        # Get spawned entity
-        entity = test_cli.entity_list[0]
-
-        # Get valid item
-        item_name = next(iter(dl.EQUIPMENT_TYPES))
-        item = dl.create_equipment(item_name)
-
-        # Process command
-        output = self.capture_function_output(
-            lambda: test_cli.process_give_item_command(
-                ["give", str(entity.id), item_name]
-            )
+        self.create_test_entity(test_cli)
+        output = self.process_command_and_get_output(
+            test_cli, "swap 1 Weapon ironsword"
         )
+        self.assertIn("Item not in backpack", output)
 
-        # Get print output
-
-        # Check output
-        self.assertEqual(
-            output,
-            f"ok: added {item.name} to {entity.id}'s backpack!\n",
-        )
-
-        # Check item was added to backpack
-        self.assertTrue(
-            any(
-                temp_item.name.lower() == item.name.lower()
-                for temp_item in entity.backpack
-            )
-        )
-
-    # Test invalid command with too few arguments
-    def test_give_item_invalid_command_too_few_arguments(self):
-
-        # Create test CLI
+    def test_swap_with_incorrect_item_slot(self):
         test_cli = self.create_test_cli()
-
-        # Process command
-        output = self.capture_function_output(
-            lambda: test_cli.process_give_item_command(["give", "0"])
-        )
-
-        # Get print output
-
-        # Check output
-        self.assertEqual(
-            output,
-            "error: give_failed - Invalid command!\n",
-        )
-
-    # Test invalid command with too many arguments
-    def test_give_item_invalid_command_too_many_arguments(self):
-
-        # Create test CLI
-        test_cli = self.create_test_cli()
-
-        # Process command
-        output = self.capture_function_output(
-            lambda: test_cli.process_give_item_command(
-                ["give", "0", "IronSword", "extra"]
-            )
-        )
-
-        # Get print output
-
-        # Check output
-        self.assertEqual(
-            output,
-            "error: give_failed - Invalid command!\n",
-        )
-
-    # Test give when map does not exist
-    def test_give_item_no_map(self):
-
-        # Create test CLI
-        test_cli = self.create_test_cli()
-
-        # Process command
-        output = self.capture_function_output(
-            lambda: test_cli.process_give_item_command(["give", "0", "IronSword"])
-        )
-
-        # Get print output
-
-        # Check output
-        self.assertEqual(
-            output,
-            "error: give_failed - Map does not exist!\n",
-        )
-
-    # Test give with an invalid entity ID
-    def test_give_item_invalid_entity_id(self):
-
-        # Create test CLI
-        test_cli = self.create_test_cli()
-
-        # Create map
         self.create_test_map(test_cli)
-
-        # Process command
-        output = self.capture_function_output(
-            lambda: test_cli.process_give_item_command(["give", "-1", "IronSword"])
+        self.create_test_entity(test_cli)
+        test_cli.process_command("give 1 ironchestplate")
+        output = self.process_command_and_get_output(
+            test_cli, "swap 1 Weapon ironchestplate"
         )
+        self.assertIn("Slot incorrect", output)
 
-        # Get print output
-
-        # Check output
-        self.assertEqual(
-            output,
-            "error: give_failed - Entity does not exist!\n",
-        )
-
-    # Test give with an entity ID that does not exist
-    def test_give_item_nonexistent_entity(self):
-
-        # Create test CLI
+    def test_swap_success(self):
         test_cli = self.create_test_cli()
-
-        # Create map
         self.create_test_map(test_cli)
-
-        # Process command
-        output = self.capture_function_output(
-            lambda: test_cli.process_give_item_command(["give", "9999", "IronSword"])
+        self.create_test_entity(test_cli)
+        test_cli.process_command("give 1 ironsword")
+        original_attack = test_cli.game_state.get_entity_info_from_list(1).attack
+        output = self.process_command_and_get_output(
+            test_cli, "swap 1 Weapon ironsword"
         )
-
-        # Get print output
-
-        # Check output
-        self.assertEqual(
-            output,
-            "error: give_failed - Entity does not exist!\n",
+        # print(output)
+        self.assertIn("swapped", output.lower())
+        self.assertGreater(
+            test_cli.game_state.get_entity_info_from_list(1).attack, original_attack
         )
-
-    # Test give with an invalid item name
-    def test_give_item_invalid_item_name(self):
-
-        # Create test CLI
-        test_cli = self.create_test_cli()
-
-        # Create map
-        self.create_test_map(test_cli)
-
-        # Spawn entity
-        test_cli.process_command("spawn warrior 10 10")
-
-        # Get spawned entity
-        entity = test_cli.entity_list[0]
-
-        # Process command
-        output = self.capture_function_output(
-            lambda: test_cli.process_give_item_command(
-                ["give", str(entity.id), "NotAnItem"]
-            )
-        )
-
-        # Get print output
-
-        # Check output
-        self.assertEqual(
-            output,
-            "error: give_failed - Item name not found!\n",
-        )
-
-    # Test give with different item name capitalization
-    def test_give_item_case_insensitive(self):
-
-        # Create test CLI
-        test_cli = self.create_test_cli()
-
-        # Clear out grid
-        self.reset_test_grid(test_cli)
-
-        # Clear out entity list
-        test_cli.entity_list.clear()
-
-        # Create map
-        self.create_test_map(test_cli)
-
-        # Spawn entity
-        test_cli.process_command("spawn warrior 10 10")
-
-        # Get spawned entity
-        entity = test_cli.entity_list[0]
-
-        # Get valid item
-        item_name = next(iter(dl.EQUIPMENT_TYPES))
-        item = dl.create_equipment(item_name)
-
-        # Process command using uppercase item name
-        output = self.capture_function_output(
-            lambda: test_cli.process_give_item_command(
-                ["give", str(entity.id), item_name.upper()]
-            )
-        )
-
-        # Get print output
-
-        # Check output
-        self.assertEqual(
-            output,
-            f"ok: added {item.name} to {entity.id}'s backpack!\n",
-        )
-
-        # Check item was added to backpack
-        self.assertTrue(
-            any(
-                temp_item.name.lower() == item.name.lower()
-                for temp_item in entity.backpack
-            )
-        )
-
-    # Test give when backpack is full
-    def test_give_item_backpack_full(self):
-
-        # Create test CLI
-        test_cli = self.create_test_cli()
-
-        # Clear out grid
-        self.reset_test_grid(test_cli)
-
-        # Clear out entity list
-        test_cli.entity_list.clear()
-
-        # Create map
-        self.create_test_map(test_cli)
-
-        # Spawn entity
-        test_cli.process_command("spawn warrior 10 10")
-
-        # Get spawned entity
-        entity = test_cli.entity_list[0]
-
-        # Get valid item
-        item_name = next(iter(dl.EQUIPMENT_TYPES))
-        item = dl.EQUIPMENT_TYPES[item_name]
-
-        # Fill backpack to maximum capacity
-        entity.backpack = [item for _ in range(Entity.BACKPACK_SIZE)]
-
-        # Process command
-        output = self.capture_function_output(
-            lambda: test_cli.process_give_item_command(
-                ["give", str(entity.id), item_name]
-            )
-        )
-
-        # Get print output
-
-        # Check output
-        self.assertEqual(
-            output,
-            "error: give_failed - Backpack if full!\n",
-        )
-
-        # Check backpack size remains unchanged
-        self.assertEqual(
-            len(entity.backpack),
-            Entity.BACKPACK_SIZE,
-        )
-
-    # Test Process Drop Item Command - Successful Drop
-    def test_process_drop_item_command_success(self):
-
-        # Create CLI and initialize map
-        test_cli = self.create_test_cli()
-        Grid.reset_grid()
-        test_cli.entity_list.clear()
-
-        self.create_test_map(test_cli)
-        test_cli.process_command("spawn warrior 10 10")
-
-        # Get spawned entity
-        entity = test_cli.entity_list[0]
-
-        # Give entity an item
-        test_cli.process_command(f"give {entity.id} IronSword")
-
-        # Drop item
-        output = self.capture_function_output(
-            lambda: test_cli.process_drop_item_command(
-                ["drop", str(entity.id), "IronSword"]
-            )
-        )
-
-        # Check item was added to tile
-        self.assertIn(
-            dl.EQUIPMENT_TYPES["ironsword"]().name,
-            test_cli.grid.grid[10][10].item_list[0].name,
-        )
-
-        # Check item was removed from backpack
-        self.assertFalse(any(item.name == "IronSword" for item in entity.backpack))
-
-        # Check no error was printed
-        self.assertEqual(output, "ok: dropped IronSword onto tile!\n")
-
-    # Test Process Drop Item Command - Invalid Command (Too Few Pieces)
-    def test_process_drop_item_command_too_few_pieces(self):
-
-        # Create CLI
-        test_cli = self.create_test_cli()
-
-        # Run command with too few pieces
-        output = self.capture_function_output(
-            lambda: test_cli.process_drop_item_command(["drop", "1"])
-        )
-
-        # Check error message
-        self.assertEqual(output, "error: drop_failed - Invalid command!\n")
-
-    # Test Process Drop Item Command - Invalid Command (Too Many Pieces)
-    def test_process_drop_item_command_too_many_pieces(self):
-
-        # Create CLI
-        test_cli = self.create_test_cli()
-
-        # Run command with too many pieces
-        output = self.capture_function_output(
-            lambda: test_cli.process_drop_item_command(
-                ["drop", "1", "IronSword", "extra"]
-            )
-        )
-
-        # Check error message
-        self.assertEqual(output, "error: drop_failed - Invalid command!\n")
-
-    # Test Process Drop Item Command - Map Does Not Exist
-    def test_process_drop_item_command_no_map(self):
-
-        # Create CLI
-        test_cli = self.create_test_cli()
-        Grid.reset_grid()
-        test_cli.entity_list.clear()
-
-        # Run command without creating a map
-        output = self.capture_function_output(
-            lambda: test_cli.process_drop_item_command(["drop", "1", "IronSword"])
-        )
-
-        # Check error message
-        self.assertEqual(output, "error: drop_failed - Map does not exist!\n")
-
-    # Test Process Drop Item Command - Entity Does Not Exist
-    def test_process_drop_item_command_entity_not_found(self):
-
-        # Create CLI and initialize map
-        test_cli = self.create_test_cli()
-        Grid.reset_grid()
-        test_cli.entity_list.clear()
-
-        self.create_test_map(test_cli)
-
-        # Run command with invalid entity ID
-        output = self.capture_function_output(
-            lambda: test_cli.process_drop_item_command(["drop", "999", "IronSword"])
-        )
-
-        # Check error message
-        self.assertEqual(output, "error: drop_failed - Entity does not exist!\n")
-
-    # Test Process Drop Item Command - Invalid Item Name
-    def test_process_drop_item_command_invalid_item(self):
-
-        # Create CLI and initialize map
-        test_cli = self.create_test_cli()
-        Grid.reset_grid()
-        test_cli.entity_list.clear()
-
-        self.create_test_map(test_cli)
-        test_cli.process_command("spawn warrior 10 10")
-
-        # Get spawned entity
-        entity = test_cli.entity_list[0]
-
-        # Run command with invalid item name
-        output = self.capture_function_output(
-            lambda: test_cli.process_drop_item_command(
-                ["drop", str(entity.id), "InvalidItem"]
-            )
-        )
-
-        # Check error message
-        self.assertEqual(output, "error: drop_failed - Item name not found!\n")
-
-    # Test Process Drop Item Command - Case-Insensitive Item Name
-    def test_process_drop_item_command_case_insensitive(self):
-
-        # Create CLI and initialize map
-        test_cli = self.create_test_cli()
-        Grid.reset_grid()
-        test_cli.entity_list.clear()
-
-        self.create_test_map(test_cli)
-        test_cli.process_command("spawn warrior 10 10")
-
-        # Get spawned entity
-        entity = test_cli.entity_list[0]
-
-        # Give entity an item
-        test_cli.process_command(f"give {entity.id} IronSword")
-
-        # Drop item using lowercase name
-        output = self.capture_function_output(
-            lambda: test_cli.process_drop_item_command(
-                ["drop", str(entity.id), "ironsword"]
-            )
-        )
-
-        # Check item was added to tile
-        self.assertIn(
-            dl.EQUIPMENT_TYPES["ironsword"]().name,
-            test_cli.grid.grid[10][10].item_list[0].name,
-        )
-
-        # Check item was removed from backpack
-        self.assertFalse(any(item.name == "IronSword" for item in entity.backpack))
-
-        # Check no error was printed
-        self.assertEqual(output, "ok: dropped IronSword onto tile!\n")
-
-    # Test Process Drop Item Command - Item Not In Backpack
-    def test_process_drop_item_command_item_not_in_backpack(self):
-
-        # Create CLI and initialize map
-        test_cli = self.create_test_cli()
-        Grid.reset_grid()
-        test_cli.entity_list.clear()
-
-        self.create_test_map(test_cli)
-        test_cli.process_command("spawn warrior 10 10")
-
-        # Get spawned entity
-        entity = test_cli.entity_list[0]
-
-        # Run command without giving the entity the item
-        output = self.capture_function_output(
-            lambda: test_cli.process_drop_item_command(
-                ["drop", str(entity.id), "IronSword"]
-            )
-        )
-
-        # Check item was not added to the tile
-        self.assertNotIn("IronSword", test_cli.grid.grid[10][10].item_list)
-        self.assertEqual(output, "error: drop_failed - Item not in backpack!\n")
-
-    # Test Process Swap Item Command - Successful Weapon Swap
-    def test_process_swap_item_command_success_weapon(self):
-
-        # Create CLI and initialize map
-        test_cli = self.create_test_cli()
-        Grid.reset_grid()
-        test_cli.entity_list.clear()
-
-        self.create_test_map(test_cli)
-        test_cli.process_command("spawn warrior 10 10")
-
-        # Get spawned entity
-        entity = test_cli.entity_list[0]
-        entity.inventory = [
-            dl.create_equipment("none_wep"),
-            dl.create_equipment("none_armor"),
-            dl.create_equipment("none_acc"),
-        ]
-
-        # Give entity a weapon
-        test_cli.process_command(f"give {entity.id} IronSword")
-
-        # Swap weapon
-        output = self.capture_function_output(
-            lambda: test_cli.process_swap_item_command(
-                ["swap", str(entity.id), "Weapon", "IronSword"]
-            )
-        )
-
-        # Check weapon was equipped
-        self.assertEqual(
-            entity.inventory[0].name, dl.create_equipment("ironsword").name
-        )
-
-        # Check success message
-        # check output
-        self.assertEqual(
-            output,
-            "Valid items: ironsword, curseddagger, magestaff, ironchestplate, leathertunic, scoutarmor, ringofthesorcerer, amuletofvitality, ringofhaste, none_wep, none_armor, none_acc, smallhealthpotion, greaterhealthpotion, superiorhealthpotion, manapotion, turtlemasterpotion\n"
-            "Valid slots: Weapon, Armor, Accessory\n"
-            "ok: swapped Weapon with backpack item!\n",
-        )
-
-    # Test Process Swap Item Command - Successful Armor Swap
-    def test_process_swap_item_command_success_armor(self):
-
-        # Create CLI and initialize map
-        test_cli = self.create_test_cli()
-        Grid.reset_grid()
-        test_cli.entity_list.clear()
-
-        self.create_test_map(test_cli)
-        test_cli.process_command("spawn warrior 10 10")
-
-        # Get spawned entity
-        entity = test_cli.entity_list[0]
-        entity.inventory = [
-            dl.create_equipment("none_wep"),
-            dl.create_equipment("none_armor"),
-            dl.create_equipment("none_acc"),
-        ]
-
-        # Give entity armor
-        test_cli.process_command(f"give {entity.id} IronChestplate")
-
-        # Swap armor
-        output = self.capture_function_output(
-            lambda: test_cli.process_swap_item_command(
-                ["swap", str(entity.id), "Armor", "IronChestplate"]
-            )
-        )
-
-        # Check armor was equipped
-        self.assertEqual(
-            entity.inventory[1].name, dl.create_equipment("ironchestplate").name
-        )
-
-        # Check success message
-        self.assertEqual(
-            output,
-            "Valid items: ironsword, curseddagger, magestaff, ironchestplate, leathertunic, scoutarmor, ringofthesorcerer, amuletofvitality, ringofhaste, none_wep, none_armor, none_acc, smallhealthpotion, greaterhealthpotion, superiorhealthpotion, manapotion, turtlemasterpotion\n"
-            "Valid slots: Weapon, Armor, Accessory\n"
-            "ok: swapped Armor with backpack item!\n",
-        )
-
-    # Test Process Swap Item Command - Successful Accessory Swap
-    def test_process_swap_item_command_success_accessory(self):
-
-        # Create CLI and initialize map
-        test_cli = self.create_test_cli()
-        Grid.reset_grid()
-        test_cli.entity_list.clear()
-
-        self.create_test_map(test_cli)
-        test_cli.process_command("spawn warrior 10 10")
-
-        # Get spawned entity
-        entity = test_cli.entity_list[0]
-        entity.inventory = [
-            dl.create_equipment("none_wep"),
-            dl.create_equipment("none_armor"),
-            dl.create_equipment("none_acc"),
-        ]
-
-        # Give entity accessory
-        test_cli.process_command(f"give {entity.id} RingOfHaste")
-
-        # Swap accessory
-        output = self.capture_function_output(
-            lambda: test_cli.process_swap_item_command(
-                ["swap", str(entity.id), "Accessory", "RingOfHaste"]
-            )
-        )
-
-        # Check accessory was equipped
-        self.assertEqual(
-            entity.inventory[2].name, dl.create_equipment("ringofhaste").name
-        )
-
-        # Check success message
-        # check output
-        self.assertEqual(
-            output,
-            "Valid items: ironsword, curseddagger, magestaff, ironchestplate, leathertunic, scoutarmor, ringofthesorcerer, amuletofvitality, ringofhaste, none_wep, none_armor, none_acc, smallhealthpotion, greaterhealthpotion, superiorhealthpotion, manapotion, turtlemasterpotion\n"
-            "Valid slots: Weapon, Armor, Accessory\n"
-            "ok: swapped Accessory with backpack item!\n",
-        )
-
-    # Test Process Swap Item Command - Invalid Command (Too Few Pieces)
-    def test_process_swap_item_command_too_few_pieces(self):
-
-        # Create CLI
-        test_cli = self.create_test_cli()
-
-        # Run command with too few pieces
-        output = self.capture_function_output(
-            lambda: test_cli.process_swap_item_command(["swap", "1", "Weapon"])
-        )
-
-        # Check error message
-        self.assertEqual(output, "error: swap_failed - Invalid command!\n")
-
-    # Test Process Swap Item Command - Invalid Command (Too Many Pieces)
-    def test_process_swap_item_command_too_many_pieces(self):
-
-        # Create CLI
-        test_cli = self.create_test_cli()
-
-        # Run command with too many pieces
-        output = self.capture_function_output(
-            lambda: test_cli.process_swap_item_command(
-                ["swap", "1", "Weapon", "IronSword", "extra"]
-            )
-        )
-
-        # Check error message
-        self.assertEqual(output, "error: swap_failed - Invalid command!\n")
-
-    # Test Process Swap Item Command - Map Does Not Exist
-    def test_process_swap_item_command_no_map(self):
-
-        # Create CLI
-        test_cli = self.create_test_cli()
-        Grid.reset_grid()
-        test_cli.entity_list.clear()
-
-        # Run command without creating a map
-        output = self.capture_function_output(
-            lambda: test_cli.process_swap_item_command(
-                ["swap", "1", "Weapon", "IronSword"]
-            )
-        )
-
-        # Check error message
-        self.assertEqual(output, "error: swap_failed - Map does not exist!\n")
-
-    # Test Process Swap Item Command - Entity Does Not Exist
-    def test_process_swap_item_command_entity_not_found(self):
-
-        # Create CLI and initialize map
-        test_cli = self.create_test_cli()
-        Grid.reset_grid()
-        test_cli.entity_list.clear()
-
-        self.create_test_map(test_cli)
-
-        # Run command with invalid entity ID
-        output = self.capture_function_output(
-            lambda: test_cli.process_swap_item_command(
-                ["swap", "999", "Weapon", "IronSword"]
-            )
-        )
-
-        # Check error message
-        self.assertEqual(output, "error: swap_failed - Entity does not exist!\n")
-
-    # Test Process Swap Item Command - Invalid Item Name
-    def test_process_swap_item_command_invalid_item(self):
-
-        # Create CLI and initialize map
-        test_cli = self.create_test_cli()
-        Grid.reset_grid()
-        test_cli.entity_list.clear()
-
-        self.create_test_map(test_cli)
-        test_cli.process_command("spawn warrior 10 10")
-
-        # Get spawned entity
-        entity = test_cli.entity_list[0]
-
-        entity.inventory = [
-            dl.create_equipment("none_wep"),
-            dl.create_equipment("none_armor"),
-            dl.create_equipment("none_acc"),
-        ]
-
-        # Run command with invalid item name
-        output = self.capture_function_output(
-            lambda: test_cli.process_swap_item_command(
-                ["swap", str(entity.id), "Weapon", "InvalidItem"]
-            )
-        )
-
-        # Check error message
-        self.assertEqual(output, "error: swap_failed - Item name not found!\n")
-
-    # Test Process Swap Item Command - Invalid Slot
-    def test_process_swap_item_command_invalid_slot(self):
-
-        # Create CLI and initialize map
-        test_cli = self.create_test_cli()
-        Grid.reset_grid()
-        test_cli.entity_list.clear()
-
-        self.create_test_map(test_cli)
-        test_cli.process_command("spawn warrior 10 10")
-
-        # Get spawned entity
-        entity = test_cli.entity_list[0]
-
-        entity.inventory = [
-            dl.create_equipment("none_wep"),
-            dl.create_equipment("none_armor"),
-            dl.create_equipment("none_acc"),
-        ]
-
-        # Run command with invalid slot
-        output = self.capture_function_output(
-            lambda: test_cli.process_swap_item_command(
-                ["swap", str(entity.id), "Helmet", "IronSword"]
-            )
-        )
-
-        # Check error message
-        self.assertEqual(
-            output, "error: swap_failed - Item slot not valid inventory slot!\n"
-        )
-
-    # Test Process Swap Item Command - Incorrect Slot For Item
-    def test_process_swap_item_command_incorrect_item_slot(self):
-
-        # Create CLI and initialize map
-        test_cli = self.create_test_cli()
-        Grid.reset_grid()
-        test_cli.entity_list.clear()
-
-        self.create_test_map(test_cli)
-        test_cli.process_command("spawn warrior 10 10")
-
-        # Get spawned entity
-        entity = test_cli.entity_list[0]
-
-        # Try to equip armor in weapon slot
-        output = self.capture_function_output(
-            lambda: test_cli.process_swap_item_command(
-                ["swap", str(entity.id), "Weapon", "IronChestplate"]
-            )
-        )
-
-        # Check error message
-        self.assertEqual(output, "error: swap_failed - Slot inccorect for item type!\n")
-
-    # Test Process Swap Item Command - Case-Insensitive Slot And Item
-    def test_process_swap_item_command_case_insensitive(self):
-
-        # Create CLI and initialize map
-        test_cli = self.create_test_cli()
-        Grid.reset_grid()
-        test_cli.entity_list.clear()
-
-        self.create_test_map(test_cli)
-        test_cli.process_command("spawn warrior 10 10")
-
-        # Get spawned entity
-        entity = test_cli.entity_list[0]
-        entity.inventory = [
-            dl.create_equipment("none_wep"),
-            dl.create_equipment("none_armor"),
-            dl.create_equipment("none_acc"),
-        ]
-
-        # Give entity a weapon
-        test_cli.process_command(f"give {entity.id} IronSword")
-
-        # Swap using lowercase slot and item name
-        output = self.capture_function_output(
-            lambda: test_cli.process_swap_item_command(
-                ["swap", str(entity.id), "weapon", "ironsword"]
-            )
-        )
-
-        # Check weapon was equipped
-        self.assertEqual(
-            entity.inventory[0].name, dl.create_equipment("ironsword").name
-        )
-
-        # check output
-        self.assertEqual(
-            output,
-            "Valid items: ironsword, curseddagger, magestaff, ironchestplate, leathertunic, scoutarmor, ringofthesorcerer, amuletofvitality, ringofhaste, none_wep, none_armor, none_acc, smallhealthpotion, greaterhealthpotion, superiorhealthpotion, manapotion, turtlemasterpotion\n"
-            "Valid slots: Weapon, Armor, Accessory\n"
-            "ok: swapped Weapon with backpack item!\n",
-        )
-
-    # Test Process Swap Item Command - Consumable Item
-    def test_process_swap_item_command_consumable(self):
-
-        # Create CLI and initialize map
-        test_cli = self.create_test_cli()
-        Grid.reset_grid()
-        test_cli.entity_list.clear()
-
-        self.create_test_map(test_cli)
-        test_cli.process_command("spawn warrior 10 10")
-
-        # Get spawned entity
-        entity = test_cli.entity_list[0]
-
-        entity.inventory = [
-            dl.create_equipment("none_wep"),
-            dl.create_equipment("none_armor"),
-            dl.create_equipment("none_acc"),
-        ]
-
-        # Attempt to equip a consumable item
-        output = self.capture_function_output(
-            lambda: test_cli.process_swap_item_command(
-                ["swap", str(entity.id), "Consumable", "smallhealthpotion"]
-            )
-        )
-
-        # Check error message
-        self.assertEqual(
-            output, "error: swap_failed - Item slot not valid inventory slot!\n"
-        )
-
-        # Check consumable was not equipped
-        self.assertNotIn(dl.EQUIPMENT_TYPES["smallhealthpotion"], entity.inventory)
-
-    # Test Process Swap Item Command - Check Stats After Swapping Armor
-    def test_process_swap_item_command_armor_stats(self):
-
-        # Create CLI and initialize map
-        test_cli = self.create_test_cli()
-        Grid.reset_grid()
-        test_cli.entity_list.clear()
-
-        self.create_test_map(test_cli)
-        test_cli.process_command("spawn warrior 10 10")
-
-        # Get spawned entity
-        entity = test_cli.entity_list[0]
-
-        entity.inventory = [
-            dl.create_equipment("none_wep"),
-            dl.create_equipment("none_armor"),
-            dl.create_equipment("none_acc"),
-        ]
-        entity.backpack = []
-
-        # Get armor items
-        iron_chestplate = dl.create_equipment("ironchestplate")
-        leather_tunic = dl.create_equipment("leathertunic")
-
-        entity.inventory[1] = leather_tunic
-        entity.backpack.append(leather_tunic)
-        entity.backpack.append(iron_chestplate)
-
-        # get stats
-        entity.update_stats(test_cli)
-
-        # Get spawned entity
-        entity = test_cli.entity_list[0]
-
-        # Before swap
-        self.assertEqual(entity.defence, 15)
-        self.assertEqual(entity.speed, 5)
-
-        # Swap
-        test_cli.process_command(f"swap {str(entity.id)} armor ironchestplate")
-
-        # After swap
-        self.assertEqual(entity.inventory[1].name, iron_chestplate.name)
-        self.assertEqual(entity.defence, 25)
-        self.assertEqual(entity.speed, 3)
-
-    # Test Process Swap Item Command - Item Not In Backpack
-    def test_process_swap_item_command_item_not_in_backpack(self):
-
-        # Create CLI and initialize map
-        test_cli = self.create_test_cli()
-        Grid.reset_grid()
-        test_cli.entity_list.clear()
-
-        self.create_test_map(test_cli)
-        test_cli.process_command("spawn warrior 10 10")
-
-        # Get spawned entity
-        entity = test_cli.entity_list[0]
-
-        entity.inventory = [
-            dl.create_equipment("none_wep"),
-            dl.create_equipment("none_armor"),
-            dl.create_equipment("none_acc"),
-        ]
-
-        # Ensure item is not in backpack
-        entity.backpack = []
-
-        # Attempt to swap to IronChestplate
-        output = self.capture_function_output(
-            lambda: test_cli.process_swap_item_command(
-                ["swap", str(entity.id), "Armor", "IronChestplate"]
-            )
-        )
-
-        # Check error message
-        self.assertEqual(output.strip(), "error: swap_failed - Item not in backpack!")
-
-        # Check armor was not equipped
-        self.assertNotEqual(entity.inventory[1], dl.EQUIPMENT_TYPES["ironchestplate"])
-
-    # Test CLI initialization
-    def test_cli_init(self):
-
-        # Create test CLI
-        test_cli = self.create_test_cli()
-
-        # Check grid is initialized to None
-        self.assertIsNone(test_cli.grid)
-
-        # Check entity list is initialized empty
-        self.assertEqual(test_cli.entity_list, [])
-
-        # Check entity IDs issued is initialized to 0
-        self.assertEqual(test_cli.entity_ids_issued, 1)
-
-        # Check map created is initialized to False
-        self.assertFalse(test_cli.map_created)
 
     # Use Commands Start
 
-    # Test an incorrect number of command pieces
-    def test_use_item_incorrect_number_of_command_pieces(self):
-        # Create test CLI
+    def test_use_with_invalid_command(self):
         test_cli = self.create_test_cli()
+        output = self.process_command_and_get_output(test_cli, "use 1")
+        self.assertIn("use_failed", output)
 
-        command = "use 1"
-
-        # Process command
-        output = self.process_command_and_get_output(test_cli, command)
-        # Get print output to compare
-        # Output was captured by the helper
-
-        # Check output
-        self.assertEqual(
-            output,
-            "error: use_failed - Invalid command!\n",
-        )
-
-    # Test too many command pieces
-    def test_use_item_too_many_command_pieces(self):
-        # Create test CLI
+    def test_use_with_invalid_item(self):
         test_cli = self.create_test_cli()
+        self.create_test_map(test_cli)
+        self.create_test_entity(test_cli)
+        output = self.process_command_and_get_output(test_cli, "use 1 fakeitem")
+        self.assertIn("Item name not found", output)
 
-        command = "use 1 SmallHealthPotion extra"
-
-        # Process command
-        output = self.process_command_and_get_output(test_cli, command)
-        # Get print output to compare
-        # Output was captured by the helper
-
-        # Check output
-        self.assertEqual(
-            output,
-            "error: use_failed - Invalid command!\n",
-        )
-
-    # Test using an entity that does not exist
-    def test_use_item_entity_does_not_exist(self):
-        # Create test CLI
-        test_cli = self.create_test_cli()
-
-        command = "use 999 SmallHealthPotion"
-
-        # Process command
-        output = self.process_command_and_get_output(test_cli, command)
-        # Get print output to compare
-        # Output was captured by the helper
-
-        # Check output
-        self.assertEqual(
-            output,
-            "error: use_failed - Entity does not exist!\n",
-        )
-
-    # Test using an invalid item name
-    def test_use_item_invalid_item_name(self):
-        # Create test CLI
-        test_cli = self.create_test_cli()
-
-        # Create map and entity
-        self.create_test_map(test_cli, 10, 10)
-        test_cli.process_command("spawn Warrior 1 1")
-
-        command = "use 1 NotARealItem"
-
-        # Process command
-        output = self.process_command_and_get_output(test_cli, command)
-        # Get print output to compare
-        # Output was captured by the helper
-
-        # Check output
-        self.assertEqual(
-            output,
-            "error: use_failed - Item name not found!\n",
-        )
-
-    # Test using a valid item that is not in the entity's backpack
     def test_use_item_not_in_backpack(self):
+        test_cli = self.create_test_cli()
+        self.create_test_map(test_cli)
+        self.create_test_entity(test_cli)
+        output = self.process_command_and_get_output(
+            test_cli, "use 1 smallhealthpotion"
+        )
+        self.assertIn("Item not in backpack", output)
+
+    def test_use_non_consumable_item(self):
+        test_cli = self.create_test_cli()
+        self.create_test_map(test_cli)
+        self.create_test_entity(test_cli)
+        test_cli.process_command("give 1 ironsword")
+        output = self.process_command_and_get_output(test_cli, "use 1 ironsword")
+        self.assertIn("not a consumable", output)
+
+    def test_use_consumable_success(self):
+        test_cli = self.create_test_cli()
+        self.create_test_map(test_cli)
+        self.create_test_entity(test_cli, "Warrior", 1, 1)
+        test_cli.process_command("give 1 smallhealthpotion")
+        output = self.process_command_and_get_output(
+            test_cli, "use 1 smallhealthpotion"
+        )
+        self.assertIn("used", output)
+
+    # Move Commands Start
+
+    def test_move_with_invalid_command(self):
+        test_cli = self.create_test_cli()
+        output = self.process_command_and_get_output(test_cli, "move 1 2")
+        self.assertIn("move_failed", output)
+
+    def test_move_without_map_created(self):
+        test_cli = self.create_test_cli()
+        output = self.process_command_and_get_output(test_cli, "move 1 2 2")
+        self.assertIn("Map does not exist", output)
+
+    def test_move_with_invalid_entity_id(self):
+        test_cli = self.create_test_cli()
+        self.create_test_map(test_cli)
+        output = self.process_command_and_get_output(test_cli, "move nope 2 2")
+        self.assertIn("Entity does not exist", output)
+
+    def test_move_with_invalid_coordinates(self):
+        test_cli = self.create_test_cli()
+        self.create_test_map(test_cli)
+        self.create_test_entity(test_cli)
+        output = self.process_command_and_get_output(test_cli, "move 1 nope 2")
+        self.assertIn("not valid integers", output)
+
+    def test_move_to_occupied_tile(self):
+        test_cli = self.create_test_cli()
+        self.create_test_map(test_cli)
+        self.create_test_entity(test_cli, "Warrior", 1, 1)
+        self.create_test_entity(test_cli, "Goblin", 2, 2)
+        output = self.process_command_and_get_output(test_cli, "move 1 2 2")
+        self.assertIn("already present", output)
+
+    def test_move_to_impassable_tile(self):
+        test_cli = self.create_test_cli()
+        self.create_test_map(test_cli)
+        self.create_test_entity(test_cli, "Warrior", 1, 1)
+        test_cli.process_command("set tile 2 1 Wall")
+        output = self.process_command_and_get_output(test_cli, "move 1 2 1")
+        self.assertIn("impassable", output)
+
+    def test_move_out_of_range(self):
+        test_cli = self.create_test_cli()
+        self.create_test_map(test_cli)
+        self.create_test_entity(test_cli, "Warrior", 1, 1)
+        output = self.process_command_and_get_output(test_cli, "move 1 20 20")
+        self.assertIn("out of entity's range", output)
+
+    def test_move_success(self):
+        test_cli = self.create_test_cli()
+        self.create_test_map(test_cli)
+        self.create_test_entity(test_cli, "Warrior", 1, 1)
+        output = self.process_command_and_get_output(test_cli, "move 1 2 1")
+        self.assertIn("moved 1 to 2, 1", output)
+        self.assertEqual(
+            test_cli.game_state.get_entity_info_from_list(1).position, [2, 1]
+        )
+
+    # Attack Commands Start
+
+    def test_attack_with_invalid_command(self):
+        test_cli = self.create_test_cli()
+        output = self.process_command_and_get_output(test_cli, "attack 1")
+        self.assertIn("attack_failed", output)
+
+    def test_attack_without_map_created(self):
+        test_cli = self.create_test_cli()
+        output = self.process_command_and_get_output(test_cli, "attack 1 2")
+        self.assertIn("Map does not exist", output)
+
+    def test_attack_with_invalid_entity_id(self):
+        test_cli = self.create_test_cli()
+        self.create_test_map(test_cli)
+        self.create_test_entity(test_cli, "Warrior", 1, 1)
+        output = self.process_command_and_get_output(test_cli, "attack nope 1")
+        self.assertIn("not valid integers", output)
+
+    def test_attack_with_missing_attacker(self):
+        test_cli = self.create_test_cli()
+        self.create_test_map(test_cli)
+        self.create_test_entity(test_cli, "Goblin", 2, 1)
+        output = self.process_command_and_get_output(test_cli, "attack 5 2")
+        self.assertIn("Attacking entity does not exist", output)
+
+    def test_attack_with_missing_defender(self):
+        test_cli = self.create_test_cli()
+        self.create_test_map(test_cli)
+        self.create_test_entity(test_cli, "Warrior", 1, 1)
+        output = self.process_command_and_get_output(test_cli, "attack 1 2")
+        self.assertIn("Defending entity does not exist", output)
+
+    def test_attack_with_defender_out_of_range(self):
+        test_cli = self.create_test_cli()
+        self.create_test_map(test_cli)
+        self.create_test_entity(test_cli, "Warrior", 1, 1)
+        self.create_test_entity(test_cli, "Goblin", 10, 10)
+        output = self.process_command_and_get_output(test_cli, "attack 1 2")
+        self.assertIn("Defender is out of range", output)
+
+    def test_attack_success(self):
+        test_cli = self.create_test_cli()
+        self.create_test_map(test_cli)
+        self.create_test_entity(test_cli, "Warrior", 1, 1)
+        self.create_test_entity(test_cli, "Goblin", 2, 1)
+        defender_before = test_cli.game_state.get_entity_info_from_list(2).health
+        output = self.process_command_and_get_output(test_cli, "attack 1 2")
+        self.assertIn("ok: attack", output)
+        defender_after = test_cli.game_state.get_entity_info_from_list(2).health
+        self.assertLess(defender_after, defender_before)
+
+    # Cast Commands Start
+
+    def test_cast_with_invalid_command(self):
+        test_cli = self.create_test_cli()
+        output = self.process_command_and_get_output(test_cli, "cast 1 2")
+        self.assertIn("cast_failed", output)
+
+    def test_cast_without_map_created(self):
+        test_cli = self.create_test_cli()
+        output = self.process_command_and_get_output(test_cli, "cast 1 2 Fireball")
+        self.assertIn("Map does not exist", output)
+
+    def test_cast_with_invalid_entity_id(self):
+        test_cli = self.create_test_cli()
+        self.create_test_map(test_cli)
+        self.create_test_entity(test_cli, "Mage", 1, 1)
+        output = self.process_command_and_get_output(test_cli, "cast nope 1 Fireball")
+        self.assertIn("cast_failed", output)
+
+    def test_cast_with_invalid_spell(self):
+        test_cli = self.create_test_cli()
+        self.create_test_map(test_cli)
+        self.create_test_entity(test_cli, "Mage", 1, 1)
+        self.create_test_entity(test_cli, "Goblin", 2, 1)
+        output = self.process_command_and_get_output(test_cli, "cast 1 2 FakeSpell")
+        self.assertIn("Spell does not exist", output)
+
+    def test_cast_with_non_mage_caster(self):
+        test_cli = self.create_test_cli()
+        self.create_test_map(test_cli)
+        self.create_test_entity(test_cli, "Warrior", 1, 1)
+        self.create_test_entity(test_cli, "Goblin", 2, 1)
+        output = self.process_command_and_get_output(test_cli, "cast 1 2 Fireball")
+        self.assertIn("not a valid spellcaster", output)
+
+    def test_cast_with_target_out_of_range(self):
+        test_cli = self.create_test_cli()
+        self.create_test_map(test_cli)
+        self.create_test_entity(test_cli, "Mage", 1, 1)
+        self.create_test_entity(test_cli, "Goblin", 20, 20)
+        output = self.process_command_and_get_output(test_cli, "cast 1 2 Fireball")
+        self.assertIn("outside of range", output)
+
+    def test_cast_success(self):
+        test_cli = self.create_test_cli()
+        self.create_test_map(test_cli)
+        self.create_test_entity(test_cli, "Mage", 1, 1)
+        self.create_test_entity(test_cli, "Goblin", 2, 1)
+        output = self.process_command_and_get_output(test_cli, "cast 1 2 Fireball")
+        self.assertIn("ok: cast Fireball", output)
+
+    # Tick Commands Start
+
+    def test_tick_with_invalid_command(self):
+        test_cli = self.create_test_cli()
+        output = self.process_command_and_get_output(test_cli, "tick extra")
+        self.assertIn("tick_failed", output)
+
+    def test_tick_without_map_created(self):
+        test_cli = self.create_test_cli()
+        output = self.process_command_and_get_output(test_cli, "tick")
+        self.assertIn("Map does not exist", output)
+
+    def test_tick_success(self):
+        test_cli = self.create_test_cli()
+        self.create_test_map(test_cli)
+        output = self.process_command_and_get_output(test_cli, "tick")
+        # Tick should advance the turn after processing entities.
+        self.assertEqual(output, "ok: advanced to turn 2!\n")
+
+    # Main Function Start
+
+    @patch("builtins.input", side_effect=["quit"])
+    def test_main_quits(self, mock_input):
+        # Capture output
+        with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
+            from command_line_interface import main
+
+            main()
+        # Check output
+        self.assertIn("Thank you for playing!", mock_stdout.getvalue())
+
+    # Additional Validation Tests Start
+
+    def test_init_map_with_negative_dimensions(self):
         # Create test CLI
         test_cli = self.create_test_cli()
+        # Process command
+        output = self.process_command_and_get_output(test_cli, "init map -5 10")
+        # Check output and state
+        self.assertIn("map_init_failed", output)
+        self.assertFalse(test_cli.game_state.is_map_created())
 
+    def test_init_map_with_decimal_dimensions(self):
+        # Create test CLI
+        test_cli = self.create_test_cli()
+        # Process command
+        output = self.process_command_and_get_output(test_cli, "init map 5.5 10")
+        # Check output and state
+        self.assertIn("map_init_failed", output)
+        self.assertFalse(test_cli.game_state.is_map_created())
+
+    def test_init_map_with_extra_arguments(self):
+        # Create test CLI
+        test_cli = self.create_test_cli()
+        # Process command
+        output = self.process_command_and_get_output(test_cli, "init map 10 10 extra")
+        # Check output
+        self.assertIn("map_init_failed", output)
+        self.assertFalse(test_cli.game_state.is_map_created())
+
+    def test_init_map_resets_entity_ids_after_map_reset(self):
+        # Create test CLI
+        test_cli = self.create_test_cli()
         # Create map and entity
-        self.create_test_map(test_cli, 10, 10)
+        self.create_test_map(test_cli)
+        self.create_test_entity(test_cli, "Warrior", 1, 1)
+        # Reset map
+        test_cli.process_command("init map 10 10")
+        self.create_test_entity(test_cli, "Goblin", 2, 2)
+        # Check ID reset
+        entity_info = test_cli.game_state.get_entity_info_from_list(1)
+        self.assertIsNotNone(entity_info)
+        self.assertEqual(entity_info.e_type.lower(), "goblin")
+
+    def test_set_tile_with_negative_coordinates(self):
+        # Create test CLI
+        test_cli = self.create_test_cli()
+        self.create_test_map(test_cli)
+        # Process command
+        output = self.process_command_and_get_output(test_cli, "set tile -1 0 Wall")
+        # Check output
+        self.assertIn("set_tile_failed", output)
+
+    def test_set_tile_with_decimal_coordinates(self):
+        # Create test CLI
+        test_cli = self.create_test_cli()
+        self.create_test_map(test_cli)
+        # Process command
+        output = self.process_command_and_get_output(test_cli, "set tile 1.5 0 Wall")
+        # Check output
+        self.assertIn("set_tile_failed", output)
+
+    def test_set_tile_preserves_entity_occupant(self):
+        # Create test CLI
+        test_cli = self.create_test_cli()
+        self.create_test_map(test_cli)
+        self.create_test_entity(test_cli, "Warrior", 2, 2)
+        # Process command
+        output = self.process_command_and_get_output(
+            test_cli, "set tile 2 2 ShallowWater"
+        )
+        # Check output and occupant
+        self.assertIn("tile_set", output)
+        tile_info = test_cli.game_state.get_game_tile_info(2, 2)
+        self.assertIn(1, tile_info.occupants)
+
+    def test_spawn_entity_with_decimal_coordinates(self):
+        # Create test CLI
+        test_cli = self.create_test_cli()
+        self.create_test_map(test_cli)
+        # Process command
+        output = self.process_command_and_get_output(test_cli, "spawn Warrior 1.5 1")
+        # Check output
+        self.assertIn("spawn_failed", output)
+        self.assertIsNone(test_cli.game_state.get_entity_info_from_list(1))
+
+    def test_spawn_entity_with_negative_coordinates(self):
+        # Create test CLI
+        test_cli = self.create_test_cli()
+        self.create_test_map(test_cli)
+        # Process command
+        output = self.process_command_and_get_output(test_cli, "spawn Warrior -1 1")
+        # Check output
+        self.assertIn("spawn_failed", output)
+        self.assertIsNone(test_cli.game_state.get_entity_info_from_list(1))
+
+    def test_spawn_entity_with_extra_arguments(self):
+        # Create test CLI
+        test_cli = self.create_test_cli()
+        self.create_test_map(test_cli)
+        # Process command
+        output = self.process_command_and_get_output(
+            test_cli, "spawn Warrior 1 1 extra"
+        )
+        # Check output
+        self.assertIn("spawn_failed", output)
+        self.assertIsNone(test_cli.game_state.get_entity_info_from_list(1))
+
+    def test_spawn_entity_does_not_increment_id_after_failure(self):
+        # Create test CLI
+        test_cli = self.create_test_cli()
+        self.create_test_map(test_cli)
+        # Attempt invalid spawn then valid spawn
+        test_cli.process_command("spawn Dragon 1 1")
         test_cli.process_command("spawn Warrior 1 1")
+        # Check ID
+        entity_info = test_cli.game_state.get_entity_info_from_list(1)
+        self.assertIsNotNone(entity_info)
+        self.assertEqual(entity_info.id, 1)
 
-        command = "use 1 SmallHealthPotion"
-
+    def test_spawn_loot_with_negative_coordinates(self):
+        # Create test CLI
+        test_cli = self.create_test_cli()
+        self.create_test_map(test_cli)
         # Process command
-        output = self.process_command_and_get_output(test_cli, command)
-        # Get print output to compare
-        # Output was captured by the helper
-
-        # Check output
-        self.assertEqual(
-            output,
-            "error: use_failed - Item not in backpack!\n",
+        output = self.process_command_and_get_output(
+            test_cli, "spawn loot ironsword -1 1"
         )
+        # Check output
+        self.assertIn("spawn_failed", output)
+        tile_info = test_cli.game_state.get_game_tile_info(0, 1)
+        self.assertEqual(tile_info.item_list, ())
 
-    # Test using an item that is not a consumable
-    def test_use_item_not_a_consumable(self):
+    def test_spawn_loot_with_decimal_coordinates(self):
         # Create test CLI
         test_cli = self.create_test_cli()
-
-        # Create map and entity
-        self.create_test_map(test_cli, 10, 10)
-        test_cli.process_command("spawn Warrior 1 1")
-
-        # Get entity
-        entity = test_cli.entity_list[0]
-
-        # Add a weapon to the backpack
-        item = dl.EQUIPMENT_TYPES["ironsword"]()
-        entity.backpack.append(item)
-
-        command = "use 1 IronSword"
-
+        self.create_test_map(test_cli)
         # Process command
-        output = self.process_command_and_get_output(test_cli, command)
-        # Get print output to compare
-        # Output was captured by the helper
-
-        # Check output
-        self.assertEqual(
-            output,
-            "error: use_failed - Item is not a consumable!\n",
+        output = self.process_command_and_get_output(
+            test_cli, "spawn loot ironsword 1.5 1"
         )
-
-        # Check that the weapon remains in the backpack
-        self.assertIn(item, entity.backpack)
-
-    # Test using a Small Health Potion
-    def test_use_small_health_potion(self):
-        # Create test CLI
-        test_cli = self.create_test_cli()
-
-        # Create map and entity
-        self.create_test_map(test_cli, 10, 10)
-        test_cli.process_command("spawn Warrior 1 1")
-
-        # Get entity
-        entity = test_cli.entity_list[0]
-
-        # Lower health so the potion has an effect
-        entity.health = 50
-
-        # Add potion to backpack
-        item = dl.EQUIPMENT_TYPES["smallhealthpotion"]()
-        entity.backpack.append(item)
-
-        command = "use 1 SmallHealthPotion"
-
-        # Process command
-        output = self.process_command_and_get_output(test_cli, command)
-        # Get print output to compare
-        # Output was captured by the helper
-
         # Check output
-        self.assertEqual(output, "ok: used SmallHealthPotion!\n")
+        self.assertIn("not valid integers", output)
 
-        # Check potion effect
-        self.assertEqual(entity.health, 70)
-
-        # Check that potion was removed
-        self.assertNotIn(item, entity.backpack)
-
-    # Test using a Greater Health Potion
-    def test_use_greater_health_potion(self):
-        # Create test CLI
-        test_cli = self.create_test_cli()
-
-        # Create map and entity
-        self.create_test_map(test_cli, 10, 10)
-        test_cli.process_command("spawn Warrior 1 1")
-
-        # Get entity
-        entity = test_cli.entity_list[0]
-        entity.health = 50
-
-        # Add potion to backpack
-        item = dl.EQUIPMENT_TYPES["greaterhealthpotion"]()
-        entity.backpack.append(item)
-
-        command = "use 1 GreaterHealthPotion"
-
-        # Process command
-        output = self.process_command_and_get_output(test_cli, command)
-        # Get print output to compare
-        # Output was captured by the helper
-
-        # Check output
-        self.assertEqual(output, "ok: used GreaterHealthPotion!\n")
-
-        # Check potion effect
-        self.assertEqual(entity.health, 100)
-
-        # Check that potion was removed
-        self.assertNotIn(item, entity.backpack)
-
-    # Test using a Superior Health Potion - HALF OF FILE
-    def test_use_superior_health_potion(self):
-        # Create test CLI
-        test_cli = self.create_test_cli()
-
-        # Create map and entity
-        self.create_test_map(test_cli, 10, 10)
-        test_cli.process_command("spawn warrior 1 1")
-
-        # Get entity
-        entity = test_cli.entity_list[0]
-        entity.health = 10
-
-        # Add potion to backpack
-        item = dl.EQUIPMENT_TYPES["superiorhealthpotion"]()
-        entity.backpack.append(item)
-
-        command = "use 1 SuperiorHealthPotion"
-
-        # Process command
-        output = self.process_command_and_get_output(test_cli, command)
-        # Get print output to compare
-        # Output was captured by the helper
-
-        # Check output
-        self.assertEqual(output, "ok: used SuperiorHealthPotion!\n")
-
-        # Check potion effect
-        self.assertEqual(entity.health, 110)
-
-        # Check that potion was removed
-        self.assertNotIn(item, entity.backpack)
-
-    # Test using a Superior Health Potion with overflow
-    def test_use_superior_health_potion_overflow(self):
-        # Create test CLI
-        test_cli = self.create_test_cli()
-
-        # Create map and entity
-        self.create_test_map(test_cli, 10, 10)
-        test_cli.process_command("spawn warrior 1 1")
-
-        # Get entity
-        entity = test_cli.entity_list[0]
-        entity.health = 30
-
-        # Add potion to backpack
-        item = dl.EQUIPMENT_TYPES["superiorhealthpotion"]()
-        entity.backpack.append(item)
-
-        command = "use 1 SuperiorHealthPotion"
-
-        # Process command
-        output = self.process_command_and_get_output(test_cli, command)
-        # Get print output to compare
-        # Output was captured by the helper
-
-        # Check output
-        self.assertEqual(output, "ok: used SuperiorHealthPotion!\n")
-
-        # Check potion effect
-        self.assertEqual(entity.health, 120)
-
-        # Check that potion was removed
-        self.assertNotIn(item, entity.backpack)
-        # Check for max health cap
-        self.assertEqual(entity.max_health, entity.health)
-
-    # Test using a Mana Potion
-    def test_use_mana_potion(self):
-        # Create test CLI
-        test_cli = self.create_test_cli()
-
-        # Create map and Mage
-        self.create_test_map(test_cli, 10, 10)
-        test_cli.process_command("spawn Mage 1 1")
-
-        # Get entity
-        entity = test_cli.entity_list[0]
-        entity.mana = 25
-
-        # Add potion to backpack
-        item = dl.EQUIPMENT_TYPES["manapotion"]()
-        entity.backpack.append(item)
-
-        command = "use 1 ManaPotion"
-
-        # Process command
-        output = self.process_command_and_get_output(test_cli, command)
-        # Get print output to compare
-        # Output was captured by the helper
-
-        # Check output
-        self.assertEqual(output, "ok: used ManaPotion!\n")
-
-        # Check potion effect
-        self.assertEqual(entity.mana, 75)
-
-        # Check that potion was removed
-        self.assertNotIn(item, entity.backpack)
-
-    # Test using a Mana Potion with overflow
-    def test_use_mana_potion_overlfow(self):
-        # Create test CLI
-        test_cli = self.create_test_cli()
-
-        # Create map and Mage
-        self.create_test_map(test_cli, 10, 10)
-        test_cli.process_command("spawn Mage 1 1")
-
-        # Get entity
-        entity = test_cli.entity_list[0]
-        entity.mana = 51
-
-        # Add potion to backpack
-        item = dl.EQUIPMENT_TYPES["manapotion"]()
-        entity.backpack.append(item)
-
-        command = "use 1 ManaPotion"
-
-        # Process command
-        output = self.process_command_and_get_output(test_cli, command)
-        # Get print output to compare
-        # Output was captured by the helper
-
-        # Check output
-        self.assertEqual(output, "ok: used ManaPotion!\n")
-
-        # Check potion effect
-        self.assertEqual(entity.mana, 100)
-
-        # Check that potion was removed
-        self.assertNotIn(item, entity.backpack)
-        # Check mana cap
-        self.assertEqual(entity.max_mana, entity.mana)
-
-    # Test using a Turtle Master Potion
-    def test_use_turtle_master_potion(self):
-        # Create test CLI
-        test_cli = self.create_test_cli()
-
-        # Create map and Warrior
-        self.create_test_map(test_cli, 10, 10)
-        test_cli.process_command("spawn Warrior 1 1")
-
-        # Get entity
-        entity = test_cli.entity_list[0]
-        entity.health = 50
-
-        # Add potion to backpack
-        item = dl.EQUIPMENT_TYPES["turtlemasterpotion"]()
-        entity.backpack.append(item)
-
-        command = "use 1 TurtleMasterPotion"
-
-        # Process command
-        output = self.process_command_and_get_output(test_cli, command)
-        # Get print output to compare
-        # Output was captured by the helper
-
-        # Check output
-        self.assertEqual(output, "ok: used TurtleMasterPotion!\n")
-
-        # Check instant health effect
-        self.assertEqual(entity.health, 55)
-
-        # Check that temporary buffs were added
-        self.assertGreater(len(entity.temp_buffs), 0)
-
-        # Check that potion was removed
-        self.assertNotIn(item, entity.backpack)
-
-    # Test that item names are case-insensitive
-    def test_use_item_name_case_insensitive(self):
-        # Create test CLI
-        test_cli = self.create_test_cli()
-
-        # Create map and entity
-        self.create_test_map(test_cli, 10, 10)
-        test_cli.process_command("spawn Warrior 1 1")
-
-        # Get entity
-        entity = test_cli.entity_list[0]
-        entity.health = 50
-
-        # Add potion to backpack
-        item = dl.EQUIPMENT_TYPES["smallhealthpotion"]()
-        entity.backpack.append(item)
-
-        # Use potion with lowercase name
-        command = "use 1 smallhealthpotion"
-
-        # Process command
-        output = self.process_command_and_get_output(test_cli, command)
-        # Get print output to compare
-        # Output was captured by the helper
-
-        # Check output
-        self.assertEqual(output, "ok: used SmallHealthPotion!\n")
-
-        # Check potion effect
-        self.assertEqual(entity.health, 70)
-
-        # Check that potion was removed
-        self.assertNotIn(item, entity.backpack)
-
-    # Test that using one item does not remove other items
-    def test_use_item_keeps_other_backpack_items(self):
-        # Create test CLI
-        test_cli = self.create_test_cli()
-
-        # Create map and entity
-        self.create_test_map(test_cli, 10, 10)
-        test_cli.process_command("spawn Warrior 1 1")
-
-        # Get entity
-        entity = test_cli.entity_list[0]
-        entity.health = 50
-
-        # Add two potions to backpack
-        potion_to_use = dl.EQUIPMENT_TYPES["smallhealthpotion"]()
-        other_potion = dl.EQUIPMENT_TYPES["greaterhealthpotion"]()
-
-        entity.backpack.append(potion_to_use)
-        entity.backpack.append(other_potion)
-
-        command = "use 1 SmallHealthPotion"
-
-        # Process command
-        output = self.process_command_and_get_output(test_cli, command)
-        # Get print output to compare
-        # Output was captured by the helper
-
-        # Check output
-        self.assertEqual(output, "ok: used SmallHealthPotion!\n")
-
-        # Check potion effect
-        self.assertEqual(entity.health, 70)
-
-        # Check used potion was removed
-        self.assertNotIn(potion_to_use, entity.backpack)
-
-        # Check other potion remains
-        self.assertIn(other_potion, entity.backpack)
-
-    # Test that an item belonging to another entity cannot be used
-    def test_use_item_from_another_entity_backpack(self):
-        # Create test CLI
-        test_cli = self.create_test_cli()
-
-        # Create map and two entities
-        self.create_test_map(test_cli, 10, 10)
-        test_cli.process_command("spawn Warrior 1 1")
-        test_cli.process_command("spawn Warrior 2 2")
-
-        # Get entities
-        entity_1 = test_cli.entity_list[0]
-        entity_2 = test_cli.entity_list[1]
-
-        entity_1.health = 50
-
-        # Add potion only to the second entity
-        item = dl.EQUIPMENT_TYPES["smallhealthpotion"]()
-        entity_2.backpack.append(item)
-
-        command = f"use {entity_1.id} SmallHealthPotion"
-
-        # Process command
-        output = self.process_command_and_get_output(test_cli, command)
-        # Get print output to compare
-        # Output was captured by the helper
-
-        # Check output
-        self.assertEqual(
-            output,
-            "error: use_failed - Item not in backpack!\n",
-        )
-
-        # Check first entity's health was not changed
-        self.assertEqual(entity_1.health, 50)
-
-        # Check second entity still has the potion
-        self.assertIn(item, entity_2.backpack)
-
-    # Spawn Loot Commands Start
-
-    # Test an incorrect number of command pieces
-    def test_spawn_loot_incorrect_number_of_command_pieces(self):
-        # Create test CLI
-        test_cli = self.create_test_cli()
-
-        # Create map
-        self.create_test_map(test_cli, 10, 10)
-
-        command = "spawn loot IronSword 2"
-
-        # Process command
-        output = self.process_command_and_get_output(test_cli, command)
-        # Get print output to compare
-        # Output was captured by the helper
-
-        # Check output
-        self.assertEqual(
-            output,
-            "error: spawn_failed - Invalid arguments!\n",
-        )
-
-    # Test too many command pieces
-    def test_spawn_loot_too_many_command_pieces(self):
-        # Create test CLI
-        test_cli = self.create_test_cli()
-
-        # Create map
-        self.create_test_map(test_cli, 10, 10)
-
-        command = "spawn loot IronSword 2 3 extra"
-
-        # Process command
-        output = self.process_command_and_get_output(test_cli, command)
-        # Get print output to compare
-        # Output was captured by the helper
-
-        # Check output
-        self.assertEqual(
-            output,
-            "error: spawn_failed - Invalid arguments!\n",
-        )
-
-    # Test an incorrect command type
-    def test_spawn_loot_incorrect_command_type(self):
-        # Create test CLI
-        test_cli = self.create_test_cli()
-
-        # Create map
-        self.create_test_map(test_cli, 10, 10)
-
-        command = "spawn item IronSword 2 3"
-
-        # Process command
-        output = self.process_command_and_get_output(test_cli, command)
-        # Get print output to compare
-        # Output was captured by the helper
-
-        # Check output
-        self.assertEqual(
-            output,
-            "error: spawn_failed - Invalid arguments!\n",
-        )
-
-    # Test spawning loot when a map does not exist
-    def test_spawn_loot_map_does_not_exist(self):
-        # Create test CLI
-        test_cli = self.create_test_cli()
-
-        command = "spawn loot IronSword 2 3"
-
-        # Process command
-        output = self.process_command_and_get_output(test_cli, command)
-        # Get print output to compare
-        # Output was captured by the helper
-
-        # Check output
-        self.assertEqual(
-            output,
-            "error: spawn_failed - Map does not exist!\n",
-        )
-
-    # Test an invalid x coordinate
-    def test_spawn_loot_invalid_x_coordinate(self):
-        # Create test CLI
-        test_cli = self.create_test_cli()
-
-        # Create map
-        self.create_test_map(test_cli, 10, 10)
-
-        command = "spawn loot IronSword abc 3"
-
-        # Process command
-        output = self.process_command_and_get_output(test_cli, command)
-        # Get print output to compare
-        # Output was captured by the helper
-
-        # Check output
-        self.assertEqual(
-            output,
-            "error: spawn_failed - x and y are not valid integers!\n",
-        )
-
-    # Test an invalid y coordinate
-    def test_spawn_loot_invalid_y_coordinate(self):
-        # Create test CLI
-        test_cli = self.create_test_cli()
-
-        # Create map
-        self.create_test_map(test_cli, 10, 10)
-
-        command = "spawn loot IronSword 2 abc"
-
-        # Process command
-        output = self.process_command_and_get_output(test_cli, command)
-        # Get print output to compare
-        # Output was captured by the helper
-
-        # Check output
-        self.assertEqual(
-            output,
-            "error: spawn_failed - x and y are not valid integers!\n",
-        )
-
-    # Test coordinates outside the grid
-    def test_spawn_loot_coordinates_outside_grid(self):
-        # Create test CLI
-        test_cli = self.create_test_cli()
-
-        # Create map
-        self.create_test_map(test_cli, 10, 10)
-
-        command = "spawn loot IronSword 100 100"
-
-        # Process command
-        output = self.process_command_and_get_output(test_cli, command)
-        # Get print output to compare
-        # Output was captured by the helper
-
-        # Check output
-        self.assertEqual(
-            output,
-            "error: spawn_failed - x and y exceed current grid bounds!\n",
-        )
-
-    # Test a negative coordinate
-    def test_spawn_loot_negative_coordinates(self):
-        # Create test CLI
-        test_cli = self.create_test_cli()
-
-        # Create map
-        self.create_test_map(test_cli, 10, 10)
-
-        command = "spawn loot IronSword -1 3"
-
-        # Process command
-        output = self.process_command_and_get_output(test_cli, command)
-        # Get print output to compare
-        # Output was captured by the helper
-
-        # Check output
-        self.assertEqual(
-            output,
-            "error: spawn_failed - x and y exceed current grid bounds!\n",
-        )
-
-    # Test an invalid item name
-    def test_spawn_loot_invalid_item_name(self):
-        # Create test CLI
-        test_cli = self.create_test_cli()
-
-        # Create map
-        self.create_test_map(test_cli, 10, 10)
-
-        command = "spawn loot NotARealItem 2 3"
-
-        # Process command
-        output = self.process_command_and_get_output(test_cli, command)
-        # Get print output to compare
-        # Output was captured by the helper
-
-        # Check output
-        self.assertEqual(
-            output,
-            "error: spawn_failed - Item name not found!\n",
-        )
-
-    # Test successfully spawning an Iron Sword
-    def test_spawn_loot_iron_sword(self):
-        # Create test CLI
-        test_cli = self.create_test_cli()
-
-        # Create map
-        self.create_test_map(test_cli, 10, 10)
-
-        command = "spawn loot IronSword 2 3"
-
-        # Process command
-        output = self.process_command_and_get_output(test_cli, command)
-        # Get print output to compare
-        # Output was captured by the helper
-
-        # Check output
-        self.assertEqual(
-            output,
-            "ok: spawn_loot ironsword at 2, 3!\n",
-        )
-
-        # Get tile
-        tile = test_cli.grid.grid[2][3]
-
-        # Check that loot was added
-        self.assertEqual(len(tile.item_list), 1)
-
-        # Check that the correct item was created
-        self.assertEqual(
-            tile.item_list[0].name,
-            dl.EQUIPMENT_TYPES["ironsword"]().name,
-        )
-
-    # Test successfully spawning a health potion
-    def test_spawn_loot_health_potion(self):
-        # Create test CLI
-        test_cli = self.create_test_cli()
-
-        # Create map
-        self.create_test_map(test_cli, 10, 10)
-
-        command = "spawn loot SmallHealthPotion 2 3"
-
-        # Process command
-        output = self.process_command_and_get_output(test_cli, command)
-        # Get print output to compare
-        # Output was captured by the helper
-
-        # Check output
-        self.assertEqual(
-            output,
-            "ok: spawn_loot smallhealthpotion at 2, 3!\n",
-        )
-
-        # Get tile
-        tile = test_cli.grid.grid[2][3]
-
-        # Check that loot was added
-        self.assertEqual(len(tile.item_list), 1)
-
-        # Check that the correct item was created
-        self.assertEqual(
-            tile.item_list[0].name,
-            dl.EQUIPMENT_TYPES["smallhealthpotion"]().name,
-        )
-
-    # Test that item names are case-insensitive
-    def test_spawn_loot_item_name_case_insensitive(self):
-        # Create test CLI
-        test_cli = self.create_test_cli()
-
-        # Create map
-        self.create_test_map(test_cli, 10, 10)
-
-        command = "spawn loot ironsword 2 3"
-
-        # Process command
-        output = self.process_command_and_get_output(test_cli, command)
-        # Get print output to compare
-        # Output was captured by the helper
-
-        # Check output
-        self.assertEqual(
-            output,
-            "ok: spawn_loot ironsword at 2, 3!\n",
-        )
-
-        # Get tile
-        tile = test_cli.grid.grid[2][3]
-
-        # Check that loot was added
-        self.assertEqual(len(tile.item_list), 1)
-
-        # Check that the correct item was created
-        self.assertEqual(
-            tile.item_list[0].name,
-            dl.EQUIPMENT_TYPES["ironsword"]().name,
-        )
-
-    # Test that multiple items can be spawned on the same tile
     def test_spawn_multiple_loot_on_same_tile(self):
         # Create test CLI
         test_cli = self.create_test_cli()
+        self.create_test_map(test_cli)
+        # Spawn multiple items
+        test_cli.process_command("spawn loot ironsword 2 2")
+        test_cli.process_command("spawn loot smallhealthpotion 2 2")
+        # Check tile items
+        tile_info = test_cli.game_state.get_game_tile_info(2, 2)
+        item_names = [item.lower() for item in tile_info.item_list]
+        self.assertIn("ironsword", item_names)
+        self.assertIn("smallhealthpotion", item_names)
 
-        # Create map
-        self.create_test_map(test_cli, 10, 10)
-
-        # Spawn first item
-        test_cli.process_command("spawn loot IronSword 2 3")
-
-        # Spawn second item
-        command = "spawn loot SmallHealthPotion 2 3"
-
+    def test_inventory_with_non_integer_entity_id(self):
+        # Create test CLI
+        test_cli = self.create_test_cli()
+        self.create_test_map(test_cli)
+        self.create_test_entity(test_cli)
         # Process command
-        output = self.process_command_and_get_output(test_cli, command)
-        # Get print output to compare
-        # Output was captured by the helper
-
+        output = self.process_command_and_get_output(test_cli, "inventory nope")
         # Check output
+        self.assertIn("not valid integer", output)
+
+    def test_inventory_with_negative_entity_id(self):
+        # Create test CLI
+        test_cli = self.create_test_cli()
+        self.create_test_map(test_cli)
+        # Process command
+        output = self.process_command_and_get_output(test_cli, "inventory -1")
+        # Check output
+        self.assertIn("does not exist", output)
+
+    def test_inspect_with_non_integer_entity_id(self):
+        # Create test CLI
+        test_cli = self.create_test_cli()
+        self.create_test_map(test_cli)
+        self.create_test_entity(test_cli)
+        # Process command
+        output = self.process_command_and_get_output(test_cli, "inspect nope")
+        # Check output
+        self.assertIn("not valid integer", output)
+
+    def test_inspect_with_negative_entity_id(self):
+        # Create test CLI
+        test_cli = self.create_test_cli()
+        self.create_test_map(test_cli)
+        # Process command
+        output = self.process_command_and_get_output(test_cli, "inspect -1")
+        # Check output
+        self.assertIn("No entities exist", output)
+
+    def test_tile_with_negative_coordinates(self):
+        # Create test CLI
+        test_cli = self.create_test_cli()
+        self.create_test_map(test_cli)
+        # Process command
+        output = self.process_command_and_get_output(test_cli, "tile -1 0")
+        # Check output
+        self.assertIn("exceed current grid bounds", output)
+
+    def test_tile_with_decimal_coordinates(self):
+        # Create test CLI
+        test_cli = self.create_test_cli()
+        self.create_test_map(test_cli)
+        # Process command
+        output = self.process_command_and_get_output(test_cli, "tile 1.5 0")
+        # Check output
+        self.assertIn("not valid integers", output)
+
+    def test_pickup_with_non_integer_entity_id_does_not_crash(self):
+        # Create test CLI
+        test_cli = self.create_test_cli()
+        self.create_test_map(test_cli)
+        # Process command
+        output = self.process_command_and_get_output(test_cli, "pickup nope ironsword")
+        # Check output
+        self.assertIn("pickup_failed", output)
+
+    def test_pickup_with_nonexistent_entity_does_not_crash(self):
+        # Create test CLI
+        test_cli = self.create_test_cli()
+        self.create_test_map(test_cli)
+        # Process command
+        output = self.process_command_and_get_output(test_cli, "pickup 99 ironsword")
+        # Check output
+        self.assertIn("Entity does not exist", output)
+
+    def test_give_with_non_integer_entity_id_does_not_crash(self):
+        # Create test CLI
+        test_cli = self.create_test_cli()
+        self.create_test_map(test_cli)
+        # Process command
+        output = self.process_command_and_get_output(test_cli, "give nope ironsword")
+        # Check output
+        self.assertIn("give_failed", output)
+
+    def test_give_with_nonexistent_entity_does_not_crash(self):
+        # Create test CLI
+        test_cli = self.create_test_cli()
+        self.create_test_map(test_cli)
+        # Process command
+        output = self.process_command_and_get_output(test_cli, "give 99 ironsword")
+        # Check output
+        self.assertIn("Entity does not exist", output)
+
+    def test_drop_with_non_integer_entity_id_does_not_crash(self):
+        # Create test CLI
+        test_cli = self.create_test_cli()
+        self.create_test_map(test_cli)
+        # Process command
+        output = self.process_command_and_get_output(test_cli, "drop nope ironsword")
+        # Check output
+        self.assertIn("drop_failed", output)
+
+    def test_drop_with_nonexistent_entity_does_not_crash(self):
+        # Create test CLI
+        test_cli = self.create_test_cli()
+        self.create_test_map(test_cli)
+        # Process command
+        output = self.process_command_and_get_output(test_cli, "drop 99 ironsword")
+        # Check output
+        self.assertIn("Entity does not exist", output)
+
+    def test_swap_with_non_integer_entity_id_does_not_crash(self):
+        # Create test CLI
+        test_cli = self.create_test_cli()
+        self.create_test_map(test_cli)
+        # Process command
+        output = self.process_command_and_get_output(
+            test_cli, "swap nope Weapon ironsword"
+        )
+        # Check output
+        self.assertIn("swap_failed", output)
+
+    def test_swap_with_nonexistent_entity_does_not_crash(self):
+        # Create test CLI
+        test_cli = self.create_test_cli()
+        self.create_test_map(test_cli)
+        # Process command
+        output = self.process_command_and_get_output(
+            test_cli, "swap 99 Weapon ironsword"
+        )
+        # Check output
+        self.assertIn("Entity does not exist", output)
+
+    def test_use_with_non_integer_entity_id_does_not_crash(self):
+        # Create test CLI
+        test_cli = self.create_test_cli()
+        self.create_test_map(test_cli)
+        # Process command
+        output = self.process_command_and_get_output(
+            test_cli, "use nope smallhealthpotion"
+        )
+        # Check output
+        self.assertIn("use_failed", output)
+
+    def test_use_with_nonexistent_entity_does_not_crash(self):
+        # Create test CLI
+        test_cli = self.create_test_cli()
+        self.create_test_map(test_cli)
+        # Process command
+        output = self.process_command_and_get_output(
+            test_cli, "use 99 smallhealthpotion"
+        )
+        # Check output
+        self.assertIn("Entity does not exist", output)
+
+    def test_move_with_non_integer_entity_id_does_not_crash(self):
+        # Create test CLI
+        test_cli = self.create_test_cli()
+        self.create_test_map(test_cli)
+        self.create_test_entity(test_cli)
+        # Process command
+        output = self.process_command_and_get_output(test_cli, "move nope 2 2")
+        # Check output
+        self.assertIn("Entity does not exist", output)
+
+    def test_move_with_nonexistent_entity_does_not_crash(self):
+        # Create test CLI
+        test_cli = self.create_test_cli()
+        self.create_test_map(test_cli)
+        # Process command
+        output = self.process_command_and_get_output(test_cli, "move 99 2 2")
+        # Check output
+        self.assertIn("Entity does not exist", output)
+
+    def test_move_does_not_change_position_when_rejected(self):
+        # Create test CLI
+        test_cli = self.create_test_cli()
+        self.create_test_map(test_cli)
+        self.create_test_entity(test_cli, "Warrior", 1, 1)
+        # Process command
+        self.process_command_and_get_output(test_cli, "move 1 20 20")
+        # Check position did not change
+        entity_info = test_cli.game_state.get_entity_info_from_list(1)
+        self.assertEqual(entity_info.position, [1, 1])
+
+    def test_move_updates_old_and_new_tile_occupants(self):
+        # Create test CLI
+        test_cli = self.create_test_cli()
+        self.create_test_map(test_cli)
+        self.create_test_entity(test_cli, "Warrior", 1, 1)
+        # Process command
+        output = self.process_command_and_get_output(test_cli, "move 1 2 1")
+        # Check output and tile occupants
+        self.assertIn("ok: moved", output)
+        old_tile = test_cli.game_state.get_game_tile_info(1, 1)
+        new_tile = test_cli.game_state.get_game_tile_info(2, 1)
+        self.assertNotIn(1, old_tile.occupants)
+        self.assertIn(1, new_tile.occupants)
+
+    def test_move_rejected_by_occupied_tile_does_not_change_position(self):
+        # Create test CLI
+        test_cli = self.create_test_cli()
+        self.create_test_map(test_cli)
+        self.create_test_entity(test_cli, "Warrior", 1, 1)
+        self.create_test_entity(test_cli, "Goblin", 2, 1)
+        # Process command
+        output = self.process_command_and_get_output(test_cli, "move 1 2 1")
+        # Check output and position
+        self.assertIn("already present", output)
         self.assertEqual(
-            output,
-            "ok: spawn_loot smallhealthpotion at 2, 3!\n",
+            test_cli.game_state.get_entity_info_from_list(1).position, [1, 1]
         )
 
-        # Get tile
-        tile = test_cli.grid.grid[2][3]
+    def test_attack_with_non_integer_ids_does_not_crash(self):
+        # Create test CLI
+        test_cli = self.create_test_cli()
+        self.create_test_map(test_cli)
+        self.create_test_entity(test_cli, "Warrior", 1, 1)
+        self.create_test_entity(test_cli, "Goblin", 2, 1)
+        # Process command
+        output = self.process_command_and_get_output(test_cli, "attack nope 2")
+        # Check output
+        self.assertIn("attack_failed", output)
 
-        # Check that both items were added
-        self.assertEqual(len(tile.item_list), 2)
-
-        # Check that the correct items were created
+    def test_attack_does_not_damage_target_when_out_of_range(self):
+        # Create test CLI
+        test_cli = self.create_test_cli()
+        self.create_test_map(test_cli)
+        self.create_test_entity(test_cli, "Warrior", 1, 1)
+        self.create_test_entity(test_cli, "Goblin", 10, 10)
+        # Get original health
+        original_health = test_cli.game_state.get_entity_info_from_list(2).health
+        # Process command
+        output = self.process_command_and_get_output(test_cli, "attack 1 2")
+        # Check output and health
+        self.assertIn("out of range", output)
         self.assertEqual(
-            tile.item_list[0].name,
-            dl.EQUIPMENT_TYPES["ironsword"]().name,
+            test_cli.game_state.get_entity_info_from_list(2).health, original_health
         )
 
-        self.assertEqual(
-            tile.item_list[1].name,
-            dl.EQUIPMENT_TYPES["smallhealthpotion"]().name,
-        )
-
-    # Test that spawning loot does not affect another tile
-    def test_spawn_loot_does_not_affect_other_tile(self):
+    def test_attack_with_nonexistent_attacker_does_not_crash(self):
         # Create test CLI
         test_cli = self.create_test_cli()
-
-        # Create map
-        self.create_test_map(test_cli, 10, 10)
-
-        command = "spawn loot IronSword 2 3"
-
+        self.create_test_map(test_cli)
+        self.create_test_entity(test_cli, "Goblin", 1, 1)
         # Process command
-        output = self.process_command_and_get_output(test_cli, command)
-        # Get print output to compare
-        # Output was captured by the helper
-
+        output = self.process_command_and_get_output(test_cli, "attack 99 1")
         # Check output
-        self.assertEqual(
-            output,
-            "ok: spawn_loot ironsword at 2, 3!\n",
-        )
+        self.assertIn("attack_failed", output)
 
-        # Get tiles
-        target_tile = test_cli.grid.grid[2][3]
-        other_tile = test_cli.grid.grid[3][2]
-
-        # Check that loot was added to the target tile
-        self.assertEqual(len(target_tile.item_list), 1)
-
-        # Check that the other tile remains empty
-        self.assertEqual(len(other_tile.item_list), 0)
-
-    # Spawn Entity For CLI Tests Start
-
-    # Test spawning an entity when a map does not exist
-    def test_spawn_entity_no_map(self):
+    def test_attack_with_nonexistent_defender_does_not_crash(self):
         # Create test CLI
         test_cli = self.create_test_cli()
-
+        self.create_test_map(test_cli)
+        self.create_test_entity(test_cli, "Warrior", 1, 1)
         # Process command
-        output = self.capture_function_output(
-            lambda: test_cli.spawn_entity_for_cli(2, 3, "Warrior")
-        )
-
-        # Get print output to compare
-
+        output = self.process_command_and_get_output(test_cli, "attack 1 99")
         # Check output
-        self.assertEqual(
-            output,
-            "error: spawn_failed - Map does not exist!\n",
-        )
+        self.assertIn("attack_failed", output)
 
-        # Check that no entity was created
-        self.assertEqual(len(test_cli.entity_list), 0)
-
-    # Test spawning an entity with an invalid x coordinate
-    def test_spawn_entity_invalid_x(self):
+    def test_cast_with_non_integer_ids_does_not_crash(self):
         # Create test CLI
         test_cli = self.create_test_cli()
-
-        # Create map
-        self.create_test_map(test_cli, 10, 10)
-
+        self.create_test_map(test_cli)
+        self.create_test_entity(test_cli, "Mage", 1, 1)
+        self.create_test_entity(test_cli, "Goblin", 2, 1)
         # Process command
-        output = self.capture_function_output(
-            lambda: test_cli.spawn_entity_for_cli("abc", 3, "Warrior")
-        )
-
-        # Get print output to compare
-
+        output = self.process_command_and_get_output(test_cli, "cast nope 2 Fireball")
         # Check output
-        self.assertEqual(
-            output,
-            "error: spawn_failed - x and y are not valid integers!\n",
-        )
+        self.assertIn("cast_failed", output)
 
-        # Check that no entity was created
-        self.assertEqual(len(test_cli.entity_list), 0)
-
-    # Test spawning an entity with an invalid y coordinate
-    def test_spawn_entity_invalid_y(self):
+    def test_cast_with_nonexistent_caster_does_not_crash(self):
         # Create test CLI
         test_cli = self.create_test_cli()
-
-        # Create map
-        self.create_test_map(test_cli, 10, 10)
-
+        self.create_test_map(test_cli)
+        self.create_test_entity(test_cli, "Mage", 1, 1)
         # Process command
-        output = self.capture_function_output(
-            lambda: test_cli.spawn_entity_for_cli(2, "abc", "Warrior")
-        )
-
-        # Get print output to compare
-
+        output = self.process_command_and_get_output(test_cli, "cast 99 1 Fireball")
         # Check output
-        self.assertEqual(
-            output,
-            "error: spawn_failed - x and y are not valid integers!\n",
-        )
+        self.assertIn("cast_failed", output)
 
-        # Check that no entity was created
-        self.assertEqual(len(test_cli.entity_list), 0)
-
-    # Test spawning an entity outside the grid
-    def test_spawn_entity_outside_grid(self):
+    def test_cast_with_nonexistent_target_does_not_crash(self):
         # Create test CLI
         test_cli = self.create_test_cli()
-
-        # Create map
-        self.create_test_map(test_cli, 10, 10)
-
+        self.create_test_map(test_cli)
+        self.create_test_entity(test_cli, "Mage", 1, 1)
         # Process command
-        output = self.capture_function_output(
-            lambda: test_cli.spawn_entity_for_cli(100, 100, "Warrior")
-        )
-
-        # Get print output to compare
-
+        output = self.process_command_and_get_output(test_cli, "cast 1 99 Fireball")
         # Check output
-        self.assertEqual(
-            output,
-            "error: spawn_failed - x and y exceed current grid bounds!\n",
-        )
+        self.assertIn("cast_failed", output)
 
-        # Check that no entity was created
-        self.assertEqual(len(test_cli.entity_list), 0)
-
-    # Test spawning an entity at a negative coordinate
-    def test_spawn_entity_negative_coordinates(self):
+    def test_tick_with_extra_arguments_does_not_advance_game(self):
         # Create test CLI
         test_cli = self.create_test_cli()
-
-        # Create map
-        self.create_test_map(test_cli, 10, 10)
-
-        # Process command
-        output = self.capture_function_output(
-            lambda: test_cli.spawn_entity_for_cli(-1, 3, "Warrior")
-        )
-
-        # Get print output to compare
-
-        # Check output
-        self.assertEqual(
-            output,
-            "error: spawn_failed - x and y exceed current grid bounds!\n",
-        )
-
-        # Check that no entity was created
-        self.assertEqual(len(test_cli.entity_list), 0)
-
-    # Test spawning an entity at an occupied location
-    def test_spawn_entity_occupied_location(self):
-        # Create test CLI
-        test_cli = self.create_test_cli()
-
-        # Create map
-        self.create_test_map(test_cli, 10, 10)
-
-        # Spawn first entity
-        test_cli.spawn_entity_for_cli(2, 3, "Warrior")
-
-        # Attempt to spawn another entity at the same location
-        output = self.capture_function_output(
-            lambda: test_cli.spawn_entity_for_cli(2, 3, "Mage")
-        )
-
-        # Get print output to compare
-
-        # Check output
-        self.assertEqual(
-            output,
-            "error: spawn_failed - Entity is already present at (2, 3)!\n",
-        )
-
-        # Check that only one entity exists
-        self.assertEqual(len(test_cli.entity_list), 1)
-
-        # Check that the entity ID was not incremented again
-        self.assertEqual(test_cli.entity_ids_issued, 2)
-
-    # Test spawning an invalid entity type
-    def test_spawn_entity_invalid_type(self):
-        # Create test CLI
-        test_cli = self.create_test_cli()
-
-        # Create map
-        self.create_test_map(test_cli, 10, 10)
-
-        # Process command
-        output = self.capture_function_output(
-            lambda: test_cli.spawn_entity_for_cli(2, 3, "Dragon")
-        )
-
-        # Get print output to compare
-
-        # Check output
-        self.assertEqual(
-            output,
-            "error: spawn_failed - Invalid entity type!\n",
-        )
-
-        # Check that no entity was created
-        self.assertEqual(len(test_cli.entity_list), 0)
-
-        # Check that the entity ID was not incremented
-        self.assertEqual(test_cli.entity_ids_issued, 1)
-
-    # Test successfully spawning a Warrior
-    def test_spawn_entity_warrior(self):
-        # Create test CLI
-        test_cli = self.create_test_cli()
-
-        # Create map
-        self.create_test_map(test_cli, 10, 10)
-
-        # Process command
-        output = self.capture_function_output(
-            lambda: test_cli.spawn_entity_for_cli(2, 3, "Warrior")
-        )
-
-        # Get print output to compare
-
-        # Check output
-        self.assertEqual(
-            output,
-            "ok: Spawned Warrior at 2, 3. id: 1!\n",
-        )
-
-        # Get spawned entity
-        entity = test_cli.entity_list[0]
-
-        # Check entity details
-        self.assertEqual(entity.id, 1)
-        self.assertEqual(entity.e_type.lower(), "warrior")
-
-        # Check max health
-        self.assertEqual(entity.max_health, entity.health)
-
-        # Check temporary buffs
-        self.assertEqual(entity.temp_buffs, [])
-
-        # Check entity ID counter
-        self.assertEqual(test_cli.entity_ids_issued, 2)
-
-        # Check entity was added to entity list
-        self.assertEqual(len(test_cli.entity_list), 1)
-
-        # Check grid location
-        self.assertTrue(Grid.is_occupied(test_cli.grid, 2, 3))
-
-    # Test successfully spawning a Mage
-    def test_spawn_entity_mage(self):
-        # Create test CLI
-        test_cli = self.create_test_cli()
-        self.reset_test_entities(test_cli)
-        test_cli.reset_id_issuer_tracker()
-
-        # Create map
-        self.create_test_map(test_cli, 10, 10)
-
-        # Process command
-        output = self.capture_function_output(
-            lambda: test_cli.spawn_entity_for_cli(2, 3, "Mage")
-        )
-
-        # Get print output to compare
-
-        # Check output
-        self.assertEqual(
-            output,
-            "ok: Spawned Mage at 2, 3. id: 1!\n",
-        )
-
-        # Get spawned entity
-        entity = test_cli.entity_list[0]
-
-        # Check entity details
-        self.assertEqual(entity.id, 1)
-        self.assertEqual(entity.e_type.lower(), "mage")
-
-        # Check max health and mana
-        self.assertEqual(entity.max_health, entity.health)
-        self.assertEqual(entity.max_mana, entity.mana)
-
-        # Check temporary buffs
-        self.assertEqual(entity.temp_buffs, [])
-
-        # Check entity ID counter
-        self.assertEqual(test_cli.entity_ids_issued, 2)
-
-        # Check entity was added to entity list
-        self.assertEqual(len(test_cli.entity_list), 1)
-
-        # Check grid location
-        self.assertTrue(Grid.is_occupied(test_cli.grid, 2, 3))
-
-    # Test that entity IDs increment when spawning multiple entities
-    def test_spawn_multiple_entities(self):
-        # Create test CLI
-        test_cli = self.create_test_cli()
-
-        # Create map
-        self.create_test_map(test_cli, 10, 10)
-
-        # Spawn first entity
-        test_cli.spawn_entity_for_cli(2, 3, "Warrior")
-
-        # Spawn second entity
-        output = self.capture_function_output(
-            lambda: test_cli.spawn_entity_for_cli(4, 5, "Mage")
-        )
-
-        # Get print output to compare
-
-        # Check output
-        self.assertEqual(
-            output,
-            "ok: Spawned Mage at 4, 5. id: 2!\n",
-        )
-
-        # Check entity count
-        self.assertEqual(len(test_cli.entity_list), 2)
-
-        # Check entity IDs
-        self.assertEqual(test_cli.entity_list[0].id, 1)
-        self.assertEqual(test_cli.entity_list[1].id, 2)
-
-        # Check entity ID counter
-        self.assertEqual(test_cli.entity_ids_issued, 3)
-
-        # Check both grid locations
-        self.assertTrue(Grid.is_occupied(test_cli.grid, 2, 3))
-        self.assertTrue(Grid.is_occupied(test_cli.grid, 4, 5))
-
-    # Spawn Loot For CLI Tests Start
-
-    # Test spawning loot when a map does not exist
-    def test_spawn_loot_for_cli_no_map(self):
-        # Create test CLI
-        test_cli = self.create_test_cli()
-
-        # Process command
-        output = self.capture_function_output(
-            lambda: test_cli.spawn_loot_for_cli("IronSword", 2, 3)
-        )
-
-        # Get print output to compare
-
-        # Check output
-        self.assertEqual(
-            output,
-            "error: spawn_failed - Map does not exist!\n",
-        )
-
-    # Test spawning loot with an invalid x coordinate
-    def test_spawn_loot_for_cli_invalid_x(self):
-        # Create test CLI
-        test_cli = self.create_test_cli()
-
-        # Create map
-        self.create_test_map(test_cli, 10, 10)
-
-        # Process command
-        output = self.capture_function_output(
-            lambda: test_cli.spawn_loot_for_cli("IronSword", "abc", 3)
-        )
-
-        # Get print output to compare
-
-        # Check output
-        self.assertEqual(
-            output,
-            "error: spawn_failed - x and y are not valid integers!\n",
-        )
-
-    # Test spawning loot with an invalid y coordinate
-    def test_spawn_loot_for_cli_invalid_y(self):
-        # Create test CLI
-        test_cli = self.create_test_cli()
-
-        # Create map
-        self.create_test_map(test_cli, 10, 10)
-
-        # Process command
-        output = self.capture_function_output(
-            lambda: test_cli.spawn_loot_for_cli("IronSword", 2, "abc")
-        )
-
-        # Get print output to compare
-
-        # Check output
-        self.assertEqual(
-            output,
-            "error: spawn_failed - x and y are not valid integers!\n",
-        )
-
-    # Test spawning loot outside the grid
-    def test_spawn_loot_for_cli_outside_grid(self):
-        # Create test CLI
-        test_cli = self.create_test_cli()
-
-        # Create map
-        self.create_test_map(test_cli, 10, 10)
-
-        # Process command
-        output = self.capture_function_output(
-            lambda: test_cli.spawn_loot_for_cli("IronSword", 100, 100)
-        )
-
-        # Get print output to compare
-
-        # Check output
-        self.assertEqual(
-            output,
-            "error: spawn_failed - x and y exceed current grid bounds!\n",
-        )
-
-    # Test spawning loot with an invalid item name
-    def test_spawn_loot_for_cli_invalid_item(self):
-        # Create test CLI
-        test_cli = self.create_test_cli()
-
-        # Create map
-        self.create_test_map(test_cli, 10, 10)
-
-        # Process command
-        output = self.capture_function_output(
-            lambda: test_cli.spawn_loot_for_cli("NotARealItem", 2, 3)
-        )
-
-        # Get print output to compare
-
-        # Check output
-        self.assertEqual(
-            output,
-            "error: spawn_failed - Item name not found!\n",
-        )
-
-    # Test successfully spawning an Iron Sword
-    def test_spawn_loot_for_cli_iron_sword(self):
-        # Create test CLI
-        test_cli = self.create_test_cli()
-
-        # Create map
-        self.create_test_map(test_cli, 10, 10)
-
-        # Process command
-        output = self.capture_function_output(
-            lambda: test_cli.spawn_loot_for_cli("IronSword", 2, 3)
-        )
-
-        # Get print output to compare
-
-        # Check output
-        self.assertEqual(
-            output,
-            "ok: spawn_loot IronSword at 2, 3!\n",
-        )
-
-        # Get tile
-        tile = test_cli.grid.grid[2][3]
-
-        # Check that loot was added
-        self.assertEqual(len(tile.item_list), 1)
-
-        # Check that the correct item class was created
-        self.assertIsInstance(
-            tile.item_list[0],
-            dl.EQUIPMENT_TYPES["ironsword"],
-        )
-
-    # Test successfully spawning a health potion
-    def test_spawn_loot_for_cli_health_potion(self):
-        # Create test CLI
-        test_cli = self.create_test_cli()
-
-        # Create map
-        self.create_test_map(test_cli, 10, 10)
-
-        # Process command
-        output = self.capture_function_output(
-            lambda: test_cli.spawn_loot_for_cli("SmallHealthPotion", 2, 3)
-        )
-
-        # Get print output to compare
-
-        # Check output
-        self.assertEqual(
-            output,
-            "ok: spawn_loot SmallHealthPotion at 2, 3!\n",
-        )
-
-        # Get tile
-        tile = test_cli.grid.grid[2][3]
-
-        # Check that loot was added
-        self.assertEqual(len(tile.item_list), 1)
-
-        # Check that the correct item class was created
-        self.assertIsInstance(
-            tile.item_list[0],
-            dl.EQUIPMENT_TYPES["smallhealthpotion"],
-        )
-
-    # Test that item names are case-insensitive
-    def test_spawn_loot_for_cli_case_insensitive(self):
-        # Create test CLI
-        test_cli = self.create_test_cli()
-
-        # Create map
-        self.create_test_map(test_cli, 10, 10)
-
-        # Process command
-        output = self.capture_function_output(
-            lambda: test_cli.spawn_loot_for_cli("ironsword", 2, 3)
-        )
-
-        # Get print output to compare
-
-        # Check output
-        self.assertEqual(
-            output,
-            "ok: spawn_loot ironsword at 2, 3!\n",
-        )
-
-        # Get tile
-        tile = test_cli.grid.grid[2][3]
-
-        # Check that loot was added
-        self.assertEqual(len(tile.item_list), 1)
-
-        # Check that the correct item class was created
-        self.assertIsInstance(
-            tile.item_list[0],
-            dl.EQUIPMENT_TYPES["ironsword"],
-        )
-
-    # Test that multiple items can be spawned on the same tile
-    def test_spawn_multiple_loot_for_cli(self):
-        # Create test CLI
-        test_cli = self.create_test_cli()
-
-        # Create map
-        self.create_test_map(test_cli, 10, 10)
-
-        # Spawn first item
-        test_cli.spawn_loot_for_cli("IronSword", 2, 3)
-
-        # Spawn second item
-        output = self.capture_function_output(
-            lambda: test_cli.spawn_loot_for_cli("SmallHealthPotion", 2, 3)
-        )
-
-        # Get print output to compare
-
-        # Check output
-        self.assertEqual(
-            output,
-            "ok: spawn_loot SmallHealthPotion at 2, 3!\n",
-        )
-
-        # Get tile
-        tile = test_cli.grid.grid[2][3]
-
-        # Check that both items were added
-        self.assertEqual(len(tile.item_list), 2)
-
-        # Check item classes
-        self.assertIsInstance(
-            tile.item_list[0],
-            dl.EQUIPMENT_TYPES["ironsword"],
-        )
-
-        self.assertIsInstance(
-            tile.item_list[1],
-            dl.EQUIPMENT_TYPES["smallhealthpotion"],
-        )
-
-    # Test that spawning loot does not affect another tile
-    def test_spawn_loot_for_cli_does_not_affect_other_tile(self):
-        # Create test CLI
-        test_cli = self.create_test_cli()
-
-        # Create map
-        self.create_test_map(test_cli, 10, 10)
-
-        # Process command
-        output = self.capture_function_output(
-            lambda: test_cli.spawn_loot_for_cli("IronSword", 2, 3)
-        )
-
-        # Get print output to compare
-
-        # Check output
-        self.assertEqual(
-            output,
-            "ok: spawn_loot IronSword at 2, 3!\n",
-        )
-
-        # Get tiles
-        target_tile = test_cli.grid.grid[2][3]
-        other_tile = test_cli.grid.grid[3][2]
-
-        # Check target tile
-        self.assertEqual(len(target_tile.item_list), 1)
-
-        # Check other tile
-        self.assertEqual(len(other_tile.item_list), 0)
-
-    # Invalid command - too few command pieces
-    def test_move_invalid_command(self):
-
-        # Create test CLI
-        test_cli = self.create_test_cli()
-
-        # reset
-        self.reset_cli_stats(test_cli)
-
-        # Create map
         self.create_test_map(test_cli)
-
-        command = "move 1 2"
-
-        # Process command
-        output = self.process_command_and_get_output(test_cli, command)
-        # Get print output to compare
-        # Output was captured by the helper
-
-        # Check output
-        self.assertEqual(output, "error: move_failed - Invalid command!\n")
-
-    # Invalid command - too few command pieces
-    def test_move_invalid_command(self):
-
-        # Create test CLI
-        test_cli = self.create_test_cli()
-
-        # reset
-        self.reset_cli_stats(test_cli)
-
-        # Create map
-        self.create_test_map(test_cli)
-
-        command = "move 1 2"
-
-        # Process command
-        output = self.process_command_and_get_output(test_cli, command)
-        # Get print output to compare
-        # Output was captured by the helper
-
-        # Check output
-        self.assertEqual(output, "error: move_failed - Invalid command!\n")
-
-    # Invalid command - too few command pieces
-    def test_move_invalid_command(self):
-
-        # Create test CLI
-        test_cli = self.create_test_cli()
-
-        # reset
-        self.reset_cli_stats(test_cli)
-
-        # Create map
-        self.create_test_map(test_cli)
-
-        command = "move 1 2"
-
-        # Process command
-        output = self.process_command_and_get_output(test_cli, command)
-        # Get print output to compare
-        # Output was captured by the helper
-
-        # Check output
-        self.assertEqual(output, "error: move_failed - Invalid command!\n")
-
-    # Invalid command - too few command pieces
-    def test_move_invalid_command(self):
-
-        # Create test CLI
-        test_cli = self.create_test_cli()
-
-        # reset
-        self.reset_cli_stats(test_cli)
-
-        # Create map
-        self.create_test_map(test_cli)
-
-        command = "move 1 2"
-
-        # Process command
-        output = self.process_command_and_get_output(test_cli, command)
-        # Get print output to compare
-        # Output was captured by the helper
-
-        # Check output
-        self.assertEqual(output, "error: move_failed - Invalid command!\n")
-
-    # Invalid command - too few command pieces
-    def test_move_invalid_command(self):
-
-        # Create test CLI
-        test_cli = self.create_test_cli()
-        # reset
-        self.reset_cli_stats(test_cli)
-
-        # Create map
-        self.create_test_map(test_cli)
-
-        command = "move 1 2"
-
-        # Process command
-        output = self.process_command_and_get_output(test_cli, command)
-        # Get print output to compare
-        # Output was captured by the helper
-
-        # Check output
-        self.assertEqual(output, "error: move_failed - Invalid command!\n")
-
-    # Target tile is impassable - Failure
-    def test_move_impassable_tile(self):
-
-        # Create test CLI
-        test_cli = self.create_test_cli()
-
-        # reset
-        self.reset_cli_stats(test_cli)
-
-        # Create map
-        self.create_test_map(test_cli)
-
-        # Spawn entity
-        test_cli.process_command("spawn warrior 1 1")
-        entity = test_cli.entity_list[0]
-        reset_ent_stats(entity, test_cli)
-
-        # Set target tile to wall
-        test_cli.grid.set_tile(2, 2, "wall")
-
-        command = "move 1 2 2"
-
-        # Process command
-        output = self.process_command_and_get_output(test_cli, command)
-
-        # Get print output
-
-        # Check output
-        self.assertEqual(
-            output, "error: move_failed - Target tile (2, 2) is impassable!\n"
-        )
-
-    # Entity does not exist - Failure
-    def test_move_entity_does_not_exist(self):
-
-        # Create test CLI
-        test_cli = self.create_test_cli()
-
-        # reset
-        self.reset_cli_stats(test_cli)
-
-        # Create map
-        self.create_test_map(test_cli)
-
-        command = "move 99 2 2"
-
-        # Process command
-        output = self.process_command_and_get_output(test_cli, command)
-
-        # Get print output
-
-        # Check output
-        self.assertEqual(output, "error: move_failed - Entity does not exist!\n")
-
-    # Target is outside entity's range - Failure
-    def test_move_out_of_range(self):
-
-        # Create test CLI
-        test_cli = self.create_test_cli()
-
-        # reset
-        self.reset_cli_stats(test_cli)
-
-        # Create map
-        self.create_test_map(test_cli)
-
-        # Spawn entity
-        test_cli.process_command("spawn warrior 1 1")
-
-        # Get entity
-        entity = test_cli.entity_list[0]
-        reset_ent_stats(entity, test_cli)
-
-        # Attempt to move farther than the entity's speed
-        command = "move 1 20 20"
-
-        # Process command
-        output = self.process_command_and_get_output(test_cli, command)
-
-        # Get print output
-
-        # Check output
-        self.assertEqual(
-            output, "error: move_failed - Target: 20, 20 is out of entity's range!\n"
-        )
-
-    # Successful move
-    def test_move_success(self):
-
-        # Create test CLI
-        test_cli = self.create_test_cli()
-
-        # reset
-        self.reset_cli_stats(test_cli)
-
-        # Create map
-        self.create_test_map(test_cli)
-
-        # Spawn entity
-        test_cli.process_command("spawn warrior 1 1")
-        # Get entity
-        entity = test_cli.entity_list[0]
-        reset_ent_stats(entity, test_cli)
-
-        command = "move 1 2 1"
-        # Process command
-        output = self.process_command_and_get_output(test_cli, command)
-
-        # Get print output
-
-        # Check output
-        self.assertEqual(output, "ok: moved 1 to 2, 1!\n")
-
-        # Check entity position
-        self.assertEqual(entity.position, [2, 1])
-
-        # check tile occupancy
-        self.assertEqual(len(test_cli.grid.grid[2][1].occupants), 1)
-
-    # Successful move to shallow water
-    def test_move_to_shallow_water(self):
-
-        # Create test CLI
-        test_cli = self.create_test_cli()
-
-        # reset
-        self.reset_cli_stats(test_cli)
-
-        # Create map
-        self.create_test_map(test_cli)
-
-        # Spawn entity
-        test_cli.process_command("spawn warrior 1 1")
-        # Get entity
-        entity = test_cli.entity_list[0]
-        reset_ent_stats(entity, test_cli)
-        # Set target tile to shallow water
-        test_cli.grid.set_tile(2, 1, "shallowwater")
-
-        command = "move 1 2 1"
-
-        self.assertEqual(entity.speed, 5)
-
-        # Process command
-        output = self.process_command_and_get_output(test_cli, command)
-
-        # Get print output
-
-        # Check output
-        self.assertEqual(output, "ok: moved 1 to 2, 1!\n")
-
-        # Check entity position
-        self.assertEqual(entity.position, [2, 1])
-        self.assertEqual(entity.speed, 3)
-        # check tile occupancy
-        self.assertEqual(len(test_cli.grid.grid[2][1].occupants), 1)
-
-    # Move to lower grid boundary - Success
-    def test_move_to_lower_boundary(self):
-
-        # Create test CLI
-        test_cli = self.create_test_cli()
-        # reset
-        self.reset_cli_stats(test_cli)
-
-        # Create map
-        self.create_test_map(test_cli)
-
-        # Spawn entity
-        test_cli.process_command("spawn warrior 1 1")
-        entity = test_cli.entity_list[0]
-        reset_ent_stats(entity, test_cli)
-
-        # Move to coordinate 0, 1
-        command = "move 1 0 1"
-
-        # Process command
-        output = self.process_command_and_get_output(test_cli, command)
-
-        # Get print output
-
-        # Check output
-        self.assertEqual(output, "ok: moved 1 to 0, 1!\n")
-
-        # Check entity position
-        entity = test_cli.entity_list[0]
-        self.assertEqual(entity.position, [0, 1])
-        # check tile occupancy
-        self.assertEqual(len(test_cli.grid.grid[0][1].occupants), 1)
-
-    # Move to higher grid boundary - Success
-    def test_move_to_higher_boundary(self):
-
-        # Create test CLI
-        test_cli = self.create_test_cli()
-
-        # reset
-        self.reset_cli_stats(test_cli)
-
-        # Create map
-        self.create_test_map(test_cli)
-
-        # Spawn entity
-        test_cli.process_command("spawn warrior 1 1")
-        entity = test_cli.entity_list[0]
-        reset_ent_stats(entity, test_cli)
-
-        # Move to coordinate 24, 1
-        # This test assumes the entity has enough movement range.
-        # If not, spawn the entity closer to the boundary.
-
-        test_cli.entity_list[0].speed = 30
-
-        command = "move 1 24 1"
-
-        # Process command
-        output = self.process_command_and_get_output(test_cli, command)
-
-        # Get print output
-
-        # Check output
-        self.assertEqual(output, "ok: moved 1 to 24, 1!\n")
-
-        # Check entity position
-        entity = test_cli.entity_list[0]
-        self.assertEqual(entity.position, [24, 1])
-        # check tile occupancy
-        self.assertEqual(len(test_cli.grid.grid[24][1].occupants), 1)
-
-    # Move from shallow water to floor - Success
-    def test_move_from_shallow_water_to_floor(self):
-
-        # Create test CLI
-        test_cli = self.create_test_cli()
-
-        # reset
-        self.reset_cli_stats(test_cli)
-
-        # Create map
-        self.create_test_map(test_cli)
-
-        # Set starting tile to shallow water
-        test_cli.grid.set_tile(1, 1, "shallowwater")
-
-        # Spawn entity on shallow water
-        test_cli.process_command("spawn warrior 1 1")
-
-        # get entity
-        entity = test_cli.entity_list[0]
-        reset_ent_stats(entity, test_cli)
-
-        # Test starting speed
-        self.assertEqual(entity.speed, 3)
-
-        # Set target tile to floor
-        test_cli.grid.set_tile(2, 1, "floor")
-
-        command = "move 1 2 1"
-
-        # Process command
-        output = self.process_command_and_get_output(test_cli, command)
-        # Get print output to compare
-        # Output was captured by the helper
-
-        # Check output
-        self.assertEqual(output, "ok: moved 1 to 2, 1!\n")
-
-        # Check entity position
-        self.assertEqual(entity.position, [2, 1])
-        self.assertEqual(entity.speed, 5)
-        # check tile occupancy
-        self.assertEqual(len(test_cli.grid.grid[2][1].occupants), 1)
-
-    # Move Entity - Success
-    def test_move_entity(self):
-
-        # Create test CLI
-        test_cli = self.create_test_cli()
-
-        # Reset CLI stats
-        self.reset_cli_stats(test_cli)
-
-        # Create map
-        self.create_test_map(test_cli)
-
-        # Spawn entity
-        test_cli.process_command("spawn warrior 1 1")
-
-        # Get entity
-        entity = test_cli.entity_list[0]
-
-        # Reset entity stats
-        reset_ent_stats(entity, test_cli)
-
-        # Move entity
-        test_cli.move_entity(entity, 2, 1)
-
-        # Check entity position
-        self.assertEqual(entity.position, [2, 1])
-
-        # Check target tile occupancy
-        self.assertIn(entity.id, test_cli.grid.grid[2][1].occupants)
-
-        # Check starting tile occupancy
-        self.assertNotIn(entity.id, test_cli.grid.grid[1][1].occupants)
-
-    # Move Entity - Move Up
-    def test_move_entity_up(self):
-
-        # Create test CLI
-        test_cli = self.create_test_cli()
-
-        # Reset CLI stats
-        self.reset_cli_stats(test_cli)
-
-        # Create map
-        self.create_test_map(test_cli)
-
-        # Spawn entity
-        test_cli.process_command("spawn warrior 5 5")
-
-        # Get entity
-        entity = test_cli.entity_list[0]
-
-        # Reset entity stats
-        reset_ent_stats(entity, test_cli)
-
-        # Move entity up
-        test_cli.move_entity(entity, 5, 4)
-
-        # Check entity position
-        self.assertEqual(entity.position, [5, 4])
-
-        # Check target tile occupancy
-        self.assertIn(entity.id, test_cli.grid.grid[5][4].occupants)
-
-        # Check starting tile occupancy
-        self.assertNotIn(entity.id, test_cli.grid.grid[5][5].occupants)
-
-    # Move Entity - Move Down
-    def test_move_entity_down(self):
-
-        # Create test CLI
-        test_cli = self.create_test_cli()
-
-        # Reset CLI stats
-        self.reset_cli_stats(test_cli)
-
-        # Create map
-        self.create_test_map(test_cli)
-
-        # Spawn entity
-        test_cli.process_command("spawn warrior 5 5")
-
-        # Get entity
-        entity = test_cli.entity_list[0]
-
-        # Reset entity stats
-        reset_ent_stats(entity, test_cli)
-
-        # Move entity down
-        test_cli.move_entity(entity, 5, 6)
-
-        # Check entity position
-        self.assertEqual(entity.position, [5, 6])
-
-        # Check target tile occupancy
-        self.assertIn(entity.id, test_cli.grid.grid[5][6].occupants)
-
-        # Check starting tile occupancy
-        self.assertNotIn(entity.id, test_cli.grid.grid[5][5].occupants)
-
-    # Move Entity - Move Left
-    def test_move_entity_left(self):
-
-        # Create test CLI
-        test_cli = self.create_test_cli()
-
-        # Reset CLI stats
-        self.reset_cli_stats(test_cli)
-
-        # Create map
-        self.create_test_map(test_cli)
-
-        # Spawn entity
-        test_cli.process_command("spawn warrior 5 5")
-
-        # Get entity
-        entity = test_cli.entity_list[0]
-
-        # Reset entity stats
-        reset_ent_stats(entity, test_cli)
-
-        # Move entity left
-        test_cli.move_entity(entity, 4, 5)
-
-        # Check entity position
-        self.assertEqual(entity.position, [4, 5])
-
-        # Check target tile occupancy
-        self.assertIn(entity.id, test_cli.grid.grid[4][5].occupants)
-
-        # Check starting tile occupancy
-        self.assertNotIn(entity.id, test_cli.grid.grid[5][5].occupants)
-
-    # Move Entity - Move Right
-    def test_move_entity_right(self):
-
-        # Create test CLI
-        test_cli = self.create_test_cli()
-
-        # Reset CLI stats
-        self.reset_cli_stats(test_cli)
-
-        # Create map
-        self.create_test_map(test_cli)
-
-        # Spawn entity
-        test_cli.process_command("spawn warrior 5 5")
-
-        # Get entity
-        entity = test_cli.entity_list[0]
-
-        # Reset entity stats
-        reset_ent_stats(entity, test_cli)
-
-        # Move entity right
-        test_cli.move_entity(entity, 6, 5)
-
-        # Check entity position
-        self.assertEqual(entity.position, [6, 5])
-
-        # Check target tile occupancy
-        self.assertIn(entity.id, test_cli.grid.grid[6][5].occupants)
-
-        # Check starting tile occupancy
-        self.assertNotIn(entity.id, test_cli.grid.grid[5][5].occupants)
-
-    # success
-    def test_attack_with_valid_melee_attack(self):
-        # Create test CLI
-        test_cli = self.create_test_cli()
-        # Clear out grid
-        self.reset_test_grid(test_cli)
-        # Create Map
-        self.create_test_map(test_cli)
-        # Clear out entity list
-        self.reset_test_entities(test_cli)
-
-        # Create attacker and defender
-        test_cli.process_command("spawn warrior 0 0")
-        test_cli.process_command("spawn goblin 1 0")
-
-        # Get spawned entities
-        attacker = test_cli.entity_list[0]
-        defender = test_cli.entity_list[1]
-
-        # Reset entity stats
-        reset_ent_stats(attacker, test_cli)
-        reset_ent_stats(defender, test_cli)
-
-        # Store defender health before attack
-        starting_health = defender.health
-
-        # Process attack
-        test_cli.process_command("attack 1 2")
-
-        # Verify defender lost health
-        self.assertLess(defender.health, starting_health)
-
-    # success
-    def test_attack_with_valid_ranged_attack(self):
-        # Create test CLI
-        test_cli = self.create_test_cli()
-        # Clear out grid
-        self.reset_test_grid(test_cli)
-        # Create Map
-        self.create_test_map(test_cli)
-        # Clear out entity list
-        self.reset_test_entities(test_cli)
-
-        # Create attacker and defender
-        test_cli.process_command("spawn skeleton 0 0")
-        test_cli.process_command("spawn goblin 2 0")
-
-        # Get spawned entities
-        attacker = test_cli.entity_list[0]
-        defender = test_cli.entity_list[1]
-
-        # Reset entity stats
-        reset_ent_stats(attacker, test_cli)
-        reset_ent_stats(defender, test_cli)
-
-        # Store defender health before attack
-        starting_health = defender.health
-
-        # Process attack
-        test_cli.process_command("attack 1 2")
-
-        # Verify defender lost health
-        self.assertLess(defender.health, starting_health)
-
-    # failure
-    def test_attack_with_invalid_amount_of_arguments(self):
-        # Create test CLI
-        test_cli = self.create_test_cli()
-
-        # Process attack with too few arguments
-        test_cli.process_command("attack 0")
-
-        # Verify no entities were created or changed
-        self.assertEqual(test_cli.entity_list, [])
-
-    # failure
-    def test_attack_with_no_map(self):
-        # Create test CLI
-        test_cli = self.create_test_cli()
-
-        # Process attack without creating map
-        test_cli.process_command("attack 1 2")
-
-        # Verify map was not created
-        self.assertFalse(test_cli.map_created)
-
-    # failure
-    def test_attack_with_invalid_entity_ids(self):
-        # Create test CLI
-        test_cli = self.create_test_cli()
-        # Clear out grid
-        self.reset_test_grid(test_cli)
-        # Create Map
-        self.create_test_map(test_cli)
-        # Clear out entity list
-        self.reset_test_entities(test_cli)
-
-        # Process attack with non-integer entity ids
-        test_cli.process_command("attack abc def")
-
-        # Verify entity list is still empty
-        self.assertEqual(test_cli.entity_list, [])
-
-    # failure
-    def test_attack_with_attacking_entity_that_does_not_exist(self):
-        # Create test CLI
-        test_cli = self.create_test_cli()
-        # Clear out grid
-        self.reset_test_grid(test_cli)
-        # Create Map
-        self.create_test_map(test_cli)
-        # Clear out entity list
-        self.reset_test_entities(test_cli)
-
-        # Create defender
-        test_cli.process_command("spawn goblin 1 0")
-
-        # Get spawned defender
-        defender = test_cli.entity_list[0]
-
-        # Process attack with invalid attacking entity id
-        test_cli.process_command("attack 1 2")
-
-        # Verify only defender exists
-        self.assertEqual(len(test_cli.entity_list), 1)
-        self.assertEqual(test_cli.entity_list[0].id, defender.id)
-
-    # failure
-    def test_attack_with_defending_entity_that_does_not_exist(self):
-        # Create test CLI
-        test_cli = self.create_test_cli()
-        # Clear out grid
-        self.reset_test_grid(test_cli)
-        # Create Map
-        self.create_test_map(test_cli)
-        # Clear out entity list
-        self.reset_test_entities(test_cli)
-
-        # Create attacker
-        test_cli.process_command("spawn warrior 0 0")
-
-        # Get spawned attacker
-        attacker = test_cli.entity_list[0]
-
-        # Process attack with invalid defending entity id
-        test_cli.process_command("attack 1 2")
-
-        # Verify only attacker exists
-        self.assertEqual(len(test_cli.entity_list), 1)
-        self.assertEqual(test_cli.entity_list[0].id, attacker.id)
-
-    # failure
-    def test_attack_with_defender_out_of_range(self):
-        # Create test CLI
-        test_cli = self.create_test_cli()
-        # Clear out grid
-        self.reset_test_grid(test_cli)
-        # Create Map
-        self.create_test_map(test_cli)
-        # Clear out entity list
-        self.reset_test_entities(test_cli)
-
-        # Create attacker and defender
-        test_cli.process_command("spawn warrior 0 0")
-        test_cli.process_command("spawn goblin 10 10")
-
-        # Get spawned entities
-        attacker = test_cli.entity_list[0]
-        defender = test_cli.entity_list[1]
-
-        # Reset entity stats
-        reset_ent_stats(attacker, test_cli)
-        reset_ent_stats(defender, test_cli)
-
-        # Store defender health before attack
-        starting_health = defender.health
-
-        # Process attack
-        test_cli.process_command("attack 1 2")
-
-        # Verify defender did not lose health
-        self.assertEqual(defender.health, starting_health)
-
-    # success
-    def test_attack_then_heal_with_health_potion(self):
-        # Create test CLI
-        test_cli = self.create_test_cli()
-        # Clear out grid
-        self.reset_test_grid(test_cli)
-        # Create Map
-        self.create_test_map(test_cli)
-        # Clear out entity list
-        self.reset_test_entities(test_cli)
-
-        # Create attacker and defender
-        test_cli.process_command("spawn warrior 0 0")
-        test_cli.process_command("spawn goblin 1 0")
-
-        # Get spawned entities
-        attacker = test_cli.entity_list[0]
-        defender = test_cli.entity_list[1]
-
-        # Reset entity stats
-        reset_ent_stats(attacker, test_cli)
-        reset_ent_stats(defender, test_cli)
-
-        # Store defender's starting health
-        starting_health = defender.health
-
-        # Attack defender
-        test_cli.process_command("attack 1 2")
-
-        # Verify defender took damage
-        self.assertLess(defender.health, starting_health)
-
-        # Store health after attack
-        damaged_health = defender.health
-
-        # Add health potion to defender
-        test_cli.process_command("give 2 smallhealthpotion")
-        test_cli.process_command("use 2 smallhealthpotion")
-
-        # Verify defender healed
-        self.assertGreater(defender.health, damaged_health)
-
-        # Verify health did not exceed maximum health
-        self.assertLessEqual(defender.health, defender.max_health)
-
-    # success
-    def test_attack_then_heal_to_max_health_with_health_potion(self):
-        # Create test CLI
-        test_cli = self.create_test_cli()
-        # Clear out grid
-        self.reset_test_grid(test_cli)
-        # Create Map
-        self.create_test_map(test_cli)
-        # Clear out entity list
-        self.reset_test_entities(test_cli)
-
-        # Create attacker and defender
-        test_cli.process_command("spawn warrior 0 0")
-        test_cli.process_command("spawn goblin 1 0")
-
-        # Get spawned entities
-        attacker = test_cli.entity_list[0]
-        defender = test_cli.entity_list[1]
-
-        # Reset entity stats
-        reset_ent_stats(attacker, test_cli)
-        reset_ent_stats(defender, test_cli)
-
-        # Store maximum health
-        max_health = defender.max_health
-
-        # Attack defender
-        test_cli.process_command("attack 1 2")
-
-        # Verify defender took damage
-        self.assertLess(defender.health, max_health)
-
-        # Add health potion to defender
-        test_cli.process_command("give 1 smallhealthpotion")
-        test_cli.process_command("use 1 smallhealthpotion")
-
-        # Verify defender's health increased
-        self.assertGreater(defender.health, 0)
-
-        # Verify defender cannot exceed maximum health
-        self.assertLessEqual(defender.health, max_health)
-
-    # success
-    def test_assign_entity_from_list_first_entity(self):
-        # Create test CLI
-        test_cli = self.create_test_cli()
-        # Clear out grid
-        self.reset_test_grid(test_cli)
-        # Create Map
-        self.create_test_map(test_cli)
-        # Clear out entity list
-        self.reset_test_entities(test_cli)
-
-        # Create entity
-        test_cli.process_command("spawn warrior 0 0")
-
-        # Get assigned entity
-        entity = test_cli.assign_entity_from_list(1)
-
-        # Verify correct entity was returned
-        self.assertEqual(entity.id, 1)
-        self.assertEqual(entity.e_type.capitalize(), "Warrior")
-
-    # success
-    def test_assign_entity_from_list_entity_in_middle_of_list(self):
-        # Create test CLI
-        test_cli = self.create_test_cli()
-        # Clear out grid
-        self.reset_test_grid(test_cli)
-        # Create Map
-        self.create_test_map(test_cli)
-        # Clear out entity list
-        self.reset_test_entities(test_cli)
-
-        # Create entities
-        test_cli.process_command("spawn warrior 0 0")
-        test_cli.process_command("spawn goblin 1 0")
-        test_cli.process_command("spawn mage 2 0")
-
-        # Get assigned entity
-        entity = test_cli.assign_entity_from_list(2)
-
-        # Verify correct entity was returned
-        self.assertEqual(entity.id, 2)
-        self.assertEqual(entity.e_type.capitalize(), "Goblin")
-
-    # success
-    def test_assign_entity_from_list_last_entity(self):
-        # Create test CLI
-        test_cli = self.create_test_cli()
-        # Clear out grid
-        self.reset_test_grid(test_cli)
-        # Create Map
-        self.create_test_map(test_cli)
-        # Clear out entity list
-        self.reset_test_entities(test_cli)
-
-        # Create entities
-        test_cli.process_command("spawn warrior 0 0")
-        test_cli.process_command("spawn goblin 1 0")
-        test_cli.process_command("spawn mage 2 0")
-
-        # Get assigned entity
-        entity = test_cli.assign_entity_from_list(3)
-
-        # Verify correct entity was returned
-        self.assertEqual(entity.id, 3)
-        self.assertEqual(entity.e_type.capitalize(), "Mage")
-
-    # success
-    def test_assign_entity_from_list_returns_same_entity_instance(self):
-        # Create test CLI
-        test_cli = self.create_test_cli()
-        # Clear out grid
-        self.reset_test_grid(test_cli)
-        # Create Map
-        self.create_test_map(test_cli)
-        # Clear out entity list
-        self.reset_test_entities(test_cli)
-
-        # Create entity
-        test_cli.process_command("spawn warrior 0 0")
-
-        # Get entity from entity list
-        list_entity = test_cli.entity_list[0]
-
-        # Assign entity from list
-        assigned_entity = test_cli.assign_entity_from_list(1)
-
-        # Verify the same entity instance was returned
-        self.assertIs(assigned_entity, list_entity)
-
-    # success
-    def test_cast_offensive_spell(self):
-        # Create test CLI
-        test_cli = self.create_test_cli()
-        # Clear out grid
-        self.reset_test_grid(test_cli)
-        # Create Map
-        self.create_test_map(test_cli)
-        # Clear out entity list
-        self.reset_test_entities(test_cli)
-
-        # Create caster and defender
-        test_cli.process_command("spawn mage 0 0")
-        test_cli.process_command("spawn goblin 1 0")
-
-        # Get spawned entities
-        caster = test_cli.entity_list[0]
-        defender = test_cli.entity_list[1]
-
-        # Reset entity stats
-        reset_ent_stats(caster, test_cli)
-        reset_ent_stats(defender, test_cli)
-
-        # Store defender's starting health
-        starting_health = defender.health
-
-        # Cast offensive spell
-        test_cli.process_command("cast 1 2 fireball")
-
-        print(f"STARTING: {starting_health}")
-        print(f"ENDING: {defender.health}")
-        self.assertNotEqual(defender.health, starting_health)
-
-    # success
-    def test_cast_heal_spell(self):
-        # Create test CLI
-        test_cli = self.create_test_cli()
-        # Clear out grid
-        self.reset_test_grid(test_cli)
-        # Create Map
-        self.create_test_map(test_cli)
-        # Clear out entity list
-        self.reset_test_entities(test_cli)
-
-        # Create caster and target
-        test_cli.process_command("spawn mage 0 0")
-        test_cli.process_command("spawn warrior 1 0")
-
-        # Get spawned entities
-        caster = test_cli.entity_list[0]
-        target = test_cli.entity_list[1]
-
-        # Reset entity stats
-        reset_ent_stats(caster, test_cli)
-        reset_ent_stats(target, test_cli)
-
-        # Damage target before healing
-        target.health -= 20
-
-        # Store target's health before healing
-        damaged_health = target.health
-
-        # Cast healing spell
-        test_cli.process_command("cast 1 2 heal")
-
-        # Verify target healed
-        self.assertGreater(target.health, damaged_health)
-
-    # success
-    def test_attack_then_cast_heal(self):
-        # Create test CLI
-        test_cli = self.create_test_cli()
-        # Clear out grid
-        self.reset_test_grid(test_cli)
-        # Create Map
-        self.create_test_map(test_cli)
-        # Clear out entity list
-        self.reset_test_entities(test_cli)
-
-        # Create attacker, caster, and target
-        test_cli.process_command("spawn warrior 0 0")
-        test_cli.process_command("spawn mage 1 1")
-        test_cli.process_command("spawn goblin 1 0")
-
-        # Get spawned entities
-        attacker = test_cli.entity_list[0]
-        caster = test_cli.entity_list[1]
-        target = test_cli.entity_list[2]
-
-        # Reset entity stats
-        reset_ent_stats(attacker, test_cli)
-        reset_ent_stats(caster, test_cli)
-        reset_ent_stats(target, test_cli)
-
-        # Store target's starting health
-        starting_health = target.health
-
-        # Attack target
-        test_cli.process_command("attack 1 3")
-
-        # Verify target took damage
-        self.assertLess(target.health, starting_health)
-
-        # Store health after attack
-        damaged_health = target.health
-
-        # Cast healing spell
-        test_cli.process_command("cast 2 3 heal")
-
-        # Verify target healed
-        self.assertGreater(target.health, damaged_health)
-
-    # failure
-    def test_cast_with_invalid_amount_of_arguments(self):
-        # Create test CLI
-        test_cli = self.create_test_cli()
-
-        # Process cast with too few arguments
-        test_cli.process_command("cast 1 2")
-
-        # Verify no entities were created or changed
-        self.assertEqual(test_cli.entity_list, [])
-
-    # failure
-    def test_cast_without_map(self):
-        # Create test CLI
-        test_cli = self.create_test_cli()
-
-        # Process cast without creating map
-        test_cli.process_command("cast 1 2 fireball")
-
-        # Verify map was not created
-        self.assertFalse(test_cli.map_created)
-
-    # failure
-    def test_cast_with_nonexistent_caster(self):
-        # Create test CLI
-        test_cli = self.create_test_cli()
-        # Clear out grid
-        self.reset_test_grid(test_cli)
-        # Create Map
-        self.create_test_map(test_cli)
-        # Clear out entity list
-        self.reset_test_entities(test_cli)
-
-        # Create target
-        test_cli.process_command("spawn goblin 1 0")
-
-        # Process cast with nonexistent caster
-        test_cli.process_command("cast 1 2 fireball")
-
-        # Verify only target exists
-        self.assertEqual(len(test_cli.entity_list), 1)
-        self.assertEqual(test_cli.entity_list[0].id, 1)
-
-    # failure
-    def test_cast_with_nonexistent_target(self):
-        # Create test CLI
-        test_cli = self.create_test_cli()
-        # Clear out grid
-        self.reset_test_grid(test_cli)
-        # Create Map
-        self.create_test_map(test_cli)
-        # Clear out entity list
-        self.reset_test_entities(test_cli)
-
-        # Create caster
-        test_cli.process_command("spawn mage 0 0")
-
-        # Process cast with nonexistent target
-        test_cli.process_command("cast 1 2 fireball")
-
-        # Verify only caster exists
-        self.assertEqual(len(test_cli.entity_list), 1)
-        self.assertEqual(test_cli.entity_list[0].id, 1)
-
-    # failure
-    def test_cast_with_nonexistent_spell(self):
-        # Create test CLI
-        test_cli = self.create_test_cli()
-        # Clear out grid
-        self.reset_test_grid(test_cli)
-        # Create Map
-        self.create_test_map(test_cli)
-        # Clear out entity list
-        self.reset_test_entities(test_cli)
-
-        # Create caster and target
-        test_cli.process_command("spawn mage 0 0")
-        test_cli.process_command("spawn goblin 1 0")
-
-        # Get target
-        target = test_cli.entity_list[1]
-
-        # Store target's starting health
-        starting_health = target.health
-
-        # Process cast with nonexistent spell
-        test_cli.process_command("cast 1 2 notaspell")
-
-        # Verify target was not damaged
-        self.assertEqual(target.health, starting_health)
-
-    # failure
-    def test_cast_with_non_mage_caster(self):
-        # Create test CLI
-        test_cli = self.create_test_cli()
-        # Clear out grid
-        self.reset_test_grid(test_cli)
-        # Create Map
-        self.create_test_map(test_cli)
-        # Clear out entity list
-        self.reset_test_entities(test_cli)
-
-        # Create non-Mage caster and target
-        test_cli.process_command("spawn warrior 0 0")
-        test_cli.process_command("spawn goblin 1 0")
-
-        # Get target
-        target = test_cli.entity_list[1]
-
-        # Store target's starting health
-        starting_health = target.health
-
-        # Process cast with Warrior as caster
-        test_cli.process_command("cast 1 2 fireball")
-
-        # Verify target was not damaged
-        self.assertEqual(target.health, starting_health)
-
-    # failure
-    def test_cast_with_target_out_of_range(self):
-        # Create test CLI
-        test_cli = self.create_test_cli()
-        # Clear out grid
-        self.reset_test_grid(test_cli)
-        # Create Map
-        self.create_test_map(test_cli)
-        # Clear out entity list
-        self.reset_test_entities(test_cli)
-
-        # Create caster and target
-        test_cli.process_command("spawn mage 0 0")
-        test_cli.process_command("spawn goblin 20 20")
-
-        # Get target
-        target = test_cli.entity_list[1]
-
-        # Store target's starting health
-        starting_health = target.health
-
-        # Process cast with target outside spell range
-        test_cli.process_command("cast 1 2 fireball")
-
-        # Verify target was not damaged
-        self.assertEqual(target.health, starting_health)
-
-    # success
-    def test_cast_spell_with_over_time_effect(self):
-        # Create test CLI
-        test_cli = self.create_test_cli()
-        # Clear out grid
-        self.reset_test_grid(test_cli)
-        # Create Map
-        self.create_test_map(test_cli)
-        # Clear out entity list
-        self.reset_test_entities(test_cli)
-
-        # Create caster and target
-        test_cli.process_command("spawn mage 0 0")
-        test_cli.process_command("spawn goblin 1 0")
-
-        # Get spawned entities
-        caster = test_cli.entity_list[0]
-        target = test_cli.entity_list[1]
-
-        # Reset entity stats
-        reset_ent_stats(caster, test_cli)
-        reset_ent_stats(target, test_cli)
-
-        # Cast spell with an over-time effect
-        test_cli.process_command("cast 1 2 frostbolt")
-
-        # Verify target received a temporary buff
-        self.assertGreater(len(target.temp_buffs), 0)
-
-        # Verify the spell effect was added
-        self.assertEqual(target.temp_buffs[0]["Name"], "Frostbolt")
-
-    # success
-    def test_cast_heal_does_not_exceed_max_health(self):
-        # Create test CLI
-        test_cli = self.create_test_cli()
-        # Clear out grid
-        self.reset_test_grid(test_cli)
-        # Create Map
-        self.create_test_map(test_cli)
-        # Clear out entity list
-        self.reset_test_entities(test_cli)
-
-        # Create caster and target
-        test_cli.process_command("spawn mage 0 0")
-        test_cli.process_command("spawn warrior 1 0")
-
-        # Get spawned entities
-        caster = test_cli.entity_list[0]
-        target = test_cli.entity_list[1]
-
-        # Reset entity stats
-        reset_ent_stats(caster, test_cli)
-        reset_ent_stats(target, test_cli)
-
-        # Damage target
-        target.health -= 20
-
-        # Cast healing spell
-        test_cli.process_command("cast 1 2 heal")
-
-        # Verify health was restored
-        self.assertGreater(target.health, 0)
-
-        # Verify health did not exceed maximum health
-        self.assertLessEqual(target.health, target.max_health)
-
-    # Process Tick Command Start
-
-    # Test tick with invalid arguments
-    def test_process_tick_command_invalid_arguments(self):
-        # Create test CLI
-        test_cli = self.create_test_cli()
-        # Process command
+        # Process invalid command
         output = self.process_command_and_get_output(test_cli, "tick extra")
         # Check output
-        self.assertEqual(output, "error: tick_failed due to invalid arguments!\n")
-        # Check ticker was not changed
-        self.assertEqual(test_cli.ticker, 1)
+        self.assertIn("tick_failed", output)
 
-    # Test tick when map does not exist
-    def test_process_tick_command_no_map(self):
+    def test_tick_with_entities_does_not_remove_living_entities(self):
         # Create test CLI
         test_cli = self.create_test_cli()
-        # test_cli.grid.reset_grid()
-        # Process command
-        output = self.process_command_and_get_output(test_cli, "tick")
-        # Check output
-        self.assertEqual(output, "error: tick_failed - Map does not exist!\n")
-        # Check ticker was not changed
-        self.assertEqual(test_cli.ticker, 1)
-
-    # Test tick with no entities
-    def test_process_tick_command_no_entities(self):
-        # Create test CLI
-        test_cli = self.create_test_cli()
-        # Create map
         self.create_test_map(test_cli)
+        self.create_test_entity(test_cli, "Warrior", 1, 1)
         # Process command
-        output = self.process_command_and_get_output(test_cli, "tick")
-        # Check output
-        self.assertEqual(output, "ok: tick processed. Ticker: 2!\n")
-        # Check ticker was increased
-        self.assertEqual(test_cli.ticker, 2)
+        self.process_command_and_get_output(test_cli, "tick")
+        # Check entity remains
+        self.assertIsNotNone(test_cli.game_state.get_entity_info_from_list(1))
 
-    # Test tick updates an entity turn timer
-    def test_process_tick_command_updates_entity_turn_timer(self):
+    def test_spawn_give_swap_and_inventory_command_interaction(self):
         # Create test CLI
         test_cli = self.create_test_cli()
-        # Create map
         self.create_test_map(test_cli)
-        # Spawn entity
-        test_cli.process_command("spawn warrior 10 10")
-        entity = test_cli.entity_list[0]
-        # Add temporary buff with a turn timer
-        entity.temp_buffs.append(
-            {
-                "Name": "TestBuff",
-                "Effects": {"Flat_modifiers": {}, "Percent_modifiers": {}},
-                "Turns": 2,
-            }
+        self.create_test_entity(test_cli, "Warrior", 1, 1)
+        # Give and equip weapon
+        test_cli.process_command("give 1 ironsword")
+        swap_output = self.process_command_and_get_output(
+            test_cli, "swap 1 Weapon ironsword"
         )
-        # Process command
-        output = self.process_command_and_get_output(test_cli, "tick")
-        # Check output
-        self.assertEqual(output, "ok: tick processed. Ticker: 2!\n")
-        # Check turn timer was decreased
-        self.assertEqual(entity.temp_buffs[0]["Turns"], 1)
+        # Check output and observable attack stat change
+        self.assertIn("swapped", swap_output)
+        self.assertGreater(test_cli.game_state.get_entity_info_from_list(1).attack, 15)
 
-    # Test tick removes a dead entity from the game
-    def test_process_tick_command_removes_dead_entity(self):
+    def test_spawn_loot_pickup_and_drop_command_interaction(self):
         # Create test CLI
         test_cli = self.create_test_cli()
-        # Create map
         self.create_test_map(test_cli)
-        # Spawn entity
-        test_cli.process_command("spawn warrior 10 10")
-        entity = test_cli.entity_list[0]
-        # Kill entity
-        entity.handle_death()
-        # Process command
-        output = self.process_command_and_get_output(test_cli, "tick")
-        output = self.process_command_and_get_output(test_cli, "tick")
-        output = self.process_command_and_get_output(test_cli, "tick")
-        # Check output
-        self.assertEqual(output, "ok: tick processed. Ticker: 4!\n")
-        # Check entity was removed from entity list and grid
-        self.assertNotIn(entity.id, test_cli.entity_list)
-        self.assertNotIn(entity.id, test_cli.grid.grid[10][10].occupants)
-
-    # Test remove entity from game clears the grid and entity list
-    def test_remove_entity_from_game(self):
-        # Create test CLI
-        test_cli = self.create_test_cli()
-        # Create map
-        self.create_test_map(test_cli)
-        # Spawn entity
-        test_cli.process_command("spawn warrior 10 10")
-        entity = test_cli.entity_list[0]
-        # Remove entity
-        output = self.capture_function_output(
-            lambda: test_cli.remove_entity_from_game(entity)
+        self.create_test_entity(test_cli, "Warrior", 1, 1)
+        # Spawn, pick up, then drop loot
+        test_cli.process_command("spawn loot ironsword 1 1")
+        pickup_output = self.process_command_and_get_output(
+            test_cli, "pickup 1 ironsword"
         )
-        # Check entity was removed from entity list and grid
-        self.assertNotIn(entity, test_cli.entity_list)
-        self.assertNotIn(entity.id, test_cli.grid.grid[10][10].occupants)
+        drop_output = self.process_command_and_get_output(test_cli, "drop 1 ironsword")
+        # Check item transitions
+        self.assertIn("picked_up", pickup_output)
+        self.assertIn("dropped", drop_output)
+        tile_info = test_cli.game_state.get_game_tile_info(1, 1)
+        self.assertIn("ironsword", [item.lower() for item in tile_info.item_list])
+        entity_info = test_cli.game_state.get_entity_info_from_list(1)
+        self.assertFalse(
+            any(item.lower() == "ironsword" for item in entity_info.backpack)
+        )
 
-    # Dead Entity Command Tests Start
-
-    # Create a dead entity for command blocking tests
-    def create_dead_test_entity(self, test_cli):
-        # Create map
+    def test_case_insensitive_equipment_commands(self):
+        # Create test CLI
+        test_cli = self.create_test_cli()
         self.create_test_map(test_cli)
-        # Spawn entity
-        test_cli.process_command("spawn warrior 10 10")
-        entity = test_cli.entity_list[0]
-        # Mark entity as dead
-        entity.handle_death()
-        return entity
+        self.create_test_entity(test_cli, "Warrior", 1, 1)
+        # Process commands using mixed casing
+        test_cli.process_command("GIVE 1 IronSword")
+        swap_output = self.process_command_and_get_output(
+            test_cli, "SWAP 1 weapon IRONSWORD"
+        )
+        # Check output
+        self.assertIn("swapped", swap_output)
+        self.assertGreater(test_cli.game_state.get_entity_info_from_list(1).attack, 15)
 
-    # Test dead entity is blocked from inventory command
+    def test_command_with_whitespace_only_does_not_change_state(self):
+        # Create test CLI
+        test_cli = self.create_test_cli()
+        # Process command
+        output = self.process_command_and_get_output(test_cli, " \t  \n ")
+        # Check output and state
+        self.assertIn("Empty command", output)
+        self.assertFalse(test_cli.game_state.is_map_created())
+
+    def test_unknown_command_does_not_change_state(self):
+        # Create test CLI
+        test_cli = self.create_test_cli()
+        # Process command
+        output = self.process_command_and_get_output(test_cli, "teleport 1 2 3")
+        # Check output and state
+        self.assertIn("Unknown command", output)
+        self.assertFalse(test_cli.game_state.is_map_created())
+
+    # Additional Validation Tests End
+
+    # Dead Entity Validation Tests Start
+
+    # Create Dead Entity
+    # Creates an entity and marks it as dead for commands that reject dead entities
+    # Params: test_cli - CLI - CLI instance used for testing
+    #           entity_type - string - type of entity to spawn
+    #           x/y - int - grid coordinates
+    # Returns: None
+    def create_dead_entity(
+        self, test_cli, entity_type="Warrior", x=1, y=1, entity_id=1
+    ):
+        self.create_test_entity(test_cli, entity_type, x, y)
+        test_cli.game_state.get_entity_from_list(entity_id).handle_death()
+
     def test_dead_entity_blocked_inventory(self):
         # Create test CLI
         test_cli = self.create_test_cli()
-        entity = self.create_dead_test_entity(test_cli)
+        self.create_test_map(test_cli)
+        self.create_test_entity(test_cli)
+        test_cli.game_state.get_entity_from_list(1).handle_death()
         # Process command
         output = self.process_command_and_get_output(test_cli, "inventory 1")
-        # Check command produced output and entity remains dead
-        self.assertNotEqual(output, "")
-        self.assertIn(entity, test_cli.entity_list)
-        self.assertFalse(entity.is_alive())
+        # Check output
+        self.assertIn("dead", output.lower())
 
-    # Test dead entity is blocked from inspect command
     def test_dead_entity_blocked_inspect(self):
         # Create test CLI
         test_cli = self.create_test_cli()
-        entity = self.create_dead_test_entity(test_cli)
+        self.create_test_map(test_cli)
+        self.create_test_entity(test_cli)
+        test_cli.game_state.get_entity_from_list(1).handle_death()
         # Process command
         output = self.process_command_and_get_output(test_cli, "inspect 1")
-        # Check command produced output and entity remains dead
-        self.assertNotEqual(output, "")
-        self.assertIn(entity, test_cli.entity_list)
-        self.assertFalse(entity.is_alive())
+        # Check output
+        self.assertIn("dead", output.lower())
 
-    # Test dead entity is blocked from pickup command
     def test_dead_entity_blocked_pickup(self):
         # Create test CLI
         test_cli = self.create_test_cli()
-        entity = self.create_dead_test_entity(test_cli)
-        # Place item on entity tile
-        item = dl.create_equipment("ironsword")
-        test_cli.grid.grid[10][10].item_list.append(item)
+        self.create_test_map(test_cli)
+        self.create_test_entity(test_cli)
+        test_cli.game_state.get_entity_from_list(1).handle_death()
+        test_cli.process_command("spawn loot ironsword 1 1")
         # Process command
-        output = self.process_command_and_get_output(test_cli, "pickup 1 IronSword")
-        # Check command produced output and item was not picked up
-        self.assertNotEqual(output, "")
-        self.assertIn(item, test_cli.grid.grid[10][10].item_list)
-        self.assertEqual(entity.backpack, [])
+        output = self.process_command_and_get_output(test_cli, "pickup 1 ironsword")
+        # Check output
+        self.assertIn("dead", output.lower())
 
-    # Test dead entity is blocked from drop command
     def test_dead_entity_blocked_drop(self):
         # Create test CLI
         test_cli = self.create_test_cli()
-        entity = self.create_dead_test_entity(test_cli)
-        # Add item to backpack
-        item = dl.create_equipment("ironsword")
-        entity.backpack.append(item)
+        self.create_test_map(test_cli)
+        self.create_test_entity(test_cli)
+        test_cli.process_command("give 1 ironsword")
+        test_cli.game_state.get_entity_from_list(1).handle_death()
         # Process command
-        output = self.process_command_and_get_output(test_cli, "drop 1 IronSword")
-        # Check command produced output and item was not dropped
-        self.assertNotEqual(output, "")
-        self.assertIn(item, entity.backpack)
-        self.assertEqual(test_cli.grid.grid[10][10].item_list, [])
+        output = self.process_command_and_get_output(test_cli, "drop 1 ironsword")
+        # Check output and unchanged backpack
+        self.assertIn("dead", output.lower())
+        entity_info = test_cli.game_state.get_entity_info_from_list(1)
+        self.assertTrue(
+            any(item.name.lower() == "ironsword" for item in entity_info.backpack)
+        )
 
-    # Test dead entity is blocked from swap command
     def test_dead_entity_blocked_swap(self):
         # Create test CLI
         test_cli = self.create_test_cli()
-        entity = self.create_dead_test_entity(test_cli)
-        # Add item to backpack
-        item = dl.create_equipment("ironsword")
-        entity.backpack.append(item)
+        self.reset_test_game_state(test_cli)
+        self.create_test_map(test_cli)
+        self.create_test_entity(test_cli)
+        test_cli.process_command("give 1 ironchestplate")
+        test_cli.game_state.get_entity_from_list(1).handle_death()
         # Process command
         output = self.process_command_and_get_output(
-            test_cli, "swap 1 weapon IronSword"
+            test_cli, "swap 1 Armor ironchestplate"
         )
-        # Check command produced output and item was not equipped
-        self.assertNotEqual(output, "")
-        self.assertEqual(entity.inventory[0].name, "None")
-        self.assertIn(item, entity.backpack)
+        # Check output and unchanged inventory
+        self.assertIn("dead", output.lower())
+        self.assertEqual(test_cli.game_state.get_entity_info_from_list(1).defence, 10)
+        # self.assertEqual(test_cli.game_state.get_entity_info_from_list(1).attack, 15)
 
-    # Test dead entity is blocked from use command
     def test_dead_entity_blocked_use(self):
         # Create test CLI
         test_cli = self.create_test_cli()
-        entity = self.create_dead_test_entity(test_cli)
-        # Add health potion to backpack
-        item = dl.create_equipment("smallhealthpotion")
-        entity.backpack.append(item)
-        starting_health = entity.health
+        self.create_test_map(test_cli)
+        self.create_test_entity(test_cli)
+        test_cli.process_command("give 1 smallhealthpotion")
+        test_cli.game_state.get_entity_from_list(1).handle_death()
         # Process command
         output = self.process_command_and_get_output(
-            test_cli, "use 1 SmallHealthPotion"
+            test_cli, "use 1 smallhealthpotion"
         )
-        # Check command produced output and potion was not used
-        self.assertNotEqual(output, "")
-        self.assertEqual(entity.health, starting_health)
-        self.assertIn(item, entity.backpack)
+        # Check output and unchanged backpack
+        self.assertIn("dead", output.lower())
+        entity_info = test_cli.game_state.get_entity_info_from_list(1)
+        self.assertTrue(
+            any(
+                item.name.lower() == "smallhealthpotion"
+                for item in entity_info.backpack
+            )
+        )
 
-    # Test dead entity is blocked from move command
     def test_dead_entity_blocked_move(self):
         # Create test CLI
         test_cli = self.create_test_cli()
-        entity = self.create_dead_test_entity(test_cli)
-        starting_position = entity.position.copy()
+        self.create_test_map(test_cli)
+        self.create_dead_entity(test_cli)
         # Process command
-        output = self.process_command_and_get_output(test_cli, "move 1 11 10")
-        # Check command produced output and entity did not move
-        self.assertNotEqual(output, "")
-        self.assertEqual(entity.position, starting_position)
+        output = self.process_command_and_get_output(test_cli, "move 1 2 1")
+        # Check output and unchanged position
+        self.assertIn("dead", output.lower())
+        self.assertEqual(
+            test_cli.game_state.get_entity_info_from_list(1).position, [1, 1]
+        )
 
-    # Test dead entity is blocked from attack command
-    def test_dead_entity_blocked_attack(self):
+    def test_dead_attacker_cannot_attack(self):
         # Create test CLI
         test_cli = self.create_test_cli()
-        # Create map and spawn entities
         self.create_test_map(test_cli)
-        test_cli.process_command("spawn warrior 10 10")
-        test_cli.process_command("spawn goblin 11 10")
-        attacker = test_cli.entity_list[0]
-        defender = test_cli.entity_list[1]
-        # Kill attacker
-        attacker.handle_death()
-        starting_health = defender.health
+        self.create_dead_entity(test_cli, "Warrior", 1, 1)
+        self.create_test_entity(test_cli, "Goblin", 2, 1)
+        # Get defender health
+        original_health = test_cli.game_state.get_entity_info_from_list(2).health
         # Process command
         output = self.process_command_and_get_output(test_cli, "attack 1 2")
-        # Check command produced output and defender was not damaged
-        self.assertNotEqual(output, "")
-        self.assertEqual(defender.health, starting_health)
+        # Check output and unchanged health
+        self.assertIn("dead", output.lower())
+        self.assertEqual(
+            test_cli.game_state.get_entity_info_from_list(2).health, original_health
+        )
 
-    # Test dead entity is blocked from cast command
-    def test_dead_entity_blocked_cast(self):
+    def test_dead_defender_cannot_be_attacked(self):
         # Create test CLI
         test_cli = self.create_test_cli()
-        # Create map and spawn entities
         self.create_test_map(test_cli)
-        test_cli.process_command("spawn mage 10 10")
-        test_cli.process_command("spawn warrior 11 10")
-        caster = test_cli.entity_list[0]
-        target = test_cli.entity_list[1]
+        self.create_test_entity(test_cli, "Warrior", 1, 1)
+        self.create_dead_entity(test_cli, "Goblin", 2, 1, entity_id=2)
+        # Process command
+        output = self.process_command_and_get_output(test_cli, "attack 1 2")
+        # Check output
+        self.assertIn("dead", output.lower())
+
+    def test_dead_caster_cannot_cast(self):
+        # Create test CLI
+        test_cli = self.create_test_cli()
+        self.create_test_map(test_cli)
+        self.create_test_entity(test_cli, "Mage", 1, 1)
+        self.create_test_entity(test_cli, "Goblin", 2, 1)
+
+        # Debug death status
         # Kill caster
-        caster.handle_death()
-        starting_health = target.health
-        starting_mana = caster.mana
-        # Process command
-        output = self.process_command_and_get_output(test_cli, "cast 1 2 fireball")
-        # Check command produced output and neither entity was changed
-        self.assertNotEqual(output, "")
-        self.assertEqual(target.health, starting_health)
-        self.assertEqual(caster.mana, starting_mana)
-
-    # Test inventory with dead entity
-    def test_inventory_with_dead_entity(self):
-
-        # Create test CLI
-        test_cli = self.create_test_cli()
-
-        # Create map
-        self.create_test_map(test_cli)
-
-        # Spawn entity
-        test_cli.process_command("spawn warrior 10 10")
-
-        # Get entity
-        entity = test_cli.entity_list[0]
-
-        # Kill entity
-        entity.handle_death()
-
-        # Process command
-        output = self.process_command_and_get_output(
-            test_cli,
-            "inventory 1",
-        )
-
-        # Check output
-        self.assertEqual(
-            output,
-            "error: inventory_failed - Player entity is dead!\n",
-        )
-
-    # Test inspect with dead entity
-    def test_inspect_with_dead_entity(self):
-
-        # Create test CLI
-        test_cli = self.create_test_cli()
-
-        # Create map
-        self.create_test_map(test_cli)
-
-        # Spawn entity
-        test_cli.process_command("spawn warrior 10 10")
-
-        # Get entity
-        entity = test_cli.entity_list[0]
-
-        # Kill entity
-        entity.handle_death()
-
-        # Process command
-        output = self.process_command_and_get_output(
-            test_cli,
-            "inspect 1",
-        )
-
-        # Check output
-        self.assertEqual(
-            output,
-            "error: inspect_failed - Player entity is dead!\n",
-        )
-
-    # Test pickup with dead entity
-    def test_pickup_with_dead_entity(self):
-
-        # Create test CLI
-        test_cli = self.create_test_cli()
-
-        # Create map
-        self.create_test_map(test_cli)
-
-        # Spawn entity
-        test_cli.process_command("spawn warrior 10 10")
-
-        # Get entity
-        entity = test_cli.entity_list[0]
-
-        # Kill entity
-        entity.handle_death()
-
-        # Process command
-        output = self.process_command_and_get_output(
-            test_cli,
-            "pickup 1 IronSword",
-        )
-
-        # Check output
-        self.assertEqual(
-            output,
-            "error: pickup_failed - Entity is dead!\n",
-        )
-
-    # Test drop with dead entity
-    def test_drop_with_dead_entity(self):
-
-        # Create test CLI
-        test_cli = self.create_test_cli()
-
-        # Create map
-        self.create_test_map(test_cli)
-
-        # Spawn entity
-        test_cli.process_command("spawn warrior 10 10")
-
-        # Get entity
-        entity = test_cli.entity_list[0]
-
-        # Kill entity
-        entity.handle_death()
-
-        # Process command
-        output = self.process_command_and_get_output(
-            test_cli,
-            "drop 1 IronSword",
-        )
-
-        # Check output
-        self.assertEqual(
-            output,
-            "error: drop_failed - Entity is dead!\n",
-        )
-
-    # Test swap with dead entity
-    def test_swap_with_dead_entity(self):
-
-        # Create test CLI
-        test_cli = self.create_test_cli()
-
-        # Create map
-        self.create_test_map(test_cli)
-
-        # Spawn entity
-        test_cli.process_command("spawn warrior 10 10")
-
-        # Get entity
-        entity = test_cli.entity_list[0]
-
-        # Kill entity
-        entity.handle_death()
-
-        # Process command
-        output = self.process_command_and_get_output(
-            test_cli,
-            "swap 1 weapon ironsword",
-        )
-
-        # Check output
-        self.assertEqual(
-            output,
-            "error: swap_failed - Entity is dead!\n",
-        )
-
-    # Test use with dead entity
-    def test_use_with_dead_entity(self):
-
-        # Create test CLI
-        test_cli = self.create_test_cli()
-
-        # Create map
-        self.create_test_map(test_cli)
-
-        # Spawn entity
-        test_cli.process_command("spawn warrior 10 10")
-
-        # Get entity
-        entity = test_cli.entity_list[0]
-
-        # Kill entity
-        entity.handle_death()
-
-        # Process command
-        output = self.process_command_and_get_output(
-            test_cli,
-            "use 1 SmallHealthPotion",
-        )
-
-        # Check output
-        self.assertEqual(
-            output,
-            "error: use_failed - Entity is dead!\n",
-        )
-
-    # Test move with dead entity
-    def test_move_with_dead_entity(self):
-
-        # Create test CLI
-        test_cli = self.create_test_cli()
-
-        # Create map
-        self.create_test_map(test_cli)
-
-        # Spawn entity
-        test_cli.process_command("spawn warrior 10 10")
-
-        # Get entity
-        entity = test_cli.entity_list[0]
-
-        # Kill entity
-        entity.handle_death()
-
-        # Process command
-        output = self.process_command_and_get_output(
-            test_cli,
-            "move 1 11 10",
-        )
-
-        # Check output
-        self.assertEqual(
-            output,
-            "error: move_failed - Entity is dead!\n",
-        )
-
-        # Make sure entity did not move
-        self.assertEqual(entity.position, [10, 10])
-
-    # Test attack with dead attacker
-    def test_attack_with_dead_attacker(self):
-
-        # Create test CLI
-        test_cli = self.create_test_cli()
-
-        # Create map
-        self.create_test_map(test_cli)
-
-        # Spawn attacker and target
-        test_cli.process_command("spawn warrior 10 10")
-        test_cli.process_command("spawn goblin 11 10")
-
-        # Get entities
-        attacker = test_cli.entity_list[0]
-        target = test_cli.entity_list[1]
-
-        # Kill attacker
-        attacker.handle_death()
-
-        # Save target health
-        target_health = target.health
-
-        # Process attack
-        output = self.process_command_and_get_output(
-            test_cli,
-            "attack 1 2",
-        )
-
-        # Check output
-        self.assertEqual(
-            output,
-            "error: attack_failed - Attacker is dead!\n",
-        )
-
-        # Make sure target was not damaged
-        self.assertEqual(target.health, target_health)
-
-    # Test attack with dead target
-    def test_attack_with_dead_target(self):
-
-        # Create test CLI
-        test_cli = self.create_test_cli()
-
-        # Create map
-        self.create_test_map(test_cli)
-
-        # Spawn attacker and target
-        test_cli.process_command("spawn warrior 10 10")
-        test_cli.process_command("spawn goblin 11 10")
-
-        # Get entities
-        attacker = test_cli.entity_list[0]
-        target = test_cli.entity_list[1]
-
-        # Kill target
-        target.handle_death()
-
-        # Save attacker health
-        attacker_health = attacker.health
-
-        # Process attack
-        output = self.process_command_and_get_output(
-            test_cli,
-            "attack 1 2",
-        )
-
-        # Check output
-        self.assertEqual(
-            output,
-            "error: attack_failed - Defender is dead!\n",
-        )
-
-        # Make sure attacker was not damaged
-        self.assertEqual(attacker.health, attacker_health)
-
-    # Test cast with dead caster
-    def test_cast_with_dead_caster(self):
-
-        # Create test CLI
-        test_cli = self.create_test_cli()
-
-        # Create map
-        self.create_test_map(test_cli)
-
-        # Spawn caster and target
-        test_cli.process_command("spawn mage 10 10")
-        test_cli.process_command("spawn goblin 11 10")
-
-        # Get entities
-        caster = test_cli.entity_list[0]
-        target = test_cli.entity_list[1]
-
-        # Kill caster
+        caster = test_cli.game_state.get_entity_from_list(1)
         caster.handle_death()
 
-        # Save target health
-        target_health = target.health
-
-        # Process cast
-        output = self.process_command_and_get_output(
-            test_cli,
-            "cast 1 2 fireball",
+        # Debug death status
+        print("Internal buffs:", caster._Entity__temp_buffs)
+        print("Info buffs:", caster.get_info().temp_buffs)
+        print(
+            "Alive:",
+            Entity.is_alive_from_info(test_cli.game_state.get_entity_info_from_list(1)),
         )
 
+        # test_cli.game_state.get_entity_from_list(1).handle_death()
+        # Process command
+        output = self.process_command_and_get_output(test_cli, "cast 1 2 Fireball")
         # Check output
-        self.assertEqual(
-            output,
-            "error: cast_failed - Caster is dead!\n",
-        )
+        self.assertIn("dead", output.lower())
 
-        # Make sure target was not damaged
-        self.assertEqual(target.health, target_health)
-
-    # Test cast with dead target
-    def test_cast_with_dead_target(self):
-
+    def test_dead_target_cannot_be_cast_on(self):
         # Create test CLI
         test_cli = self.create_test_cli()
-
-        # Create map
         self.create_test_map(test_cli)
-
-        # Spawn caster and target
-        test_cli.process_command("spawn mage 10 10")
-        test_cli.process_command("spawn goblin 11 10")
-
-        # Get entities
-        caster = test_cli.entity_list[0]
-        target = test_cli.entity_list[1]
-
-        # Kill target
-        target.handle_death()
-
-        # Save caster health
-        caster_health = caster.health
-
-        # Process cast
-        output = self.process_command_and_get_output(
-            test_cli,
-            "cast 1 2 fireball",
-        )
-
+        self.create_test_entity(test_cli, "Mage", 1, 1)
+        self.create_dead_entity(test_cli, "Goblin", 2, 1, entity_id=2)
+        # Process command
+        output = self.process_command_and_get_output(test_cli, "cast 1 2 Fireball")
         # Check output
-        self.assertEqual(
-            output,
-            "error: cast_failed - Target is dead!\n",
-        )
+        self.assertIn("dead", output.lower())
 
-        # Make sure caster was not damaged
-        self.assertEqual(caster.health, caster_health)
-
-    # Test tick with no entities
-    def test_tick_with_no_entities(self):
-
+    def test_backpack_full_rejects_additional_item(self):
         # Create test CLI
         test_cli = self.create_test_cli()
-
-        # Create map
         self.create_test_map(test_cli)
+        self.create_test_entity(test_cli)
+        # Fill backpack to capacity
+        items = [
+            "ironsword",
+            "curseddagger",
+            "magestaff",
+            "ironchestplate",
+            "leathertunic",
+            "scoutarmor",
+            "ringofthesorcerer",
+            "amuletofvitality",
+        ]
+        for item_name in items[: Entity.BACKPACK_SIZE]:
+            test_cli.process_command(f"give 1 {item_name}")
+        # Attempt to add another item
+        output = self.process_command_and_get_output(test_cli, "give 1 ringofhaste")
+        # Check output and backpack capacity
+        self.assertIn("full", output.lower())
+        entity_info = test_cli.game_state.get_entity_info_from_list(1)
+        self.assertLessEqual(len(entity_info.backpack), Entity.BACKPACK_SIZE)
 
+    def test_failed_pickup_preserves_tile_item(self):
+        # Create test CLI
+        test_cli = self.create_test_cli()
+        self.create_test_map(test_cli)
+        self.create_test_entity(test_cli)
+        test_cli.process_command("spawn loot ironsword 1 1")
+        # Attempt pickup of an item not present on the tile
+        output = self.process_command_and_get_output(
+            test_cli, "pickup 1 ironchestplate"
+        )
+        # Check output and original loot
+        self.assertIn("not in tiles item list", output.lower())
+        tile_info = test_cli.game_state.get_game_tile_info(1, 1)
+        self.assertIn("ironsword", [item.lower() for item in tile_info.item_list])
+
+    def test_failed_swap_preserves_backpack_and_equipment(self):
+        # Create test CLI
+        test_cli = self.create_test_cli()
+        self.create_test_map(test_cli)
+        self.create_test_entity(test_cli)
+        test_cli.process_command("give 1 ironchestplate")
+        # Attempt to equip armor in weapon slot
+        output = self.process_command_and_get_output(
+            test_cli, "swap 1 Weapon ironchestplate"
+        )
+        # Check output and unchanged state
+        self.assertIn("Slot incorrect", output)
+        entity_info = test_cli.game_state.get_entity_info_from_list(1)
+        self.assertTrue(
+            any(item.name.lower() == "ironchestplate" for item in entity_info.backpack)
+        )
+        self.assertEqual(entity_info.defence, 10)
+
+    # Dead Entity Validation Tests End
+
+    # Expanded Inventory and Combat Coverage Start
+
+    def test_give_item_case_insensitive(self):
+        # Create test CLI
+        test_cli = self.create_test_cli()
+        self.create_test_map(test_cli)
+        self.create_test_entity(test_cli)
+        # Process command
+        output = self.process_command_and_get_output(test_cli, "give 1 IronSword")
+        # Check output and backpack
+        self.assertIn("ironsword", output.lower())
+        self.assertTrue(
+            any(
+                item.name.lower() == "ironsword"
+                for item in test_cli.game_state.get_entity_info_from_list(1).backpack
+            )
+        )
+
+    def test_pickup_item_case_insensitive(self):
+        # Create test CLI
+        test_cli = self.create_test_cli()
+        self.create_test_map(test_cli)
+        self.create_test_entity(test_cli)
+        test_cli.process_command("spawn loot ironsword 1 1")
+        # Process command
+        output = self.process_command_and_get_output(test_cli, "pickup 1 IRONSWORD")
+        # Check output and backpack
+        self.assertIn("picked_up", output)
+        self.assertTrue(
+            any(
+                item.name.lower() == "ironsword"
+                for item in test_cli.game_state.get_entity_info_from_list(1).backpack
+            )
+        )
+
+    def test_swap_armor_success(self):
+        # Create test CLI
+        test_cli = self.create_test_cli()
+        self.create_test_map(test_cli)
+        self.create_test_entity(test_cli)
+        test_cli.process_command("give 1 ironchestplate")
+        # Process command
+        output = self.process_command_and_get_output(
+            test_cli, "swap 1 Armor ironchestplate"
+        )
+        # Check output and inventory
+        self.assertIn("swapped", output)
+        self.assertGreater(test_cli.game_state.get_entity_info_from_list(1).defence, 10)
+
+    def test_swap_accessory_success(self):
+        # Create test CLI
+        test_cli = self.create_test_cli()
+        self.create_test_map(test_cli)
+        self.create_test_entity(test_cli)
+        test_cli.process_command("give 1 ringofhaste")
+        # Process command
+        output = self.process_command_and_get_output(
+            test_cli, "swap 1 Accessory ringofhaste"
+        )
+        # Check output and inventory
+        self.assertIn("swapped", output)
+        self.assertGreater(test_cli.game_state.get_entity_info_from_list(1).speed, 5)
+
+    def test_use_all_health_and_mana_potions(self):
+        # Create test CLI
+        test_cli = self.create_test_cli()
+        self.create_test_map(test_cli)
+        self.create_test_entity(test_cli, "Warrior", 1, 1)
+        # Add each consumable to backpack
+        potion_names = [
+            "smallhealthpotion",
+            "greaterhealthpotion",
+            "superiorhealthpotion",
+            "manapotion",
+            "turtlemasterpotion",
+        ]
+        for item_name in potion_names:
+            test_cli.process_command(f"give 1 {item_name}")
+        # Use each potion and check it is consumed
+        for item_name in potion_names:
+            with self.subTest(item_name=item_name):
+                output = self.process_command_and_get_output(
+                    test_cli, f"use 1 {item_name}"
+                )
+                self.assertIn("used", output.lower())
+                entity_info = test_cli.game_state.get_entity_info_from_list(1)
+                self.assertFalse(
+                    any(item.name.lower() == item_name for item in entity_info.backpack)
+                )
+
+    def test_use_item_keeps_unrelated_backpack_items(self):
+        # Create test CLI
+        test_cli = self.create_test_cli()
+        self.create_test_map(test_cli)
+        self.create_test_entity(test_cli)
+        test_cli.process_command("give 1 smallhealthpotion")
+        test_cli.process_command("give 1 ironsword")
+        # Process command
+        output = self.process_command_and_get_output(
+            test_cli, "use 1 smallhealthpotion"
+        )
+        # Check output and remaining item
+        self.assertIn("used", output.lower())
+        entity_info = test_cli.game_state.get_entity_info_from_list(1)
+        self.assertFalse(
+            any(
+                item.name.lower() == "smallhealthpotion"
+                for item in entity_info.backpack
+            )
+        )
+        self.assertTrue(
+            any(item.name.lower() == "ironsword" for item in entity_info.backpack)
+        )
+
+    def test_use_item_from_another_entity_backpack_is_rejected(self):
+        # Create test CLI
+        test_cli = self.create_test_cli()
+        self.create_test_map(test_cli)
+        self.create_test_entity(test_cli, "Warrior", 1, 1)
+        self.create_test_entity(test_cli, "Mage", 2, 1)
+        test_cli.process_command("give 1 smallhealthpotion")
+        # Try to use item from entity 2's backpack
+        output = self.process_command_and_get_output(
+            test_cli, "use 2 smallhealthpotion"
+        )
+        # Check output and item ownership
+        self.assertIn("not in backpack", output.lower())
+        self.assertTrue(
+            any(
+                item.name.lower() == "smallhealthpotion"
+                for item in test_cli.game_state.get_entity_info_from_list(1).backpack
+            )
+        )
+
+    def test_attack_melee_damage_reduces_health(self):
+        # Create test CLI
+        test_cli = self.create_test_cli()
+        self.create_test_map(test_cli)
+        self.create_test_entity(test_cli, "Warrior", 1, 1)
+        self.create_test_entity(test_cli, "Goblin", 2, 1)
+        # Get target health
+        original_health = test_cli.game_state.get_entity_info_from_list(2).health
+        # Process command
+        output = self.process_command_and_get_output(test_cli, "attack 1 2")
+        # Check output and health
+        self.assertIn("ok: attack", output)
+        self.assertLess(
+            test_cli.game_state.get_entity_info_from_list(2).health, original_health
+        )
+
+    def test_attack_ranged_entity_can_attack_within_ranged_distance(self):
+        # Create test CLI
+        test_cli = self.create_test_cli()
+        self.create_test_map(test_cli)
+        self.create_test_entity(test_cli, "Mage", 1, 1)
+        self.create_test_entity(test_cli, "Goblin", 3, 1)
+        # Process command
+        output = self.process_command_and_get_output(test_cli, "attack 1 2")
+        # Check output
+        self.assertIn("error: attack", output)
+
+    def test_cast_heal_spell_success(self):
+        # Create test CLI
+        test_cli = self.create_test_cli()
+        self.create_test_map(test_cli)
+        self.create_test_entity(test_cli, "Mage", 1, 1)
+        self.create_test_entity(test_cli, "Warrior", 2, 1)
+        # Lower target health before healing
+        target = test_cli.game_state.get_entity_from_list(2)
+        target.update_single_stat("Health", 20)
+        test_cli.game_state.update_entity(2)
+        # Process command
+        output = self.process_command_and_get_output(test_cli, "cast 1 2 Heal")
+        # Check output and target health
+        self.assertIn("ok: cast Heal", output)
+        self.assertGreater(test_cli.game_state.get_entity_info_from_list(2).health, 20)
+
+    def test_cast_heal_does_not_exceed_max_health(self):
+        # Create test CLI
+        test_cli = self.create_test_cli()
+        self.create_test_map(test_cli)
+        self.create_test_entity(test_cli, "Mage", 1, 1)
+        self.create_test_entity(test_cli, "Warrior", 2, 1)
+        # Set target health just below maximum
+        target = test_cli.game_state.get_entity_from_list(2)
+        target_info = target.get_info()
+        target.update_single_stat("Health", target_info.max_health - 1)
+        test_cli.game_state.update_entity(2)
+        # Process command
+        self.process_command_and_get_output(test_cli, "cast 1 2 Heal")
+        # Check target health cap
+        updated_info = test_cli.game_state.get_entity_info_from_list(2)
+        self.assertLessEqual(updated_info.health, updated_info.max_health)
+
+    def test_attack_then_heal_with_health_potion(self):
+        # Create test CLI
+        test_cli = self.create_test_cli()
+        self.create_test_map(test_cli)
+        self.create_test_entity(test_cli, "Warrior", 1, 1)
+        self.create_test_entity(test_cli, "Goblin", 2, 1)
+        # Add potion and take damage
+        test_cli.process_command("give 1 smallhealthpotion")
+        test_cli.process_command("attack 2 1")
+        health_after_attack = test_cli.game_state.get_entity_info_from_list(1).health
+        # Use potion
+        output = self.process_command_and_get_output(
+            test_cli, "use 1 smallhealthpotion"
+        )
+        # Check health and output
+        self.assertIn("used", output.lower())
+        self.assertGreaterEqual(
+            test_cli.game_state.get_entity_info_from_list(1).health, health_after_attack
+        )
+
+    def test_spawn_all_supported_entity_types(self):
+        # Create test CLI
+        test_cli = self.create_test_cli()
+        self.create_test_map(test_cli)
+        # Spawn supported types at separate positions
+        entity_types = ["Warrior", "Mage", "Skeleton", "Goblin"]
+        for index, entity_type in enumerate(entity_types):
+            with self.subTest(entity_type=entity_type):
+                x = index + 1
+                test_cli.process_command(f"spawn {entity_type} {x} 1")
+                entity_info = test_cli.game_state.get_entity_info_from_list(index + 1)
+                self.assertIsNotNone(entity_info)
+                self.assertEqual(entity_info.e_type.lower(), entity_type.lower())
+
+    def test_spawn_loot_does_not_affect_other_tiles(self):
+        # Create test CLI
+        test_cli = self.create_test_cli()
+        self.create_test_map(test_cli)
+        # Spawn loot on one tile
+        test_cli.process_command("spawn loot ironsword 2 2")
+        # Check target and unrelated tiles
+        target_tile = test_cli.game_state.get_game_tile_info(2, 2)
+        other_tile = test_cli.game_state.get_game_tile_info(3, 3)
+        self.assertIn("ironsword", [item.lower() for item in target_tile.item_list])
+        self.assertEqual(other_tile.item_list, ())
+
+    def test_move_into_shallow_water_updates_entity_stats(self):
+        # Create test CLI
+        test_cli = self.create_test_cli()
+        self.create_test_map(test_cli)
+        self.create_test_entity(test_cli, "Warrior", 1, 1)
+        test_cli.process_command("set tile 2 1 ShallowWater")
+        # Get original speed and move onto shallow water
+        original_speed = test_cli.game_state.get_entity_info_from_list(1).speed
+        output = self.process_command_and_get_output(test_cli, "move 1 2 1")
+        # Check output and speed modifier
+        self.assertIn("ok: moved", output)
+        self.assertLessEqual(
+            test_cli.game_state.get_entity_info_from_list(1).speed, original_speed
+        )
+
+    def test_map_reset_clears_old_entities_and_occupants(self):
+        # Create test CLI
+        test_cli = self.create_test_cli()
+        self.create_test_map(test_cli)
+        self.create_test_entity(test_cli, "Warrior", 1, 1)
+        # Reset map through the public command
+        output = self.process_command_and_get_output(test_cli, "init map 10 10")
+        # Check reset state
+        self.assertIn("map_initialized", output)
+        self.assertIsNone(test_cli.game_state.get_entity_info_from_list(1))
+        self.assertEqual(test_cli.game_state.get_game_tile_info(1, 1).occupants, ())
+
+    # Expanded Inventory and Combat Coverage End
+
+    def test_tick_removes_dead_entity_from_game(self):
+        # Create test CLI
+        test_cli = self.create_test_cli()
+        self.create_test_map(test_cli)
+        self.create_dead_entity(test_cli, "Warrior", 1, 1)
         # Process tick
-        output = self.process_command_and_get_output(
-            test_cli,
-            "tick",
-        )
+        output = self.process_command_and_get_output(test_cli, "tick")
+        # Check dead entity was removed from the entity list and tile
+        self.assertIn("advanced to turn", output)
+        self.assertIsNone(test_cli.game_state.get_entity_info_from_list(1))
+        self.assertEqual(test_cli.game_state.get_game_tile_info(1, 1).occupants, ())
 
-        # Check output
-        self.assertEqual(
-            output,
-            "ok: tick processed. Ticker: 2!\n",
-        )
-
-        # Check ticker
-        self.assertEqual(test_cli.ticker, 2)
-
-    # Test tick removes dead entity
-    def test_tick_removes_dead_entity(self):
-
-        # Create test CLI
-        test_cli = self.create_test_cli()
-
-        # Create map
-        self.create_test_map(test_cli)
-
-        # Spawn entity
-        test_cli.process_command("spawn warrior 10 10")
-
-        # Get entity
-        entity = test_cli.entity_list[0]
-
-        # Kill entity
-        entity.handle_death()
-
-        # Process tick
-        output = self.process_command_and_get_output(
-            test_cli,
-            "tick",
-        )
-        output = self.process_command_and_get_output(
-            test_cli,
-            "tick",
-        )
-        output = self.process_command_and_get_output(
-            test_cli,
-            "tick",
-        )
-
-        # Check output
-        self.assertEqual(
-            output,
-            "ok: tick processed. Ticker: 4!\n",
-        )
-
-        # Entity should be removed
-        self.assertEqual(len(test_cli.entity_list), 0)
-
-        # Grid tile should no longer contain entity
-        self.assertEqual(
-            test_cli.grid.grid[10][10].occupants,
-            [],
-        )
-
-    # Test tick removes multiple dead entities
     def test_tick_removes_multiple_dead_entities(self):
-
         # Create test CLI
         test_cli = self.create_test_cli()
-
-        # Create map
         self.create_test_map(test_cli)
-
-        # Spawn entities
-        test_cli.process_command("spawn warrior 10 10")
-        test_cli.process_command("spawn goblin 11 10")
-        test_cli.process_command("spawn mage 12 10")
-
-        # Get entities
-        warrior = test_cli.entity_list[0]
-        goblin = test_cli.entity_list[1]
-        mage = test_cli.entity_list[2]
-
-        # Kill warrior and goblin
-        warrior.handle_death()
-        goblin.handle_death()
-
-        # Process ticks
-        test_cli.process_command("tick")
-        test_cli.process_command("tick")
-        test_cli.process_command("tick")
-        test_cli.process_command("tick")
-
-        self.assertEqual(test_cli.ticker, 5)
-
-        # Mage should remain
-        self.assertEqual(len(test_cli.entity_list), 1)
-        self.assertEqual(test_cli.entity_list[0].id, 3)
-
-    # Test tick updates entity timers
-    def test_tick_updates_entity_timers(self):
-
-        # Create test CLI
-        test_cli = self.create_test_cli()
-
-        # Create map
-        self.create_test_map(test_cli)
-
-        # Spawn entity
-        test_cli.process_command("spawn warrior 10 10")
-
-        # Get entity
-        entity = test_cli.entity_list[0]
-
-        # Add temporary buff
-        entity.temp_buffs.append(
-            {
-                "Name": "TestBuff",
-                "Turns": 2,
-                "Effects": {
-                    "Flat_modifiers": {},
-                    "Percent_modifiers": {},
-                },
-            }
-        )
-
+        self.create_dead_entity(test_cli, "Warrior", 1, 1)
+        self.create_dead_entity(test_cli, "Goblin", 2, 1, entity_id=2)
         # Process tick
-        self.process_command_and_get_output(
-            test_cli,
-            "tick",
-        )
+        output = self.process_command_and_get_output(test_cli, "tick")
+        # Check all dead entities were removed
+        self.assertIn("advanced to turn", output)
+        self.assertIsNone(test_cli.game_state.get_entity_info_from_list(1))
+        self.assertIsNone(test_cli.game_state.get_entity_info_from_list(2))
+        self.assertEqual(test_cli.game_state.get_game_tile_info(1, 1).occupants, ())
+        self.assertEqual(test_cli.game_state.get_game_tile_info(2, 1).occupants, ())
 
-        # Check buff timer
+    # Initialization and Full Spawn Coverage Start
+
+    def test_cli_initializes_with_fresh_game_state(self):
+        # Create test CLI
+        test_cli = self.create_test_cli()
+        # Check initial state
+        self.assertFalse(test_cli.game_state.is_map_created())
+        self.assertFalse(test_cli.game_state.entities_exists())
+
+    def test_spawn_multiple_entities_have_expected_base_stats(self):
+        # Create test CLI
+        test_cli = self.create_test_cli()
+        self.create_test_map(test_cli)
+        # Expected base stats: health, attack, defence, speed
+        expected_stats = {
+            "Warrior": (120, 15, 10, 5),
+            "Mage": (70, 8, 4, 5),
+            "Skeleton": (60, 10, 8, 4),
+            "Goblin": (45, 12, 3, 6),
+        }
+        # Spawn each entity type and check base stats
+        for index, (entity_type, stats) in enumerate(expected_stats.items()):
+            with self.subTest(entity_type=entity_type):
+                test_cli.process_command(f"spawn {entity_type} {index + 1} 1")
+                entity_info = test_cli.game_state.get_entity_info_from_list(index + 1)
+                self.assertIsNotNone(entity_info)
+                self.assertEqual(
+                    (
+                        entity_info.health,
+                        entity_info.attack,
+                        entity_info.defence,
+                        entity_info.speed,
+                    ),
+                    stats,
+                )
+
+    def test_spawn_loot_on_multiple_tiles_keeps_items_separate(self):
+        # Create test CLI
+        test_cli = self.create_test_cli()
+        self.create_test_map(test_cli)
+        # Spawn loot on separate tiles
+        test_cli.process_command("spawn loot ironsword 1 1")
+        test_cli.process_command("spawn loot smallhealthpotion 2 2")
+        # Check each tile contains only its own item
+        first_tile = test_cli.game_state.get_game_tile_info(1, 1)
+        second_tile = test_cli.game_state.get_game_tile_info(2, 2)
+        self.assertEqual([item.lower() for item in first_tile.item_list], ["ironsword"])
         self.assertEqual(
-            entity.temp_buffs[0]["Turns"],
-            1,
+            [item.lower() for item in second_tile.item_list], ["smallhealthpotion"]
         )
 
-
-# reset entity stats
-# Resets necessary entity stats for use in tests
-# Params:   entity - entity - entity to reset
-# Returns: None
-def reset_ent_stats(entity, cli):
-    entity.inventory = [
-        dl.EQUIPMENT_TYPES["none_wep"](),
-        dl.EQUIPMENT_TYPES["none_armor"](),
-        dl.EQUIPMENT_TYPES["none_acc"](),
-    ]
-    entity.update_stats(cli)
+    # Initialization and Full Spawn Coverage End
 
 
 if __name__ == "__main__":

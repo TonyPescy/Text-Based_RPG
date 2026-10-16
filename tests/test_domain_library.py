@@ -32,9 +32,11 @@ import equipment
 class TestDomainLibrary(unittest.TestCase):
 
     # Repeated Test Functions
-    # Saves repeated setup and assertion code while keeping individual tests readable
 
-    # Get all expected equipment classes
+    # Get Expected Equipment Types
+    # Returns the expected class for each equipment dictionary key
+    # Params: None
+    # Returns: expected_equipment_types - dict - equipment names and classes
     def get_expected_equipment_types(self):
         return {
             "ironsword": equipment.IronSword,
@@ -56,131 +58,74 @@ class TestDomainLibrary(unittest.TestCase):
             "turtlemasterpotion": equipment.TurtleMasterPotion,
         }
 
-    # Get expected equipment dictionary keys
-    def get_expected_equipment_keys(self):
-        return set(self.get_expected_equipment_types().keys())
-
-    # Verify an equipment dictionary entry creates the expected class
-    def assert_equipment_type(self, item_name, expected_class):
-        temp_equipment = dl.EQUIPMENT_TYPES[item_name]()
-        self.assertIsInstance(
-            temp_equipment,
-            expected_class,
-        )
-
-    # Verify create_equipment creates the expected class
-    def assert_created_equipment_type(self, item_name, expected_class):
-        temp_equipment = dl.create_equipment(item_name)
-        self.assertIsInstance(
-            temp_equipment,
-            expected_class,
-        )
-
-    # Verify an enum contains the expected values
+    # Assert Enum Values
+    # Checks that an enum contains the expected values in order
+    # Params: enum_class - Enum - enum to check
+    #         expected_values - tuple - expected enum values
+    # Returns: None
     def assert_enum_values(self, enum_class, expected_values):
         self.assertEqual(
             tuple(enum_value.value for enum_value in enum_class),
             expected_values,
         )
 
-    # Verify a spell name
+    # Assert Spell Name
+    # Checks that a spell name enum has the expected value
+    # Params: spell_name - Enum - spell name to check
+    #         expected_value - string - expected value
+    # Returns: None
     def assert_spell_name(self, spell_name, expected_value):
         self.assertEqual(
             spell_name.value,
             expected_value,
         )
 
-    # Verify all spell names exist
-    def assert_spell_names_exist(self):
-        self.assertIn(dl.SpellNames.FIREBALL, dl.SpellNames)
-        self.assertIn(dl.SpellNames.HEAL, dl.SpellNames)
-        self.assertIn(dl.SpellNames.FROSTBOLT, dl.SpellNames)
+    # Integer Validation Tests
 
-    # Verify all spell types exist
-    def assert_spell_types_exist(self):
-        self.assertIn(dl.SpellTypes.OFFENSIVE, dl.SpellTypes)
-        self.assertIn(dl.SpellTypes.SUPPORT, dl.SpellTypes)
-        self.assertIn(dl.SpellTypes.CONTROL, dl.SpellTypes)
-
-    # Test to see if ints provided are valid - ints are valid
+    # Test are_valid_ints with valid integers
     def test_are_valid_ints_true(self):
-        self.assertEqual(
+        self.assertTrue(
             dl.are_valid_ints(0, 0),
-            True,
         )
 
-    # Test to see if ints provided are valid - ints are not valid
+    # Test are_valid_ints with an invalid integer
     def test_are_valid_ints_false(self):
-        self.assertEqual(
+        self.assertFalse(
             dl.are_valid_ints("zilch", 0),
-            False,
         )
 
-    # Tests for equipment types dictionary
+    # Equipment Dictionary Tests
+
+    # Test equipment dictionary keys
     def test_equipment_types(self):
         self.assertEqual(
             set(dl.EQUIPMENT_TYPES.keys()),
-            self.get_expected_equipment_keys(),
+            set(self.get_expected_equipment_types().keys()),
         )
 
-    # Tests for equipment types dictionary values
+    # Test equipment dictionary values
     def test_equipment_types_values(self):
         expected_equipment_types = self.get_expected_equipment_types()
 
         for item_name, expected_class in expected_equipment_types.items():
-            self.assert_equipment_type(
-                item_name,
-                expected_class,
-            )
+            with self.subTest(item_name=item_name):
+                temp_equipment = dl.EQUIPMENT_TYPES[item_name]()
 
-    # Tests for valid equipment slots
-    def test_valid_slots(self):
-        self.assert_enum_values(
-            dl.EquipmentSlot,
-            ("Weapon", "Armor", "Accessory"),
-        )
+                self.assertIsInstance(
+                    temp_equipment,
+                    expected_class,
+                )
 
-    # Tests for valid equipment slot indices
-    def test_valid_slot_indices(self):
-        self.assert_enum_values(
-            dl.EquipmentSlotIndex,
-            (0, 1, 2),
-        )
-
-    # Tests for valid consumables
-    def test_valid_consumables(self):
-        self.assert_enum_values(
-            dl.ConsumableType,
-            (
-                "smallhealthpotion",
-                "greaterhealthpotion",
-                "superiorhealthpotion",
-                "manapotion",
-                "turtlemasterpotion",
-            ),
-        )
-
-    # Tests for entity types
-    def test_entity_types(self):
-        self.assert_enum_values(
-            dl.EntityType,
-            (
-                "Warrior",
-                "Mage",
-                "Skeleton",
-                "Goblin",
-            ),
-        )
-
-    # Tests that all equipment types are Equipment objects
+    # Test all equipment dictionary values create Equipment objects
     def test_equipment_types_are_equipment(self):
-        for item_type in dl.EQUIPMENT_TYPES.values():
-            item = item_type()
+        for item_name, item_type in dl.EQUIPMENT_TYPES.items():
+            with self.subTest(item_name=item_name):
+                temp_equipment = item_type()
 
-            self.assertIsInstance(
-                item,
-                equipment.Equipment,
-            )
+                self.assertIsInstance(
+                    temp_equipment,
+                    equipment.Equipment,
+                )
 
     # Test create_equipment with valid equipment
     def test_create_equipment_success(self):
@@ -211,15 +156,20 @@ class TestDomainLibrary(unittest.TestCase):
             temp_equipment,
         )
 
-    # Test create_equipment with each equipment type
+    # Test create_equipment with every equipment type
     def test_create_equipment_all_types(self):
         expected_equipment_types = self.get_expected_equipment_types()
 
         for item_name, expected_class in expected_equipment_types.items():
-            self.assert_created_equipment_type(
-                item_name,
-                expected_class,
-            )
+            with self.subTest(item_name=item_name):
+                temp_equipment = dl.create_equipment(item_name)
+
+                self.assertIsInstance(
+                    temp_equipment,
+                    expected_class,
+                )
+
+    # Base Inventory Tests
 
     # Test BASE_INVENTORY initialization
     def test_base_inventory(self):
@@ -240,43 +190,69 @@ class TestDomainLibrary(unittest.TestCase):
             equipment.NoneAccessory,
         )
 
-    # Test BASE_INVENTORY equipment values
+    # Test BASE_INVENTORY values
     def test_base_inventory_values(self):
-        expected_inventory = [
-            (
-                "None",
-                "Weapon",
-                {},
-            ),
-            (
-                "None",
-                "Armor",
-                {},
-            ),
-            (
-                "None",
-                "Accessory",
-                {},
-            ),
-        ]
+        expected_inventory = (
+            ("None", "Weapon", {}),
+            ("None", "Armor", {}),
+            ("None", "Accessory", {}),
+        )
 
         for index, expected_values in enumerate(expected_inventory):
-            expected_name = expected_values[0]
-            expected_slot = expected_values[1]
-            expected_effects = expected_values[2]
+            with self.subTest(index=index):
+                expected_name, expected_slot, expected_effects = expected_values
+                temp_equipment = dl.BASE_INVENTORY[index]
 
-            self.assertEqual(
-                dl.BASE_INVENTORY[index].name,
-                expected_name,
-            )
-            self.assertEqual(
-                dl.BASE_INVENTORY[index].slot,
-                expected_slot,
-            )
-            self.assertDictEqual(
-                dl.BASE_INVENTORY[index].effects,
-                expected_effects,
-            )
+                self.assertEqual(
+                    temp_equipment.name,
+                    expected_name,
+                )
+                self.assertEqual(
+                    temp_equipment.slot,
+                    expected_slot,
+                )
+                self.assertDictEqual(
+                    temp_equipment.effects,
+                    expected_effects,
+                )
+
+    # Enum Tests
+
+    # Test valid equipment slots
+    def test_valid_slots(self):
+        self.assert_enum_values(
+            dl.EquipmentSlot,
+            ("Weapon", "Armor", "Accessory"),
+        )
+
+    # Test valid equipment slot indices
+    def test_valid_slot_indices(self):
+        self.assert_enum_values(
+            dl.EquipmentSlotIndex,
+            (0, 1, 2),
+        )
+
+    # Test valid consumable names
+    def test_valid_consumables(self):
+        self.assert_enum_values(
+            dl.ConsumableType,
+            (
+                "smallhealthpotion",
+                "greaterhealthpotion",
+                "superiorhealthpotion",
+                "manapotion",
+                "turtlemasterpotion",
+            ),
+        )
+
+    # Test valid entity types
+    def test_entity_types(self):
+        self.assert_enum_values(
+            dl.EntityType,
+            ("Warrior", "Mage", "Skeleton", "Goblin"),
+        )
+
+    # Entity Validation Tests
 
     # Test is_valid_entity with warrior
     def test_is_valid_entity_warrior(self):
@@ -302,109 +278,106 @@ class TestDomainLibrary(unittest.TestCase):
             dl.is_valid_entity("goblin"),
         )
 
-    # Test is_valid_entity with invalid entity type
+    # Test is_valid_entity with an invalid entity type
     def test_is_valid_entity_invalid(self):
         self.assertFalse(
             dl.is_valid_entity("invalid"),
         )
 
-    # Tests for attack types
+    # Attack Type and Range Tests
+
+    # Test valid attack types
     def test_attack_types(self):
         self.assert_enum_values(
             dl.AttackTypes,
-            (
-                "Melee",
-                "Ranged",
-            ),
+            ("Melee", "Ranged"),
         )
 
-    # Tests for melee attack range
+    # Test melee attack range
     def test_melee_range(self):
         self.assertEqual(
             dl.MELEE_RANGE,
             1,
         )
 
-    # Tests for ranged attack range
+    # Test ranged attack range
     def test_ranged_range(self):
         self.assertEqual(
             dl.RANGED_RANGE,
             3,
         )
 
-    # success
+    # Spell Name Tests
+
+    # Test Fireball spell name
     def test_spell_names_fireball(self):
-        # Verify Fireball spell name
         self.assert_spell_name(
             dl.SpellNames.FIREBALL,
             "Fireball",
         )
 
-    # success
+    # Test Heal spell name
     def test_spell_names_heal(self):
-        # Verify Heal spell name
         self.assert_spell_name(
             dl.SpellNames.HEAL,
             "Heal",
         )
 
-    # success
+    # Test Frostbolt spell name
     def test_spell_names_frostbolt(self):
-        # Verify Frostbolt spell name
         self.assert_spell_name(
             dl.SpellNames.FROSTBOLT,
             "Frostbolt",
         )
 
-    # success
+    # Test that all spell names exist
     def test_spell_names_contains_all_spells(self):
-        # Verify all spell names exist
         self.assertEqual(
             len(dl.SpellNames),
             3,
         )
+        self.assertIn(dl.SpellNames.FIREBALL, dl.SpellNames)
+        self.assertIn(dl.SpellNames.HEAL, dl.SpellNames)
+        self.assertIn(dl.SpellNames.FROSTBOLT, dl.SpellNames)
 
-        # Verify Fireball exists
-        self.assert_spell_names_exist()
+    # Spell Type Tests
 
-    # success
+    # Test Offensive spell type
     def test_spell_types_offensive(self):
-        # Verify Offensive spell type
         self.assertEqual(
             dl.SpellTypes.OFFENSIVE.value,
             "Offensive",
         )
 
-    # success
+    # Test Support spell type
     def test_spell_types_support(self):
-        # Verify Support spell type
         self.assertEqual(
             dl.SpellTypes.SUPPORT.value,
             "Support",
         )
 
-    # success
+    # Test Control spell type
     def test_spell_types_control(self):
-        # Verify Control spell type
         self.assertEqual(
             dl.SpellTypes.CONTROL.value,
             "Control",
         )
 
-    # success
+    # Test that all spell types exist
     def test_spell_types_contains_all_types(self):
-        # Verify all spell types exist
         self.assertEqual(
             len(dl.SpellTypes),
             3,
         )
+        self.assertIn(dl.SpellTypes.OFFENSIVE, dl.SpellTypes)
+        self.assertIn(dl.SpellTypes.SUPPORT, dl.SpellTypes)
+        self.assertIn(dl.SpellTypes.CONTROL, dl.SpellTypes)
 
-        # Verify Offensive, Support, and Control exist
-        self.assert_spell_types_exist()
+    # Status Effect Tests
 
     # Test DEAD_STATUS initialization
     def test_dead_status(self):
-        self.assertEqual(
+        self.assertDictEqual(
             dl.DEAD_STATUS,
             {
                 "Name": "Dead",
@@ -415,3 +388,7 @@ class TestDomainLibrary(unittest.TestCase):
                 "Turns": 3,
             },
         )
+
+
+if __name__ == "__main__":
+    unittest.main()

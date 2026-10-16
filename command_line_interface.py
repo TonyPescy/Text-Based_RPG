@@ -17,9 +17,9 @@ Purpose: Run all public facing functions that the player will use to interact wi
 # Imports
 import domain_library as dl
 from grid import Grid, Tile
-from entity import Entity
-from equipment import Consumable
-from spell import get_spell
+from entity import Entity, EntityInfo, MageInfo
+
+# from spell import get_spell
 from game_state import GameState
 
 
@@ -129,7 +129,7 @@ class CLI:
         elif not dl.are_valid_ints(x, y):
             print("error: set_tile_failed - x and y are not valid integers!")
         # x and y exceeds current grid bounds
-        elif not self.game_state.is_valid_grid_position(self.grid, x, y):
+        elif not self.game_state.is_valid_grid_position(x, y):
             print("error: set_tile_failed - x and y exceed current grid bounds!")
         # tile is not valid
         elif not Tile.is_valid_tile(tile_type):
@@ -153,7 +153,7 @@ class CLI:
                 print(f"ok: tile_set {x}, {y} type: {tile_type.capitalize()}!")
 
     # Process Spawn Command Start
-    # Spawns a unit at designated position
+    # Spawns an entity at designated position
     # Params: command_pieces - list - list of strings that make up the command
     # Return: None
     def process_spawn_command(self, command_pieces):
@@ -195,30 +195,32 @@ class CLI:
                 print("error: inventory - Entity id is not valid integer!")
                 return
         # Get player entity
-        entity = self.game_state.get_entity_from_list(e_id)
+        entity_info = self.game_state.get_entity_info_from_list(e_id)
 
-        if entity is None:
+        if entity_info is None:
             print("error: inventory_failed - Player entity does not exist!")
             return
         # Check to see if entity is dead
-        elif not entity.is_alive():
+        elif not Entity.is_alive_from_info(entity_info):
             print("error: inventory_failed - Player entity is dead!")
             return
 
-        # Display inventory of entity
-        print(f"Weapon: {entity.inventory[0].name}")
-        print(f"Armor: {entity.inventory[1].name}")
-        print(f"Accessory: {entity.inventory[2].name}")
+        # Get entity inventory
+
+        # Display inventory of entity - Invetory is list of equipment names
+        print(f"Weapon: {entity_info.inventory[0]}")
+        print(f"Armor: {entity_info.inventory[1]}")
+        print(f"Accessory: {entity_info.inventory[2]}")
         print("Backpack Slots:")
         # Iterate through all backpack slots
-        for index in range(entity.BACKPACK_SIZE):
+        for index in range(Entity.BACKPACK_SIZE):
             # Check if slot contains an item
-            if index < len(entity.backpack):
-                item = entity.backpack[index]
+            if index < len(entity_info.backpack):
+                item = entity_info.backpack[index]
                 if item is None:
                     item_name = "Empty"
                 else:
-                    item_name = item.name
+                    item_name = item
             else:
                 # Slot is empty
                 item_name = "Empty"
@@ -246,26 +248,43 @@ class CLI:
         # Validate e_id as int
         try:
             e_id = int(e_id)
-        except:
+        except ValueError:
             print("error: inspect_failed - Entity id is not valid integer!")
             return
 
-        entity = self.game_state.get_entity_from_list(e_id)
+        entity_info = self.game_state.get_entity_info_from_list(e_id)
         # Error message for entity existence
-        if entity is None:
+        if entity_info is None:
             print("error: inspect_failed - Entity does not exist!")
             return
         # Check to see if entity is dead
-        elif not entity.is_alive():
+        elif not Entity.is_alive_from_info(entity_info):
             print("error: inspect_failed - Player entity is dead!")
             return
 
         # update entity stats - in case changes occurred
-        entity.update_stats(self)
-        # get stats of entity
-        entity_stats = entity.get_stats()
+        self.game_state.update_entity(entity_info.id)
+        # Display stats of entity   # UPDATE ASAP
         # Display stats of entity
-        for stat, value in entity_stats.items():
+        for stat, value in entity_info.__dict__.items():
+            # Special case for active modifiers
+            if stat == "active_modifiers":
+                count = 0
+
+                # Count all modifiers
+                for modifier_type, contents in value:
+                    count += len(contents)
+
+                print(f"Active_modifiers: {count}")
+
+            # Display all other stats
+            else:
+                # Capitalize stat name and value if string
+                stat = stat.capitalize()
+                value = CLI.capitalize_if_string(value)
+                print(f"{stat}: {value}")
+
+        """for stat, value in entity_stats.items():
             if stat != "Active_modifiers":
                 value = CLI.capitalize_if_string(value)
                 print(f"{stat}: {value}")
@@ -278,7 +297,7 @@ class CLI:
                     contents,
                 ) in value.items():  # dictionaries inside of dictionaries
                     count += len(contents)
-                print(f"{stat}: {count}")
+                print(f"{stat}: {count}")"""
 
     # Process Tile Command Start
     # Will describe the tile at the given grid position
@@ -343,14 +362,17 @@ class CLI:
             print("error: pickup_failed - Invalid command!")
             return
 
-        entity = self.game_state.get_entity_from_list(entity_id)
+        entity_info = self.game_state.get_entity_info_from_list(entity_id)
 
         # Ensure map exists
         if not self.game_state.is_map_created():
             print("error: pickup_failed - Map does not exist!")
             return
         # ensure entity_id is valid and within list
-        elif not any(entity_id == str(entity.id)):
+        elif not (
+            (isinstance(entity_info, EntityInfo) or isinstance(entity_info, MageInfo))
+            and entity_id == str(entity_info.id)
+        ):
             print("error: pickup_failed - Entity does not exist!")
             return
         # ensure item_name is valid
@@ -361,16 +383,16 @@ class CLI:
             return
 
         # Assign variables
-        entity_x = entity.position[0]
-        entity_y = entity.position[1]
+        entity_x = entity_info.position[0]
+        entity_y = entity_info.position[1]
 
         # Ensure entity is alive
-        if not entity.is_alive():
+        if not Entity.is_alive_from_info(entity_info):
             print("error: pickup_failed - Entity is dead!")
             return
 
         # Check for backpack space
-        if len(entity.backpack) >= Entity.BACKPACK_SIZE:
+        if len(entity_info.backpack) >= Entity.BACKPACK_SIZE:
             print("error: pickup_failed - Backpack if full!")
             return
 
@@ -385,8 +407,8 @@ class CLI:
         tile_item = None
 
         for item in ent_tile_info.item_list:
-            if item.name.lower() == item_name.lower():
-                tile_item = item
+            if item.lower() == item_name.lower():
+                tile_item = item  # Just the item name
                 break
 
         """for grid_item in e_tile.item_list:
@@ -414,14 +436,16 @@ class CLI:
             print("error: pickup_failed - Item not in tiles item list!")
             return
         else:  # item is present and there is backpack space - pickup
-            # Remove item from item_list in grid
+            # Remove item from item_list in grid - returns immutable item info object
             removed_item = self.game_state.remove_item_from_tile(
-                entity_x, entity_y, item_name
+                entity_x, entity_y, tile_item
             )
             if removed_item is None:
                 print("error: pickup_failed - Item not found!")
             # Add to backpack
-            entity.add_item_to_backpack(removed_item)
+            self.game_state.add_item_to_backpack_based_on_info(
+                entity_info.id, removed_item.name
+            )
             # Success message
             print(
                 f"ok: picked_up {removed_item.name} into backpack!"
@@ -442,14 +466,17 @@ class CLI:
             return
 
         # Get entity
-        entity = self.game_state.get_entity_from_list(entity_id)
+        entity_info = self.game_state.get_entity_info_from_list(entity_id)
 
         # Ensure map exists
         if not self.game_state.is_map_created():
             print("error: give_failed - Map does not exist!")
             return
         # ensure entity_id is valid and within list
-        elif not any(entity_id == str(entity.id)):
+        elif not (
+            (isinstance(entity_info, EntityInfo) or isinstance(entity_info, MageInfo))
+            and entity_id == str(entity_info.id)
+        ):
             print("error: give_failed - Entity does not exist!")
             return
         # ensure item_name is valid
@@ -458,23 +485,26 @@ class CLI:
         ):
             print("error: give_failed - Item name not found!")
             return
-        # Create Item
-        item = dl.create_equipment(item_name.lower())
+
+        """# Create Item
+        item = dl.create_equipment(item_name.lower())"""
 
         # Ensure entity is alive
-        if not entity.is_alive():
+        if not Entity.is_alive_from_info(entity_info):
             print("error: give_failed - Entity is dead!")
             return
 
         # Check for backpack space
-        if len(entity.backpack) >= Entity.BACKPACK_SIZE:
+        if len(entity_info.backpack) >= Entity.BACKPACK_SIZE:
             print("error: give_failed - Backpack if full!")
             return
         else:
             # Give item to entity
-            entity.add_item_to_backpack(item)
+            self.game_state.add_item_to_backpack_based_on_info(
+                entity_info.id, item_name
+            )
             # Success message
-            print(f"ok: added {item.name} to {entity.id}'s backpack!")
+            print(f"ok: added {item_name} to {entity_info.id}'s backpack!")
 
     # Process Drop Item Command
     # Drop matching entitys provided item
@@ -491,14 +521,17 @@ class CLI:
             return
 
         # Get Entity
-        entity = self.game_state.get_entity_from_list(entity_id)
+        entity_info = self.game_state.get_entity_info_from_list(entity_id)
 
         # Ensure map exists
         if not self.game_state.is_map_created():
             print("error: drop_failed - Map does not exist!")
             return
         # ensure entity_id is valid and within list
-        elif not any(entity_id == str(entity.id)):
+        elif not (
+            (isinstance(entity_info, EntityInfo) or isinstance(entity_info, MageInfo))
+            and entity_id == str(entity_info.id)
+        ):
             print("error: drop_failed - Entity does not exist!")
             return
         # ensure item_name is valid
@@ -509,19 +542,19 @@ class CLI:
             return
 
         # Always valid as this is checked during spawning/moving of said entity
-        entity_x = entity.position[0]
-        entity_y = entity.position[1]
+        entity_x = entity_info.position[0]
+        entity_y = entity_info.position[1]
 
         # Ensure entity is alive
-        if not entity.is_alive():
+        if not Entity.is_alive_from_info(entity_info):
             print("error: drop_failed - Entity is dead!")
             return
 
         # Find item in backpack
         item = None
-        for temp_item in entity.backpack:
+        for temp_item in entity_info.backpack:  # Immutable copy of item
             if item_name.lower() == temp_item.name.lower():
-                item = temp_item
+                item = temp_item.name
                 break
 
         # Ensure item is in backpack
@@ -529,15 +562,17 @@ class CLI:
             print("error: drop_failed - Item not in backpack!")
         else:  # Success case
             # Add item to the tile
-            self.game_state.add_item_from_tile(entity_x, entity_y, item_name)
+            self.game_state.add_item_to_tile(entity_x, entity_y, item)
             # Remove item from entitys bag
-            entity.remove_item_from_backpack(item)
+            self.game_state.remove_item_from_backpack_based_on_info(
+                entity_info.id, item
+            )
             # Check if item was in entity's inventory
-            entity.update_inventory()
+            self.game_state.update_inventory_based_on_info(entity_info.id)
             # update entity's stats - incase item removed was equipped
-            entity.update_stats(self)
+            self.game_state.update_entity(entity_info.id)
             # success message
-            print(f"ok: dropped {item.name} onto tile!")
+            print(f"ok: dropped {item} onto tile!")
 
     # Process Swap Item Command
     # Swop matching entitys provided item with item in slot
@@ -555,14 +590,17 @@ class CLI:
             return
 
         # Get Entity
-        entity = self.game_state.get_entity_from_list(entity_id)
+        entity_info = self.game_state.get_entity_info_from_list(entity_id)
 
         # Ensure map exists
         if not self.game_state.is_map_created():
             print("error: swap_failed - Map does not exist!")
             return
         # ensure entity_id is valid and within list
-        elif not any(entity_id == str(entity.id)):
+        elif not (
+            (isinstance(entity_info, EntityInfo) or isinstance(entity_info, MageInfo))
+            and entity_id == str(entity_info.id)
+        ):
             print("error: swap_failed - Entity does not exist!")
             return
         # ensure item_name is valid
@@ -583,30 +621,29 @@ class CLI:
             print("error: swap_failed - Item slot not valid inventory slot!")
             return
 
-        # Create Item
-        item = dl.create_equipment(item_name.lower())
+        # Find item in backpack
+        item = None
+        for temp_item in entity_info.backpack:  # Immutable copy of item
+            if item_name.lower() == temp_item.name.lower():
+                item = temp_item
+                break
 
+        if item is None:
+            print("error: swap_failed - Item not in backpack!")
+            return
         # Ensure entity is alive
-        if not entity.is_alive():
+        if not Entity.is_alive_from_info(entity_info):
             print("error: swap_failed - Entity is dead!")
             return
         # Check for correct slot for item assignment
         elif item.slot.lower() != slot.value.lower():
-            print("error: swap_failed - Slot inccorect for item type!")
-            return
-        # Ensure item is in units backpack
-        elif not any(
-            backpack_item is not None
-            and item_name.lower() == backpack_item.name.lower()
-            for backpack_item in entity.backpack
-        ):
-            print("error: swap_failed - Item not in backpack!")
+            print("error: swap_failed - Slot incorrect for item type!")
             return
         else:  # Success - assign item
-            entity.inventory[dl.EquipmentSlotIndex[slot.name].value] = item
+            self.game_state.equip_item_based_on_info(entity_info.id, item.name, slot)
 
         # Success message and stat update
-        entity.update_stats(self)
+        self.game_state.update_entity(entity_info.id)
         print("Valid items:", ", ".join(dl.EQUIPMENT_TYPES))
         print(
             "Valid slots:",
@@ -630,10 +667,13 @@ class CLI:
             return
 
         # Get Entity
-        entity = self.game_state.get_entity_from_list(entity_id)
+        entity_info = self.game_state.get_entity_info_from_list(entity_id)
 
         # ensure entity_id is valid and within list
-        if not any(entity_id == str(entity.id)):
+        if not (
+            (isinstance(entity_info, EntityInfo) or isinstance(entity_info, MageInfo))
+            and entity_id == str(entity_info.id)
+        ):
             print("error: use_failed - Entity does not exist!")
             return
         # ensure item_name is valid
@@ -644,12 +684,12 @@ class CLI:
             return
 
         # Ensure entity is alive
-        if not entity.is_alive():
+        if not Entity.is_alive_from_info(entity_info):
             print("error: use_failed - Entity is dead!")
             return
         # Find item in backpack
         item = None
-        for temp_item in entity.backpack:
+        for temp_item in entity_info.backpack:  # Backpack is collection of item names
             if item_name.lower() == temp_item.name.lower():
                 item = temp_item
                 break
@@ -657,14 +697,14 @@ class CLI:
         if item == None:
             print("error: use_failed - Item not in backpack!")
         # Ensure that item is a consumable
-        elif item.slot != "Consumable":
+        elif not item.name.lower() in (
+            consumable.value for consumable in dl.ConsumableType
+        ):
             print("error: use_failed - Item is not a consumable!")
             return
         else:  # Success case
             # Use consumable
-            Consumable.use_consumable(item, entity)
-            # Remove consumable from backpack
-            entity.backpack.remove(item)
+            self.game_state.use_consumable(entity_info.id, item.name)
             print(f"ok: used {item.name}!")
 
     # Process Move Command
@@ -696,7 +736,7 @@ class CLI:
         y = int(y)
 
         # x and y exceeds current grid bounds
-        if not self.game_state.is_valid_grid_position(self.grid, x, y):
+        if not self.game_state.is_valid_grid_position(x, y):
             print("error: move_failed - x and y exceed current grid bounds!")
             return
         # ensure grid location is empty
@@ -709,30 +749,35 @@ class CLI:
             return
 
         # Get Entity
-        entity = self.game_state.get_entity_from_list(entity_id)
+        entity_info = self.game_state.get_entity_info_from_list(entity_id)
 
         # invalid entity type
         # ensure entity_id is valid and within list
-        if not any(entity_id == str(entity.id)):
+        if not (
+            (isinstance(entity_info, EntityInfo) or isinstance(entity_info, MageInfo))
+            and entity_id == str(entity_info.id)
+        ):
             print("error: move_failed - Entity does not exist!")
             return
 
         # Ensure entity is alive
-        if not entity.is_alive():
+        if not Entity.is_alive_from_info(entity_info):
             print("error: move_failed - Entity is dead!")
             return
         # Check if target grid position is within range of entity
         elif not self.game_state.is_within_range(
-            [entity.position[0], entity.position[1]], [x, y], entity.speed
+            entity_info.position[0],
+            entity_info.position[1],
+            x,
+            y,
+            entity_info.speed,
         ):
             print(f"error: move_failed - Target: {x}, {y} is out of entity's range!")
             return
         # Success Case
         else:
             # Move entity
-            self.game_state.move_entity(entity, x, y)
-            # Update stats for entity - may have moved to shallowwater tile
-            entity.update_stats(self)
+            self.game_state.move_entity(entity_info.id, x, y)
             print(f"ok: moved {entity_id} to {x}, {y}!")
             return
 
@@ -751,52 +796,53 @@ class CLI:
             print("error: attack_failed due to invalid arguments.")
             return
 
+        # Valid ints for entity ids
+        if not dl.are_valid_ints(attacker_id, defender_id):
+            print("error: attack_failed - entity ids are not valid integers!")
+            return
+
         # Get entities
-        attacker = self.game_state.get_entity_from_list(int(attacker_id))
-        defender = self.game_state.get_entity_from_list(int(defender_id))
+        attacker_info = self.game_state.get_entity_info_from_list(int(attacker_id))
+        defender_info = self.game_state.get_entity_info_from_list(int(defender_id))
 
         # Map created
         if not self.game_state.is_map_created():
             print("error: attack_failed - Map does not exist!")
             return
-        # Valid ints for entity ids
-        elif not dl.are_valid_ints(attacker_id, defender_id):
-            print("error: attack_failed - entity ids are not valid integers!")
-            return
         # Valid entity ids in entity list
-        elif not (attacker is not None and attacker_id == str(attacker.id)):
+        elif not (attacker_info is not None and attacker_id == str(attacker_info.id)):
             print("error: attack_failed - Attacking entity does not exist!")
             return
-        elif not (defender is not None and defender_id == str(defender.id)):
+        elif not (defender_info is not None and defender_id == str(defender_info.id)):
             print("error: attack_failed - Defending entity does not exist!")
             return
         # assign grid positions
-        attacker_x = attacker.position[0]
-        attacker_y = attacker.position[1]
-        defender_x = defender.position[0]
-        defender_y = defender.position[1]
+        attacker_x = attacker_info.position[0]
+        attacker_y = attacker_info.position[1]
+        defender_x = defender_info.position[0]
+        defender_y = defender_info.position[1]
         # Ensure entity is alive
-        if not attacker.is_alive():
+        if not Entity.is_alive_from_info(attacker_info):
             print("error: attack_failed - Attacker is dead!")
             return
-        elif not defender.is_alive():
+        elif not Entity.is_alive_from_info(defender_info):
             print("error: attack_failed - Defender is dead!")
             return
         # Determine whether Entity can engage from range or just melee
-        if attacker.attack_type == dl.AttackTypes.MELEE:  # Melee assignment
+        if attacker_info.attack_type == dl.AttackTypes.MELEE:  # Melee assignment
             attack_range = dl.MELEE_RANGE
         else:  # Ranged assignment
             attack_range = dl.RANGED_RANGE
 
         # Determine if defender is within attack range
         if self.game_state.is_within_range(
-            [attacker_x, attacker_y], [defender_x, defender_y], attack_range
+            attacker_x, attacker_y, defender_x, defender_y, attack_range
         ):
             # Continue attack as defender is within attack range
-            damage = attacker.attack_entity(defender)
+            damage = self.game_state.attack_entity(attacker_info.id, defender_info.id)
             # Print success message
             print(
-                f"ok: attack {attacker_id} dealt {damage} {attacker.attack_type} damage to {defender_id}!"
+                f"ok: attack {attacker_id} dealt {damage} {attacker_info.attack_type} damage to {defender_id}!"
             )
         else:  # Cancel attack as defender is out of range
             print("error: attack_failed - Defender is out of range!")
@@ -818,9 +864,14 @@ class CLI:
             print("error: cast_failed due to invalid arguments.")
             return
 
+        # Valid ints for entity ids
+        if not dl.are_valid_ints(caster_id, target_id):
+            print("error: cast_failed - entity ids are not valid integers!")
+            return
+
         # Get entities
-        caster = self.game_state.get_entity_from_list(int(caster_id))
-        target = self.game_state.get_entity_from_list(int(target_id))
+        caster_info = self.game_state.get_entity_info_from_list(int(caster_id))
+        target_info = self.game_state.get_entity_info_from_list(int(target_id))
 
         # Map created
         if not self.game_state.is_map_created():
@@ -828,59 +879,59 @@ class CLI:
             return
 
         # Valid ints for entity ids
-        elif not any(caster_id == str(caster.id)):
+        elif not (caster_info is not None and caster_id == str(caster_info.id)):
             print("error: cast_failed - Casting entity does not exist!")
             return
-        elif not any(target_id == str(target.id)):
+        elif not (target_info is not None and target_id == str(target_info.id)):
             print("error: cast_failed - Targeted entity does not exist!")
             return
         # Check for spell name within enums
         elif any(spell_name.lower() == name.value.lower() for name in dl.SpellNames):
-            # Assign spell
-            spell = get_spell(spell_name)
-            # Assign range for spell
-            spell_range = spell.get_range()
+            # Get spell info
+            spell_info = self.game_state.get_spell_info(spell_name.lower())
         # Spell not found
         else:
             print("error: cast_failed - Spell does not exist!")
             return
 
         # Ensure entities are alive
-        if not caster.is_alive():
+        if not Entity.is_alive_from_info(caster_info):
             print("error: cast_failed - Caster is dead!")
             return
         # CHANGE THIS LOGIC WHEN REVIVAL IS ADDED
-        elif not target.is_alive():
+        elif not Entity.is_alive_from_info(target_info):
             print("error: cast_failed - Target is dead!")
             return
         # Ensure entity is a spell caster - currently only mage
-        elif not caster.e_type.lower() == "mage":
+        elif not caster_info.e_type.lower() == "mage":
             print(
-                f"error: cast_failed - Caster is {caster.e_type}, which is not a valid spellcaster!"
+                f"error: cast_failed - Caster is {caster_info.e_type}, which is not a valid spellcaster!"
             )
             return
 
         # assign grid positions
-        caster_x = caster.position[0]
-        caster_y = caster.position[1]
-        target_x = target.position[0]
-        target_y = target.position[1]
+        caster_x = caster_info.position[0]
+        caster_y = caster_info.position[1]
+        target_x = target_info.position[0]
+        target_y = target_info.position[1]
 
         # Determine if this spell is within range
         if self.game_state.is_within_range(
-            [caster_x, caster_y], [target_x, target_y], spell_range
+            caster_x, caster_y, target_x, target_y, spell_info.spell_range
         ):
             # cast spell on target
-            effect = spell.cast_spell(caster, target)
+            effect = self.game_state.cast_spell(
+                caster_info.id, target_info.id, spell_info.name
+            )
             # update unit stats
             # target.update_stats(self)
             # Print success message
             print(
-                f"ok: cast {spell.name} from {caster.id} to {target.id} effect: {effect}"
+                f"ok: cast {spell_info.name} from {caster_info.id} to {target_info.id} effect: {effect}"
             )
         else:
             print(
-                f"error: cast_failed - Target outside of range! {spell.name} Range: {spell_range}"
+                f"error: cast_failed - Target outside of range! {spell_info.name} Range: {spell_info.spell_range}"
             )
             return
 
@@ -926,7 +977,7 @@ class CLI:
             print("error: spawn_failed - x and y are not valid integers!")
             return
         # x and y exceeds current grid bounds
-        elif not self.game_state.is_valid_grid_position(self.grid, x, y):
+        elif not self.game_state.is_valid_grid_position(x, y):
             print("error: spawn_failed - x and y exceed current grid bounds!")
             return
         # ensure grid location is empty
@@ -962,7 +1013,7 @@ class CLI:
             print("error: spawn_failed - x and y are not valid integers!")
             return
         # x and y exceeds current grid bounds
-        elif not self.game_state.is_valid_grid_position(self.grid, x, y):
+        elif not self.game_state.is_valid_grid_position(x, y):
             print("error: spawn_failed - x and y exceed current grid bounds!")
             return
         # ensure item_name is valid
@@ -988,7 +1039,7 @@ class CLI:
                 break
         return entity"""
 
-    """# Capitalize If String Start
+    # Capitalize If String Start
     # Will capitalize and return string if it is a string
     # Params: value - Any - Value to be tested if a string
     # Returns: value - Any - value will be Capitalized if a string
@@ -997,7 +1048,7 @@ class CLI:
         if isinstance(value, str):
             return value.capitalize()
         else:
-            return value"""
+            return value
 
 
 # Main to run the command line interface

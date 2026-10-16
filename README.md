@@ -58,7 +58,7 @@ Tony Pescatore
 | Floor         | Standard tile |
 | Wall      |  An impassable tile     |
 | ShallowWater      | Tile that imposes a speed debuff of -2 on the player |
-| Forest        | Tile that grants the entity +5 defence and a debuff of -2 |
+| Forest        | Tile that grants the entity +5 defence and a speed debuff of -2 |
 
 ## Spells
 [Table of Contents](#table-of-contents)
@@ -162,14 +162,14 @@ Tony Pescatore
 **Contraints:** id must be an integer within the current entity list and the x,y must correspond to a valid grid position for the entity to occupy.
 
 ### Attack
-**Description:** First entity will attack the second entity with damage being calculated as attack vs defence. When an defender's health reaches zero they will die (DEATH HAS NOT BEEN IMPLEMENTED YET).
+**Description:** First entity will attack the second entity with damage being calculated as attack vs defence. When an defender's health reaches zero they will die and receive the "Dead" status.
 
 **Called as:** attack attacker_id defender_id
 
 **Contraints:** ids must be an integer within the current entity list and the defender must be within the attack range of the attacker. 
 
 ### Cast
-**Description:** First entity will cast a spell on the other entity. This can do damage using the spell power and the spell damage modifier against the targets defence, it can heal them, and it can apply an effect on them. When a targets health reaches zero they will die (DEATH HAS NOT BEEN IMPLEMENTED YET).
+**Description:** First entity will cast a spell on the other entity. This can do damage using the spell power and the spell damage modifier against the targets defence, it can heal them, and it can apply an effect on them. When a targets health reaches zero they will die and receive the "Dead" status.
 
 **Called as:** cast caster_id target_id spell_name
 
@@ -195,7 +195,7 @@ Tony Pescatore
 - Grid distances will be calculating using Manhattan Distance.
 - When using A* pathing, entities will not block their tiles. So you will be able to move through entities but will not be able to end on the same tile as an entity.
 
-### Tiles - ToDo: Reduce future cyclomatic complexity - Will need readme update as well
+### Tiles - ToDo: Reduce future cyclomatic complexity
 - Tiles are what make up the grid. Each Tile has its typing, a boolean determining whether they are passable or not for collision/movement restrictions, and a list of occupants. 
 - Each tile can have more than 1 occupant, which will be represented by a list of entity IDs, or if there are no occupants it will be instead be filled with the empty tile constant value. 
 - Each tile also has an item_list for loot that can be picked up, dropped, or spawned at the tile location.
@@ -235,10 +235,21 @@ Tony Pescatore
 
 ### Test Suite 
 - The test suite tests the public facing methods as they will call and use the other private facing methods. This means that these private facing methods will also be tested in tandem. It incldues verbose tests includings tests on the boundary values, the validity of inputs, and ensures that all public facing methods and private methods are working as intended. 
-- All other aspects of the project are tested within this suite including the Command Line Interface, Equipment, Entities, Grid, and Tiles.
+- All other aspects of the project are tested within this suite including the Command Line Interface, Equipment, Entities, Grid, Game State, Game State Manager, Spells, and Tiles.
 - Each suite has a set of helper functions to reduce the amount of code needed, but does not detract from the readability of the code.
 
 ### Command Line Interface
 - The command line interface is where the game in played. Running the command line interface will allow the user to input commands, which will be handled accordingly by the command line interfaces process_command method. This will return descriptive error messages so that users will know what was wrong with their inputs. 
+- It also contains the main function that will prompt for the commands in the terminal, the player can exit at any time by entering 'quit'.
+
+### Game State
 - Manages time passing in game through ticks.
-- The command line interface will house the current game grid of tiles, a list of the current entities, and a boolean to determine if the map was already created. It also contains the main function that will prompt for the commands in the terminal, the player can exit at any time by entering 'quit'.
+- The game state will house the current game grid of tiles, a list of the current entities, an entity id tracker, a boolean to determine if the map was already created, a turn tracker, and a boolean to determine the save status.
+- Interacts with the other files and classes for the command line interface to protect sensitive information.
+
+### Game State Manager
+- Gathers all immutable read-only momentos that are required for saving, Game State, Entities within active entity list, active Equipment Grid, and Tiles, by using their classes create_momento methods. Then utilizes JSON to save them to a file that will be used to load them.
+- Handles loading momentos from files and uses the respective class method, restore, to restore to a game-ready object.
+
+### Other
+- Values for entities, tiles, spells, equipment, grids, and game state are marked as private (__varname). To access this information x.getinfo() will return a immutable copy to prevent any of that private data from being public and able to be modified. When these do need to be changed, such as an entity losing health, it is handled within its own class.

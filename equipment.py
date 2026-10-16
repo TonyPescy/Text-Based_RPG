@@ -10,14 +10,66 @@ Filename: equipment.py
 Purpose: Houses all functions necessary for proper equipment handling and logic in the game
 """
 
+# Imports
+from dataclasses import dataclass
+
+
+# Data Classes for equipment and all equipment classes
+@dataclass
+class EquipmentInfo:
+    name: str
+    slot: str
+    effects: dict
+
+
+@dataclass
+class ConsumableInfo:
+    name: str
+    instant_effects: tuple
+    over_time_effects: tuple
+    duration: int
+
 
 # Equipment class with all methods needed for equipment
 class Equipment:
     # Initilize Equipment class with name, slot, effects
     def __init__(self, name, slot, effects):
-        self.name = name
-        self.slot = slot
-        self.effects = effects
+        self.__name = name
+        self.__slot = slot
+        self.__effects = effects
+
+    # Get Info
+    # Returns a EquipmentInfo object of the equipment's information
+    # Params: None
+    # Returns: EquipmentInfo - Equipment information
+    def get_info(self):
+        return EquipmentInfo(
+            name=self.__name, slot=self.__slot, effects=tuple(self.__effects.items())
+        )
+
+    # Name
+    # Solves issues with accessing name of consumble which inherits from equipment
+    # Params: None
+    # Returns: name of consumble/equipment
+    @property
+    def name(self):
+        return self.__name
+
+    # Slot
+    # Solves issues with accessing slot of consumble which inherits from equipment
+    # Params: None
+    # Returns: slot of consumble/equipment
+    @property
+    def slot(self):
+        return self.__slot
+
+    # Effects
+    # Solves issues with accessing effects of consumble which inherits from equipment
+    # Params: None
+    # Returns: effect of consumble/equipment
+    @property
+    def effects(self):
+        return self.__effects
 
 
 # None Equipment Classes
@@ -155,86 +207,142 @@ class Consumable(Equipment):
         if over_time_effects is None:
             over_time_effects = {"Flat_modifiers": {}, "Percent_modifiers": {}}
 
-        self.instant_effects = instant_effects
-        self.over_time_effects = over_time_effects
-        self.duration = duration
+        self.__instant_effects = instant_effects
+        self.__over_time_effects = over_time_effects
+        self.__duration = duration
+
+    # Get Info
+    # Returns a ConsumableInfo object of the consumable's information
+    # Params: None
+    # Returns: ConsumableInfo - Consumable information
+    def get_info(self):
+        return ConsumableInfo(
+            name=self.name,
+            instant_effects=(
+                (
+                    "Flat_modifiers",
+                    tuple(self.__instant_effects["Flat_modifiers"].items()),
+                ),
+                (
+                    "Percent_modifiers",
+                    tuple(self.__instant_effects["Percent_modifiers"].items()),
+                ),
+            ),
+            over_time_effects=(
+                (
+                    "Flat_modifiers",
+                    tuple(self.__over_time_effects["Flat_modifiers"].items()),
+                ),
+                (
+                    "Percent_modifiers",
+                    tuple(self.__over_time_effects["Percent_modifiers"].items()),
+                ),
+            ),
+            duration=self.__duration,
+        )
 
     # Use Consumable
     # Uses the current consumable - Inputs cleaned in CLI - MAKE SURE ITEM IN BACKPACK
-    # Params: consumable - Consumable instance - Consumable to be used
-    #         entity - Entity instance - entity using the item
+    # Params:   consumable - Consumable instance - Consumable to be used
+    #           entity - Entity instance - entity using the item
+    #           game_state - GameState instance - current game state for entity and item management
     # Return: None
     def use_consumable(
         consumable,
         entity,
+        game_state,
     ):
+        entity_info = entity.get_info()
         # Apply instant effects
-        for modifier_type, modifiers in consumable.instant_effects.items():
+        for modifier_type, modifiers in consumable.__instant_effects.items():
 
             # Flat modifiers
             if modifier_type == "Flat_modifiers":
                 for stat, amount in modifiers.items():
-
+                    stat = stat.lower()
                     # Convert modifier amount to int
                     amount = int(amount)
+                    print(amount)
+                    # Check if entity has the stat
+                    if not hasattr(entity_info, stat.lower()):
+                        continue
                     # Get current stat
-                    current_value = getattr(entity, stat.lower())
+                    current_value = getattr(entity_info, stat.lower())
                     # Calculate new stat
                     new_value = current_value + amount
-
+                    # Debug health values
+                    print(f"DEBUG - Current health: {entity_info.health}")
+                    print(f"DEBUG - Potion amount: {amount}")
+                    print(f"DEBUG - Calculated health: {new_value}")
                     # Prevent oveflow of health/mana
                     # max
                     max_stat = None
-                    if stat == "Health":
-                        max_stat = entity.max_health
-                    elif stat == "Mana" and hasattr(entity, "max_mana"):
-                        max_stat = entity.max_mana
+                    if stat == "health":
+                        max_stat = entity_info.max_health
+                    elif stat == "mana":
+                        max_stat = getattr(entity_info, "max_mana", None)
                     # Prevent overflow
                     if max_stat is not None:
                         new_value = min(new_value, max_stat)
 
                     # Apply the new value
-                    setattr(entity, stat.lower(), new_value)
+                    game_state.update_single_entity_stat(
+                        entity_info.id, stat.lower(), new_value
+                    )
 
             # Percent modifiers
             elif modifier_type == "Percent_modifiers":
                 for stat, amount in modifiers.items():
-
+                    stat = stat.lower()
                     # Convert percentage to int
                     amount = int(amount)
+                    print(amount)
                     # Get current stat
-                    current_value = getattr(entity, stat.lower())
+                    current_value = getattr(entity_info, stat.lower())
                     # Calculate percentage change
                     modifier = current_value * (amount / 100)
                     # Calculate new stat
                     new_value = int(current_value + modifier)
-
+                    # Debug health values
+                    print(f"DEBUG - Current health: {entity_info.health}")
+                    print(f"DEBUG - Potion amount: {amount}")
+                    print(f"DEBUG - Calculated health: {new_value}")
                     # Prevent overflow of health/mana
                     # max
                     max_stat = None
-                    if stat == "Health":
-                        max_stat = entity.max_health
+                    if stat == "health":
+                        max_stat = entity_info.max_health
 
-                    elif stat == "Mana" and hasattr(entity, "max_mana"):
-                        max_stat = entity.max_mana
-
+                    elif stat == "mana":
+                        max_stat = getattr(entity_info, "max_mana", None)
                     # Prevent stat from exceeding its maximum
                     if max_stat is not None:
                         new_value = min(new_value, max_stat)
 
                     # Apply the new value
-                    setattr(entity, stat.lower(), new_value)
+                    game_state.update_single_entity_stat(
+                        entity_info.id, stat.lower(), new_value
+                    )
+            entity_info = entity.get_info()
+            print(f"DEBUG - Updated health: {entity_info.health}")
 
             # Add over time effects as a temp buff
-            if consumable.over_time_effects and consumable.duration > 0:
+            if consumable.__over_time_effects and consumable.__duration > 0:
+                # Create formatted buff
+                buff = {
+                    "Name": consumable.name,
+                    "Effects": consumable.__over_time_effects,
+                    "Turns": consumable.__duration,
+                }
                 # Store temp buff
-                entity.temp_buffs.append(
+                game_state.add_temp_buff_to_entity(entity_info.id, buff)
+                """entity.__temp_buffs.append(
                     {
-                        "Name": consumable.name,
-                        "Effects": consumable.over_time_effects,
-                        "Turns": consumable.duration,
+                        "Name": consumable.__name,
+                        "Effects": consumable.__over_time_effects,
+                        "Turns": consumable.__duration,
                     }
-                )
+                )"""
 
     """# NO TIME ADDED YET, SO THIS IS  A PLACEHOLDER - WILL NEED TESTS WHEN TIME IS ADDED AS WELL
     # Process temp buffs

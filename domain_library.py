@@ -15,7 +15,7 @@ import equipment
 from enum import Enum
 
 # Constants
-# Equipment Types Dictionary
+# Equipment Types Dictionary - CHANGE TO MATCH SPELL NAMES
 EQUIPMENT_TYPES = {
     "ironsword": equipment.IronSword,
     "curseddagger": equipment.CursedDagger,
