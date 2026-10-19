@@ -33,6 +33,7 @@ from unittest.mock import patch
 import domain_library as dl
 from game_state import GameState
 import equipment
+import entity as ent
 
 
 # Class for testing GameState
@@ -615,19 +616,215 @@ class TestGameState(unittest.TestCase):
 
     # Placeholder Tests
 
-    # Create Momento
-    # Checks the current placeholder method returns None.
-    # Params: None
-    # Returns: None
-    def test_create_momento_placeholder(self):
-        self.assertIsNone(GameState.create_momento())
+    """    # Create Momento
+        # Checks the current placeholder method returns None.
+        # Params: None
+        # Returns: None
+        def test_create_momento_placeholder(self):
+            self.assertIsNone(GameState.create_momento())
 
-    # Restore Momento
-    # Checks the current placeholder method returns None.
-    # Params: None
-    # Returns: None
-    def test_restore_momento_placeholder(self):
-        self.assertIsNone(GameState.restore(None))
+        # Restore Momento
+        # Checks the current placeholder method returns None.
+        # Params: None
+        # Returns: None
+        def test_restore_momento_placeholder(self):
+            self.assertIsNone(GameState.restore(None))"""
+
+    # Checks that the Memento preserves the game state's current values.
+    def test_create_memento(self):
+        self.create_test_grid(5, 6)
+        self.create_spawned_entity("warrior", 1, 2)
+
+        memento = self.game_state.create_memento()
+
+        self.assertIsInstance(memento, GameState.Memento)
+        self.assertIsNotNone(memento.grid_memento)
+        self.assertEqual(memento.grid_memento.width, 5)
+        self.assertEqual(memento.grid_memento.height, 6)
+        self.assertEqual(len(memento.entity_mementos), 1)
+        self.assertEqual(memento.entity_mementos[0].entity_id, 1)
+        self.assertEqual(memento.entity_ids_issued, 2)
+        self.assertTrue(memento.map_created)
+        self.assertEqual(memento.turn_number, 1)
+
+    # Checks that creating a Memento works when no grid or entities exist.
+    def test_create_memento_empty_game_state(self):
+        memento = self.game_state.create_memento()
+
+        self.assertIsNone(memento.grid_memento)
+        self.assertEqual(memento.entity_mementos, ())
+        self.assertEqual(memento.entity_ids_issued, 1)
+        self.assertFalse(memento.map_created)
+        self.assertEqual(memento.turn_number, 1)
+
+    # Checks that restoring a Memento restores the grid and entity state.
+    def test_restore_memento(self):
+        self.create_test_grid(5, 6)
+        entity = self.create_spawned_entity("warrior", 1, 2)
+        original_memento = self.game_state.create_memento()
+
+        self.game_state.restore(original_memento)
+
+        restored_memento = self.game_state.create_memento()
+
+        self.assertEqual(
+            restored_memento.grid_memento.width, original_memento.grid_memento.width
+        )
+        self.assertEqual(
+            restored_memento.grid_memento.height, original_memento.grid_memento.height
+        )
+
+        self.assertEqual(
+            len(restored_memento.entity_mementos), len(original_memento.entity_mementos)
+        )
+
+        for restored_entity, original_entity in zip(
+            restored_memento.entity_mementos, original_memento.entity_mementos
+        ):
+            # Access the base Entity Memento for each entity.
+            if isinstance(original_entity, ent.Mage.Memento):
+                restored_base = restored_entity.entity_memento
+                original_base = original_entity.entity_memento
+            else:
+                restored_base = restored_entity
+                original_base = original_entity
+
+            self.assertEqual(restored_base.entity_id, original_base.entity_id)
+            self.assertEqual(restored_base.e_type, original_base.e_type)
+            self.assertEqual(restored_base.position, original_base.position)
+            self.assertEqual(restored_base.health, original_base.health)
+            self.assertEqual(restored_base.max_health, original_base.max_health)
+            self.assertEqual(restored_base.attack, original_base.attack)
+            self.assertEqual(restored_base.defence, original_base.defence)
+            self.assertEqual(restored_base.speed, original_base.speed)
+            self.assertEqual(
+                restored_base.inventory[0].name, original_base.inventory[0].name
+            )
+            self.assertEqual(
+                restored_base.active_modifiers, original_base.active_modifiers
+            )
+            self.assertEqual(restored_base.backpack, original_base.backpack)
+            self.assertEqual(restored_base.attack_type, original_base.attack_type)
+            self.assertEqual(restored_base.temp_buffs, original_base.temp_buffs)
+
+            # Compare Mage-specific state when applicable.
+            if isinstance(original_entity, ent.Mage.Memento):
+                self.assertEqual(restored_entity.mana, original_entity.mana)
+                self.assertEqual(restored_entity.max_mana, original_entity.max_mana)
+                self.assertEqual(
+                    restored_entity.spell_power, original_entity.spell_power
+                )
+
+        self.assertEqual(
+            restored_memento.entity_ids_issued, original_memento.entity_ids_issued
+        )
+        self.assertEqual(restored_memento.turn_number, original_memento.turn_number)
+        self.assertIsNot(self.game_state.get_entity_from_list(1), entity)
+
+    # Checks that restoring an invalid Memento raises a TypeError.
+    def test_restore_invalid_memento(self):
+        with self.assertRaises(TypeError):
+            self.game_state.restore(None)
+
+    # Checks that restoring a Memento with no grid clears the current grid.
+    def test_restore_memento_without_grid(self):
+        self.create_test_grid()
+
+        memento = GameState.Memento(
+            grid_memento=None,
+            entity_mementos=(),
+            entity_ids_issued=1,
+            map_created=False,
+            turn_number=1,
+            is_saved=True,
+        )
+
+        self.game_state.restore(memento)
+
+        restored_memento = self.game_state.create_memento()
+
+        self.assertIsNone(restored_memento.grid_memento)
+        self.assertEqual(restored_memento.entity_mementos, ())
+        self.assertFalse(restored_memento.map_created)
+
+    # Checks that restoring a Memento reconstructs multiple entity types.
+    def test_restore_memento_multiple_entities(self):
+        self.create_test_grid()
+        self.create_spawned_entity("warrior", 0, 0)
+        self.game_state.spawn_entity(1, 1, "mage")
+        self.game_state.spawn_entity(2, 2, "goblin")
+
+        memento = self.game_state.create_memento()
+
+        self.game_state.restore(memento)
+
+        restored_memento = self.game_state.create_memento()
+
+        self.assertEqual(len(restored_memento.entity_mementos), 3)
+
+        self.assertEqual(
+            len(restored_memento.entity_mementos), len(memento.entity_mementos)
+        )
+
+        for restored_entity, original_entity in zip(
+            restored_memento.entity_mementos, memento.entity_mementos
+        ):
+            if isinstance(original_entity, ent.Mage.Memento):
+                restored_type = restored_entity.entity_memento.e_type
+                original_type = original_entity.entity_memento.e_type
+            else:
+                restored_type = restored_entity.e_type
+                original_type = original_entity.e_type
+
+            self.assertEqual(restored_type, original_type)
+        self.assertEqual(
+            [
+                (
+                    entity.entity_memento.entity_id
+                    if isinstance(entity, ent.Mage.Memento)
+                    else entity.entity_id
+                )
+                for entity in restored_memento.entity_mementos
+            ],
+            [1, 2, 3],
+        )
+
+    # Checks that restored entities preserve their inventory and backpack contents.
+    def test_restore_memento_preserves_entity_items(self):
+        self.create_test_grid()
+        self.create_spawned_entity("warrior")
+
+        original_backpack = self.get_backpack_names(1)
+        memento = self.game_state.create_memento()
+
+        self.game_state.restore(memento)
+
+        self.assertEqual(self.get_backpack_names(1), original_backpack)
+
+    # Checks that modifying the live game state does not change an existing Memento.
+    def test_memento_preserves_original_state(self):
+        self.create_test_grid()
+        self.create_spawned_entity("warrior", 1, 1)
+
+        memento = self.game_state.create_memento()
+
+        self.game_state.spawn_entity(2, 2, "mage")
+
+        self.assertEqual(len(memento.entity_mementos), 1)
+        self.assertEqual(memento.entity_mementos[0].position, [1, 1])
+
+    # Checks that restoring a Memento marks the game state as saved.
+    def test_restore_memento_marks_game_as_saved(self):
+        self.create_test_grid()
+        self.create_spawned_entity("warrior")
+
+        memento = self.game_state.create_memento()
+
+        self.game_state.restore(memento)
+
+        restored_memento = self.game_state.create_memento()
+
+        self.assertTrue(restored_memento.is_saved)
 
 
 # Run the tests

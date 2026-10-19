@@ -26,7 +26,7 @@ these functions are handled within the CLI prior to calling this function.
 import unittest
 
 import domain_library as dl
-from entity import Warrior, Mage, Goblin, Skeleton, create_entity
+from entity import Warrior, Mage, Goblin, Skeleton, create_entity, Entity
 import equipment
 from game_state import GameState
 
@@ -596,6 +596,263 @@ class TestEntity(unittest.TestCase):
         damage = game_state.attack_entity(1, 2)
         self.assertEqual(damage, 12)
         self.assertEqual(game_state.get_entity_info_from_list(2).health, 33)
+
+    # Checks that the entity Memento preserves the entity's state.
+    def test_create_memento(self):
+        entity = self.create_test_entity(Warrior, 1, [2, 3])
+
+        memento = entity.create_memento()
+
+        self.assertIsInstance(memento, Entity.Memento)
+        self.assertEqual(memento.entity_id, 1)
+        self.assertEqual(memento.position, [2, 3])
+        self.assertEqual(memento.health, memento.max_health)
+        self.assertEqual(memento.attack, 15)
+        self.assertEqual(memento.defence, 10)
+        self.assertEqual(memento.speed, 5)
+        self.assertEqual(len(memento.inventory), len(dl.BASE_INVENTORY))
+
+    # Checks that restoring a Memento restores the entity's saved state.
+    def test_restore_memento(self):
+        entity = self.create_test_entity(Warrior)
+        original_memento = entity.create_memento()
+
+        memento = Entity.Memento(
+            entity_id=2,
+            e_type=original_memento.e_type,
+            position=[4, 5],
+            health=50,
+            max_health=original_memento.max_health,
+            attack=20,
+            defence=8,
+            speed=7,
+            inventory=original_memento.inventory,
+            active_modifiers=original_memento.active_modifiers,
+            backpack=original_memento.backpack,
+            attack_type=original_memento.attack_type,
+            temp_buffs=original_memento.temp_buffs,
+        )
+
+        entity.restore(memento)
+        restored_memento = entity.create_memento()
+
+        self.assertEqual(restored_memento.entity_id, 2)
+        self.assertEqual(restored_memento.position, [4, 5])
+        self.assertEqual(restored_memento.health, 50)
+        self.assertEqual(restored_memento.attack, 20)
+        self.assertEqual(restored_memento.defence, 8)
+        self.assertEqual(restored_memento.speed, 7)
+
+    # Checks that restoring an invalid Memento raises a TypeError.
+    def test_restore_invalid_memento(self):
+        entity = self.create_test_entity(Warrior)
+
+        with self.assertRaises(TypeError):
+            entity.restore(None)
+
+    # Checks that changing the entity's position does not change its saved Memento.
+    def test_memento_deep_copy(self):
+        entity = self.create_test_entity(Warrior, position=[0, 0])
+
+        memento = entity.create_memento()
+
+        entity.restore(
+            Entity.Memento(
+                entity_id=memento.entity_id,
+                e_type=memento.e_type,
+                position=[5, 5],
+                health=memento.health,
+                max_health=memento.max_health,
+                attack=memento.attack,
+                defence=memento.defence,
+                speed=memento.speed,
+                inventory=memento.inventory,
+                active_modifiers=memento.active_modifiers,
+                backpack=memento.backpack,
+                attack_type=memento.attack_type,
+                temp_buffs=memento.temp_buffs,
+            )
+        )
+
+        self.assertEqual(memento.position, [0, 0])
+
+    # Checks that modifying nested Memento data does not affect the restored entity.
+    def test_restore_memento_deep_copy(self):
+        entity = self.create_test_entity(Warrior)
+        original_memento = entity.create_memento()
+
+        memento = Entity.Memento(
+            entity_id=original_memento.entity_id,
+            e_type=original_memento.e_type,
+            position=[2, 3],
+            health=80,
+            max_health=original_memento.max_health,
+            attack=original_memento.attack,
+            defence=original_memento.defence,
+            speed=original_memento.speed,
+            inventory=original_memento.inventory,
+            active_modifiers={"Attack": 2},
+            backpack=[self.create_item("iron_sword")],
+            attack_type=original_memento.attack_type,
+            temp_buffs=[{"Name": "Strength", "Turns": 2}],
+        )
+
+        entity.restore(memento)
+
+        memento.position.append(4)
+        memento.active_modifiers["Attack"] = 99
+        memento.temp_buffs[0]["Turns"] = 99
+
+        restored_memento = entity.create_memento()
+
+        self.assertEqual(restored_memento.position, [2, 3])
+        self.assertEqual(restored_memento.active_modifiers, {"Attack": 2})
+        self.assertEqual(restored_memento.temp_buffs[0]["Turns"], 2)
+
+    # Checks that the Mage Memento preserves inherited and Mage-specific state.
+    def test_create_memento(self):
+        mage = self.create_test_entity(Mage, 1, [2, 3])
+
+        memento = mage.create_memento()
+
+        self.assertIsInstance(memento, Mage.Memento)
+        self.assertIsInstance(memento.entity_memento, Entity.Memento)
+        self.assertEqual(memento.entity_memento.entity_id, 1)
+        self.assertEqual(memento.entity_memento.position, [2, 3])
+        self.assertEqual(memento.entity_memento.health, 70)
+        self.assertEqual(memento.entity_memento.attack, 8)
+        self.assertEqual(memento.entity_memento.defence, 4)
+        self.assertEqual(memento.entity_memento.speed, 5)
+        self.assertEqual(memento.mana, memento.max_mana)
+        self.assertEqual(memento.max_mana, 100)
+        self.assertEqual(memento.spell_power, 25)
+
+    # Checks that restoring a Mage Memento restores inherited and Mage-specific state.
+    def test_restore_memento(self):
+        mage = self.create_test_entity(Mage)
+        original_memento = mage.create_memento()
+        entity_memento = original_memento.entity_memento
+
+        changed_entity_memento = Entity.Memento(
+            entity_id=2,
+            e_type=entity_memento.e_type,
+            position=[4, 5],
+            health=30,
+            max_health=entity_memento.max_health,
+            attack=12,
+            defence=6,
+            speed=4,
+            inventory=entity_memento.inventory,
+            active_modifiers=entity_memento.active_modifiers,
+            backpack=entity_memento.backpack,
+            attack_type=entity_memento.attack_type,
+            temp_buffs=entity_memento.temp_buffs,
+        )
+
+        memento = Mage.Memento(
+            entity_memento=changed_entity_memento,
+            mana=25,
+            max_mana=original_memento.max_mana,
+            spell_power=40,
+        )
+
+        mage.restore(memento)
+        restored_memento = mage.create_memento()
+
+        self.assertEqual(restored_memento.entity_memento.entity_id, 2)
+        self.assertEqual(restored_memento.entity_memento.position, [4, 5])
+        self.assertEqual(restored_memento.entity_memento.health, 30)
+        self.assertEqual(restored_memento.entity_memento.attack, 12)
+        self.assertEqual(restored_memento.mana, 25)
+        self.assertEqual(restored_memento.spell_power, 40)
+
+    # Checks that restoring an invalid Memento raises a TypeError.
+    def test_restore_invalid_memento(self):
+        mage = self.create_test_entity(Mage)
+
+        with self.assertRaises(TypeError):
+            mage.restore(None)
+
+    # Checks that changing Mage state does not change its saved Memento.
+    def test_memento_deep_copy(self):
+        mage = self.create_test_entity(Mage, position=[0, 0])
+
+        memento = mage.create_memento()
+
+        entity_memento = memento.entity_memento
+        changed_entity_memento = Entity.Memento(
+            entity_id=entity_memento.entity_id,
+            e_type=entity_memento.e_type,
+            position=[5, 5],
+            health=entity_memento.health,
+            max_health=entity_memento.max_health,
+            attack=entity_memento.attack,
+            defence=entity_memento.defence,
+            speed=entity_memento.speed,
+            inventory=entity_memento.inventory,
+            active_modifiers=entity_memento.active_modifiers,
+            backpack=entity_memento.backpack,
+            attack_type=entity_memento.attack_type,
+            temp_buffs=entity_memento.temp_buffs,
+        )
+
+        mage.restore(
+            Mage.Memento(
+                entity_memento=changed_entity_memento,
+                mana=10,
+                max_mana=memento.max_mana,
+                spell_power=50,
+            )
+        )
+
+        self.assertEqual(memento.entity_memento.position, [0, 0])
+        self.assertEqual(memento.mana, 100)
+        self.assertEqual(memento.spell_power, 25)
+
+    # Checks that modifying nested Memento data does not affect the restored Mage.
+    def test_restore_memento_deep_copy(self):
+        mage = self.create_test_entity(Mage)
+        original_memento = mage.create_memento()
+        entity_memento = original_memento.entity_memento
+
+        changed_entity_memento = Entity.Memento(
+            entity_id=entity_memento.entity_id,
+            e_type=entity_memento.e_type,
+            position=[2, 3],
+            health=50,
+            max_health=entity_memento.max_health,
+            attack=entity_memento.attack,
+            defence=entity_memento.defence,
+            speed=entity_memento.speed,
+            inventory=entity_memento.inventory,
+            active_modifiers={"Attack": 2},
+            backpack=entity_memento.backpack,
+            attack_type=entity_memento.attack_type,
+            temp_buffs=[{"Name": "Strength", "Turns": 2}],
+        )
+
+        memento = Mage.Memento(
+            entity_memento=changed_entity_memento,
+            mana=40,
+            max_mana=original_memento.max_mana,
+            spell_power=30,
+        )
+
+        mage.restore(memento)
+
+        memento.entity_memento.position.append(4)
+        memento.entity_memento.active_modifiers["Attack"] = 99
+        memento.entity_memento.temp_buffs[0]["Turns"] = 99
+
+        restored_memento = mage.create_memento()
+
+        self.assertEqual(restored_memento.entity_memento.position, [2, 3])
+        self.assertEqual(
+            restored_memento.entity_memento.active_modifiers, {"Attack": 2}
+        )
+        self.assertEqual(restored_memento.entity_memento.temp_buffs[0]["Turns"], 2)
+        self.assertEqual(restored_memento.mana, 40)
+        self.assertEqual(restored_memento.spell_power, 30)
 
 
 if __name__ == "__main__":

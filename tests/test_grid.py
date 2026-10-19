@@ -799,6 +799,174 @@ class TestGrid(unittest.TestCase):
         # Check no valid neighbors remain
         self.assertEqual(result, [])
 
+    def test_create_memento(self):
+        grid = self.create_test_grid(5, 6)
+
+        memento = grid.create_memento()
+
+        self.assertIsInstance(memento, Grid.Memento)
+        self.assertEqual(memento.width, 5)
+        self.assertEqual(memento.height, 6)
+        self.assertEqual(len(memento.tiles), 5)
+        self.assertEqual(len(memento.tiles[0]), 6)
+        self.assertIsInstance(memento.tiles[0][0], Tile.Memento)
+
+    def test_create_memento_uses_tuples(self):
+        grid = self.create_test_grid()
+
+        memento = grid.create_memento()
+
+        self.assertIsInstance(memento.tiles, tuple)
+        self.assertIsInstance(memento.tiles[0], tuple)
+
+    def test_restore_memento(self):
+        original_grid = self.create_test_grid(6, 7)
+        memento = original_grid.create_memento()
+
+        restored_grid = self.create_test_grid()
+        restored_grid.restore(memento)
+
+        restored_memento = restored_grid.create_memento()
+
+        self.assertEqual(restored_memento.width, 6)
+        self.assertEqual(restored_memento.height, 7)
+        self.assertEqual(restored_memento.tiles, memento.tiles)
+
+    def test_restore_invalid_memento(self):
+        grid = self.create_test_grid()
+
+        with self.assertRaises(TypeError):
+            grid.restore(None)
+
+    def test_restore_memento_rebuilds_tiles(self):
+        original_grid = self.create_test_grid()
+        memento = original_grid.create_memento()
+
+        restored_grid = self.create_test_grid()
+        restored_grid.restore(memento)
+
+        self.assertIsNot(
+            restored_grid._Grid__grid[0][0], original_grid._Grid__grid[0][0]
+        )
+
+    def test_memento_preserves_original_state(self):
+        grid = self.create_test_grid()
+
+        original_memento = grid.create_memento()
+
+        grid.set_tile(0, 0, "Wall")
+
+        self.assertEqual(original_memento.tiles[0][0].t_type, "Floor")
+        self.assertTrue(original_memento.tiles[0][0].passable)
+
+    def test_memento_preserves_tile_items(self):
+        grid = self.create_test_grid()
+
+        self.add_test_item(grid, 0, 0, "IronSword")
+
+        memento = grid.create_memento()
+
+        self.assertEqual(
+            memento.tiles[0][0].item_list[0].get_info().name,
+            grid.get_tile_info(0, 0).item_list[0],
+        )
+
+    def test_restore_memento_preserves_tile_items(self):
+        original_grid = self.create_test_grid()
+
+        self.add_test_item(original_grid, 0, 0, "IronSword")
+
+        memento = original_grid.create_memento()
+
+        restored_grid = self.create_test_grid()
+        restored_grid.restore(memento)
+
+        self.assertEqual(
+            self.get_test_tile_item(restored_grid),
+            self.get_test_tile_item(original_grid),
+        )
+
+    def test_create_memento(self):
+        tile = Tile("Floor", True, [])
+
+        memento = tile.create_memento()
+
+        self.assertIsInstance(memento, Tile.Memento)
+        self.assertEqual(memento.t_type, "Floor")
+        self.assertTrue(memento.passable)
+        self.assertEqual(memento.occupants, [])
+        self.assertEqual(memento.modifiers, {})
+        self.assertEqual(memento.item_list, [])
+
+    def test_restore_memento(self):
+        tile = Tile("Floor", True, [])
+
+        memento = Tile.Memento(
+            t_type="Wall",
+            passable=False,
+            occupants=[1, 2],
+            modifiers={"Attack": 5},
+            item_list=["IronSword"],
+        )
+
+        tile.restore(memento)
+
+        restored_memento = tile.create_memento()
+
+        self.assertEqual(restored_memento.t_type, "Wall")
+        self.assertFalse(restored_memento.passable)
+        self.assertEqual(restored_memento.occupants, [1, 2])
+        self.assertEqual(restored_memento.modifiers, {"Attack": 5})
+        self.assertEqual(restored_memento.item_list, ["IronSword"])
+
+    def test_restore_invalid_memento(self):
+        tile = Tile("Floor", True, [])
+
+        with self.assertRaises(TypeError):
+            tile.restore(None)
+
+    def test_memento_deep_copy(self):
+        tile = Tile("Floor", True, [1], {"Attack": 5}, ["IronSword"])
+
+        memento = tile.create_memento()
+
+        tile.restore(
+            Tile.Memento(
+                t_type="Floor",
+                passable=True,
+                occupants=[2],
+                modifiers={"Attack": 10},
+                item_list=["MageStaff"],
+            )
+        )
+
+        self.assertEqual(memento.occupants, [1])
+        self.assertEqual(memento.modifiers, {"Attack": 5})
+        self.assertEqual(memento.item_list, ["IronSword"])
+
+    def test_restore_memento_deep_copy(self):
+        tile = Tile("Floor", True, [])
+
+        memento = Tile.Memento(
+            t_type="Floor",
+            passable=True,
+            occupants=[1],
+            modifiers={"Attack": 5},
+            item_list=["IronSword"],
+        )
+
+        tile.restore(memento)
+
+        memento.occupants.append(2)
+        memento.modifiers["Attack"] = 10
+        memento.item_list.append("MageStaff")
+
+        restored_memento = tile.create_memento()
+
+        self.assertEqual(restored_memento.occupants, [1])
+        self.assertEqual(restored_memento.modifiers, {"Attack": 5})
+        self.assertEqual(restored_memento.item_list, ["IronSword"])
+
 
 if __name__ == "__main__":
     unittest.main()

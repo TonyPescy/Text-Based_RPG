@@ -11,10 +11,15 @@ Purpose: Record game state stats.
 """
 
 # Imports
+from dataclasses import dataclass
+
+# from copy import deepcopy
 from grid import Grid
 from equipment import Consumable
-from spell import Spell, get_spell
-import domain_library as dl
+from spell import get_spell
+import entity as ent
+
+# import domain_library as dl
 import equipment
 
 
@@ -29,6 +34,16 @@ class GameState:
         self.__map_created = False
         self.__turn_number = 1
         self.__is_saved = True
+
+    # Memento class stores a snapshot of the GameState
+    @dataclass(frozen=True)
+    class Memento:
+        grid_memento: object
+        entity_mementos: tuple
+        entity_ids_issued: int
+        map_created: bool
+        turn_number: int
+        is_saved: bool
 
     # Is Map Created
     # True/False if map is created
@@ -434,16 +449,95 @@ class GameState:
         spell = get_spell(spell_name)
         return spell.get_info()
 
-    # Create Momento
-    # Creates momento of the game state
+    # Create Memento
+    # Creates memento of the game state
     # Params: None
-    # Returns: Momento of the game state
-    def create_momento():
-        pass
+    # Returns: Memento of the game state
+    def create_memento(self):
+        # Save the Grid's state if a Grid exists
+        grid_memento = None
 
-    # Restore Momento
-    # Restores momento of the game state
-    # Params: momento - Momento - Contains all info for the game state to be restored
+        if self.__grid is not None:
+            grid_memento = self.__grid.create_memento()
+
+        # Save a Memento for each Entity
+        entity_mementos = []
+
+        for entity in self.__entity_list:
+            entity_mementos.append(entity.create_memento())
+
+        return GameState.Memento(
+            grid_memento=grid_memento,
+            entity_mementos=tuple(entity_mementos),
+            entity_ids_issued=self.__entity_ids_issued,
+            map_created=self.__map_created,
+            turn_number=self.__turn_number,
+            is_saved=self.__is_saved,
+        )
+
+    # Restore Memento
+    # Restores memento of the game state
+    # Params: memento - Memento - Contains all info for the game state to be restored
     # Returns: None
-    def restore(momento):
-        pass
+    def restore(self, memento):
+        # Ensure the provided Memento is valid
+        if not isinstance(memento, GameState.Memento):
+            raise TypeError("Invalid GameState Memento")
+
+        # Recreate all Entities before changing the current GameState
+        restored_entities = []
+
+        for entity_memento in memento.entity_mementos:
+
+            # Get the base Entity Memento for the saved entity.
+            if isinstance(entity_memento, ent.Mage.Memento):
+                base_memento = entity_memento.entity_memento
+            else:
+                base_memento = entity_memento
+
+            # Get the Entity's saved position
+            position = base_memento.position
+
+            x = position[0]
+            y = position[1]
+
+            # Create the correct Entity subclass
+            entity = ent.create_entity(
+                base_memento.e_type,
+                x,
+                y,
+                base_memento.entity_id,
+            )
+
+            # Ensure the Entity type is valid
+            if entity is None:
+                raise ValueError(
+                    f"Unable to restore Entity " f"{base_memento.entity_id}"
+                )
+
+            # Restore the Entity's saved state
+            entity.restore(entity_memento)
+
+            # Add the restored Entity to the new list
+            restored_entities.append(entity)
+
+        # Restore the Grid separately
+        restored_grid = None
+
+        if memento.grid_memento is not None:
+            restored_grid = Grid(
+                memento.grid_memento.width,
+                memento.grid_memento.height,
+            )
+
+            restored_grid.restore(memento.grid_memento)
+
+        # Replace the current GameState only after restoration succeeds
+        self.__grid = restored_grid
+        self.__entity_list = restored_entities
+        self.__entity_ids_issued = memento.entity_ids_issued
+        self.__map_created = memento.map_created
+        self.__turn_number = memento.turn_number
+
+        # Successfully restored state is considered saved
+        self.__is_saved = True

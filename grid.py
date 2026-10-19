@@ -11,6 +11,7 @@ Purpose: Houses all functions necessary for proper grid/tile handling and logic 
 """
 
 # imports
+from copy import deepcopy
 import heapq
 import domain_library as dl
 import equipment
@@ -410,6 +411,68 @@ class Grid:
     def get_info(self):
         return GridInfo(width=self.__width, height=self.__height, grid=self.__grid)
 
+    # Memento class stores the Grid's state
+    @dataclass(frozen=True)
+    class Memento:
+        width: int
+        height: int
+        tiles: tuple
+
+    # Create Memento
+    # Create a memento Grid and all its Tiles
+    # Params: None
+    # Returns: memento - Memento - memento containing grid info and all tile mementos
+    def create_memento(self):
+        tile_mementos = []
+
+        # Save each column and its Tiles
+        for col in self.__grid:
+            temp_col = []
+
+            for tile in col:
+                temp_col.append(tile.create_memento())
+
+            # Store each column as a tuple
+            tile_mementos.append(tuple(temp_col))
+
+        return Grid.Memento(
+            width=self.__width,
+            height=self.__height,
+            tiles=tuple(tile_mementos),
+        )
+
+    # Restore
+    # Restores grid and tiles based on Memento
+    # Params: memento - Memento - Memento will all grid info and tile mementos
+    # Returns: None
+    def restore(self, memento):
+        if not isinstance(memento, Grid.Memento):
+            raise TypeError("Invalid Grid Memento")
+
+        # Rebuild the grid from the saved Tile Mementos
+        restored_grid = []
+
+        for col in memento.tiles:
+            temp_col = []
+
+            for tile_memento in col:
+                tile = Tile(
+                    tile_memento.t_type,
+                    tile_memento.passable,
+                    deepcopy(tile_memento.occupants),
+                    deepcopy(tile_memento.modifiers),
+                    deepcopy(tile_memento.item_list),
+                )
+
+                temp_col.append(tile)
+
+            restored_grid.append(temp_col)
+
+        # Update the Grid's private state
+        self.__width = memento.width
+        self.__height = memento.height
+        self.__grid = restored_grid
+
 
 # Create Tile class because the grid will be made up of Tiles
 class Tile:
@@ -569,6 +632,42 @@ class Tile:
     def remove_occupant(self, entity_id):
         if entity_id in self.__occupants:
             self.__occupants.remove(entity_id)
+
+    # Memento class for Tile's state
+    @dataclass(frozen=True)
+    class Memento:
+        t_type: str
+        passable: bool
+        occupants: object
+        modifiers: object
+        item_list: object
+
+    # Create Momento
+    # Create a tiles state memento
+    # Params: None
+    # Returns: memento - Memento - tile info from save
+    def create_memento(self):
+        return Tile.Memento(
+            t_type=deepcopy(self.__t_type),
+            passable=self.__passable,
+            occupants=deepcopy(self.__occupants),
+            modifiers=deepcopy(self.__modifiers),
+            item_list=deepcopy(self.__item_list),
+        )
+
+    # Restore
+    # Restore a tiles state from memento
+    # Params: memento - Memento - tile info from save
+    # Returns: None
+    def restore(self, memento):
+        if not isinstance(memento, Tile.Memento):
+            raise TypeError("Invalid Tile Memento")
+
+        self.__t_type = deepcopy(memento.t_type)
+        self.__passable = memento.passable
+        self.__occupants = deepcopy(memento.occupants)
+        self.__modifiers = deepcopy(memento.modifiers)
+        self.__item_list = deepcopy(memento.item_list)
 
 
 # Direction Enum - used within A* pathfinding for manhattan distance calcs

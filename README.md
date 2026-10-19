@@ -240,6 +240,7 @@ Tony Pescatore
 
 ### Command Line Interface
 - The command line interface is where the game in played. Running the command line interface will allow the user to input commands, which will be handled accordingly by the command line interfaces process_command method. This will return descriptive error messages so that users will know what was wrong with their inputs. 
+- Houses the game state variable through which interaction between files and objects are handled.
 - It also contains the main function that will prompt for the commands in the terminal, the player can exit at any time by entering 'quit'.
 
 ### Game State
@@ -248,8 +249,10 @@ Tony Pescatore
 - Interacts with the other files and classes for the command line interface to protect sensitive information.
 
 ### Game State Manager
-- Gathers all immutable read-only momentos that are required for saving, Game State, Entities within active entity list, active Equipment Grid, and Tiles, by using their classes create_momento methods. Then utilizes JSON to save them to a file that will be used to load them.
-- Handles loading momentos from files and uses the respective class method, restore, to restore to a game-ready object.
+- Gathers all immutable read-only mementos that are required for saving, Game State, Entities within active entity list, active Equipment Grid, and Tiles, by using their classes create_memento methods. Then utilizes JSON to save them to a file that will be used to load them.
+- Handles loading mementos from files and uses the respective class method, restore, to restore to a game-ready object.
+- Classes that have stats that change such as entity, grid, and gamestate will need the momentos created, other than that new instances will be created for static valued instances (Example: Items will always have the same stat so they will be recreated when loading a save). These static instances can be created from their name so where they are saved will just be a name to recreate them.
+- Cleans and validates save data before calling resotre functions to ensure game state is restored correctly and completely.
 
 ### Other
 - Values for entities, tiles, spells, equipment, grids, and game state are marked as private (__varname). To access this information x.getinfo() will return a immutable copy to prevent any of that private data from being public and able to be modified. When these do need to be changed, such as an entity losing health, it is handled within its own class.

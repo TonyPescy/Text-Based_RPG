@@ -11,6 +11,7 @@ Purpose: Houses all functions necessary for proper entity handling and logic in 
 """
 
 # imports
+from copy import deepcopy
 import domain_library as dl
 from equipment import Equipment, create_equipment
 from dataclasses import dataclass
@@ -61,15 +62,15 @@ class Entity:
     ):
         self.__id = id
         self.__e_type = e_type
-        self.__position = position
+        self.__position = deepcopy(position)
         self.__health = health
         self.__max_health = max_health
         self.__attack = attack
         self.__defence = defence
         self.__speed = speed
-        self.__inventory = inventory
-        self.__active_modifiers = active_modifiers
-        self.__backpack = backpack
+        self.__inventory = deepcopy(inventory)
+        self.__active_modifiers = deepcopy(active_modifiers)
+        self.__backpack = deepcopy(backpack)
         self.__attack_type = attack_type
         self.__temp_buffs = []  # temp buffs list of dictionarys
 
@@ -554,6 +555,66 @@ class Entity:
     def add_temp_buff(self, buff):
         self.__temp_buffs.append(buff)
 
+    # Memento DataClass
+    @dataclass(frozen=True)
+    class Memento:
+        entity_id: int
+        e_type: str
+        position: object
+        health: int
+        max_health: int
+        attack: int
+        defence: int
+        speed: int
+        inventory: object
+        active_modifiers: object
+        backpack: object
+        attack_type: object
+        temp_buffs: object
+
+    # Create Memento
+    # Create entity memento
+    # Params:   None
+    # Returns Entity Memento
+    def create_memento(self):
+        return Entity.Memento(
+            entity_id=self.__id,
+            e_type=self.__e_type,
+            position=deepcopy(self.__position),
+            health=self.__health,
+            max_health=self.__max_health,
+            attack=self.__attack,
+            defence=self.__defence,
+            speed=self.__speed,
+            inventory=deepcopy(self.__inventory),
+            active_modifiers=deepcopy(self.__active_modifiers),
+            backpack=deepcopy(self.__backpack),
+            attack_type=self.__attack_type,
+            temp_buffs=deepcopy(self.__temp_buffs),
+        )
+
+    # Restore
+    # Restores entity based on memento
+    # Params: Memento - Memento - entity info pulled from save file
+    # Returns: None
+    def restore(self, memento):
+        if not isinstance(memento, Entity.Memento):
+            raise TypeError("Invalid Entity memento")
+
+        self.__id = memento.entity_id
+        self.__e_type = memento.e_type
+        self.__position = deepcopy(memento.position)
+        self.__health = memento.health
+        self.__max_health = memento.max_health
+        self.__attack = memento.attack
+        self.__defence = memento.defence
+        self.__speed = memento.speed
+        self.__inventory = deepcopy(memento.inventory)
+        self.__active_modifiers = deepcopy(memento.active_modifiers)
+        self.__backpack = deepcopy(memento.backpack)
+        self.__attack_type = memento.attack_type
+        self.__temp_buffs = deepcopy(memento.temp_buffs)
+
     """# id
     # Solves issues with accessing if of mage which inherits from Entity
     # Params: None
@@ -731,7 +792,7 @@ class Mage(Entity):
         self.__mana = self.BASE_STATS["Mana"]
         self.__max_mana = self.BASE_STATS["Mana"]
         self.__spell_power = self.BASE_STATS["Spell_power"]
-        self.__temp_buffs = []  # temp buffs list of dictionarys
+        # self.__temp_buffs = []  # temp buffs list of dictionarys
 
     # Get Info
     # Gets all relevant info of the entity and returns them
@@ -756,6 +817,42 @@ class Mage(Entity):
             attack_type=entity_info.attack_type,
             temp_buffs=entity_info.temp_buffs,
         )
+
+    # Mage Memento
+    @dataclass(frozen=True)
+    class Memento:
+        entity_memento: Entity.Memento
+        mana: int
+        max_mana: int
+        spell_power: int
+
+    # Create Memento
+    # Create mage memento
+    # Params:   None
+    # Returns Mage Memento
+    def create_memento(self):
+        return Mage.Memento(
+            entity_memento=super().create_memento(),
+            mana=self.__mana,
+            max_mana=self.__max_mana,
+            spell_power=self.__spell_power,
+        )
+
+    # Restore
+    # Restores mage based on memento
+    # Params: Memento - Memento - mage info pulled from save file
+    # Returns: None
+    def restore(self, memento):
+        if not isinstance(memento, Mage.Memento):
+            raise TypeError("Invalid Mage memento")
+
+        # Restore inherited Entity state
+        super().restore(memento.entity_memento)
+
+        # Restore Mage-specific state
+        self.__mana = memento.mana
+        self.__max_mana = memento.max_mana
+        self.__spell_power = memento.spell_power
 
     """# Get Stats Start
     # Gets all relevant stats of the entity and returns them
