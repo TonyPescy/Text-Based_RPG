@@ -265,6 +265,49 @@ class TestGameStateManager(unittest.TestCase):
         self.assertEqual(restored_memento.entity_ids_issued, 1)
         self.assertFalse(restored_memento.map_created)
 
+    # Test that a new GameStateManager can be created
+    def test_init_game_state_manager(self):
+        self.assertIsNotNone(self.manager)
+
+    # Test that the save directory is created during initialization
+    def test_init_creates_save_directory(self):
+        self.assertTrue(os.path.isdir("save_files"))
+
+    # Test creating a filepath with a JSON extension
+    def test_create_filepath_with_json_extension(self):
+        filepath = self.manager.create_filepath("test_save.json")
+
+        self.assertEqual(filepath, os.path.join("save_files", "test_save.json"))
+
+    # Test adding a JSON extension when it is missing
+    def test_create_filepath_without_json_extension(self):
+        filepath = self.manager.create_filepath("test_save")
+
+        self.assertEqual(filepath, os.path.join("save_files", "test_save.json"))
+
+    # Test creating a filepath with a filename containing spaces
+    def test_create_filepath_with_spaces(self):
+        filepath = self.manager.create_filepath("my test save")
+
+        self.assertEqual(filepath, os.path.join("save_files", "my test save.json"))
+
+    # Test that creating a filepath does not create the save file itself
+    def test_create_filepath_does_not_create_file(self):
+        filepath = self.manager.create_filepath("test_save")
+
+        self.assertFalse(os.path.exists(filepath))
+
+    # Test that basic save data can be validated
+    def test_validate_save_data(self):
+        save_data = self.create_empty_save_data()
+
+        self.assertIsNone(self.manager.validate_save_data(save_data))
+
+    # Test that non-dictionary save data raises a ValueError
+    def test_validate_non_dictionary_save_data(self):
+        with self.assertRaises(ValueError):
+            self.manager.validate_save_data([])
+
 
 if __name__ == "main":
     unittest.main()

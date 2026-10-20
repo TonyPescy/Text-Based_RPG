@@ -459,9 +459,9 @@ class Grid:
                 tile = Tile(
                     tile_memento.t_type,
                     tile_memento.passable,
-                    deepcopy(tile_memento.occupants),
+                    list(tile_memento.occupants),
                     deepcopy(tile_memento.modifiers),
-                    deepcopy(tile_memento.item_list),
+                    list(tile_memento.item_list),
                 )
 
                 temp_col.append(tile)
@@ -665,9 +665,9 @@ class Tile:
 
         self.__t_type = deepcopy(memento.t_type)
         self.__passable = memento.passable
-        self.__occupants = deepcopy(memento.occupants)
+        self.__occupants = list(memento.occupants)
         self.__modifiers = deepcopy(memento.modifiers)
-        self.__item_list = deepcopy(memento.item_list)
+        self.__item_list = list(memento.item_list)
 
 
 # Direction Enum - used within A* pathfinding for manhattan distance calcs

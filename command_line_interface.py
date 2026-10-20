@@ -19,6 +19,7 @@ import equipment
 import domain_library as dl
 from grid import Grid, Tile
 from entity import Entity, EntityInfo, MageInfo
+from game_state_manager import GameStateManager
 
 # from spell import get_spell
 from game_state import GameState
@@ -30,6 +31,7 @@ class CLI:
     # Initialize CLI
     def __init__(self):
         self.game_state = GameState()
+        self.game_state_manager = GameStateManager()
 
     # Process Command Start
     # Handles all commands that user can write
@@ -62,6 +64,9 @@ class CLI:
             "attack": self.process_attack_command,
             "cast": self.process_cast_command,
             "tick": self.process_tick_command,
+            "save": self.process_save_command,
+            "load": self.process_load_command,
+            "state-info": self.process_state_info_command,
         }
 
         # Match handler to command
@@ -949,6 +954,78 @@ class CLI:
         self.game_state.mark_as_unsaved()
         # Advance turn
         self.game_state.advance_turn()
+
+    # Process Save Command
+    # Saves the game state to given file
+    # Params: command_pieces - list - list of strings that make up the command
+    # Returns: None
+    def process_save_command(self, command_pieces):
+        if len(command_pieces) == 2:
+            filename = command_pieces[1]
+        else:
+            print("error: save_failed - Invalid command!")
+            return
+
+        # Check to see if game state is active and able to be saved
+        if not self.game_state.game_state_is_active():
+            # Not active
+            print(
+                "error: save_failed - Game State is not initialized and cannot be saved!"
+            )
+            return
+
+        else:
+            # Success - can be saved
+            try:
+                # Try save game
+                self.game_state_manager.save_game(self.game_state, filename)
+                # Sucess Message
+                print(f"ok: game saved to {filename}")
+            # Extensive error catching
+            except (OSError, ValueError, TypeError, KeyError) as error:
+                print(f"error: save_failed - {error}!")
+
+    # Process Load Command
+    # Loads the game state from given file
+    # Params: command_pieces - list - list of strings that make up the command
+    # Returns: None
+    def process_load_command(self, command_pieces):
+        if len(command_pieces) == 2:
+            filename = command_pieces[1]
+        else:
+            print("error: load_failed - Invalid command!")
+            return
+
+        # Attempt to load game
+        try:
+            # Load Game
+            self.game_state_manager.load_game(self.game_state, filename)
+            # Success Message
+            print(f"ok: game loaded from {filename}!")
+        # Extensive error catching
+        except (OSError, ValueError, TypeError, KeyError) as error:
+            print(f"error: load_failed - {error}!")
+
+    # Process State-Info Command
+    # Displays the current game state info
+    # Params: command_pieces - list - list of strings that make up the command
+    # Returns: None
+    def process_state_info_command(self, command_pieces):
+        # Check that game state exists and is active
+        if not self.game_state.game_state_is_active():
+            print("error: state-info_failed - Game State is not initialized!")
+            return
+        else:
+            # Success
+            try:
+                game_state_info = self.game_state.get_game_state_info()
+
+                print(
+                    f"ok: turn {game_state_info[0]}, entities: {game_state_info[1]}, saved: {str(game_state_info[2]).lower()}"
+                )
+            # Extensive error checking
+            except (AttributeError, TypeError, ValueError) as error:
+                print(f"error: state_info_failed {error}")
 
     # Spawn Entity For CLI
     # Contains logic for all entity spawning in the CLI

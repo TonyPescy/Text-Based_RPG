@@ -80,6 +80,7 @@ class GameState:
     def advance_turn(self):
         self.__turn_number += 1
         print(f"ok: advanced to turn {self.__turn_number}!")
+        self.mark_as_unsaved()
 
     # Mark As Unsaved Start
     # Sets is saved to False
@@ -114,6 +115,8 @@ class GameState:
         self.__entity_ids_issued = 1
         # Set map created to True
         self.mark_map_created()
+        # Unsaved
+        self.mark_as_unsaved()
 
     # Reset Map
     # Resets map and all associated variables
@@ -136,6 +139,7 @@ class GameState:
     # Returns: None
     def set_game_grid_tile(self, x, y, tile_type):
         self.__grid.set_tile(int(x), int(y), tile_type)
+        self.mark_as_unsaved()
 
     # Is Grid Tile Occupied
     # Returns t/f if tile is occupied
@@ -207,37 +211,44 @@ class GameState:
                 return None
 
     # Process Tick For All Entities
-    # Processes tick for all currnet entities
-    # Params: None
-    # Returns: List - entities ids to remove
+    # Processes turn ticks for all entities
+    # Returns: List - entity IDs that should be removed from the grid
     def process_tick_for_all_entities(self):
         entities_to_remove = []
+
         for entity in self.__entity_list:
-            temp_bool = entity.process_tick_on_entity()
-            # Check for removal of entity
-            if temp_bool:
-                entity_id = (entity.get_info()).id
-                # Remove if true
+            # Process the entity's turn
+            should_remove = entity.process_tick_on_entity()
+
+            # If the entity should be removed
+            if should_remove:
+                entity_id = entity.get_info().id
                 entities_to_remove.append(entity_id)
+
         return entities_to_remove
 
     # Remove Entity From Game
-    # Removes given entity from the game
-    # Params: entity_id - Entity.id - id of entity to remove
+    # Removes an entity from the board but keeps it in the entity list.
+    # Params: entity_id - int - ID of entity to remove
     # Returns: None
     def remove_entity_from_game(self, entity_id):
         # Get entity info
         entity_info = self.get_entity_info_from_list(entity_id)
+
+        # Check if entity exists
+        if entity_info is None:
+            return
+
         # Get grid position of entity
         entity_x = entity_info.position[0]
         entity_y = entity_info.position[1]
-        # Clear tile
+
+        # Clear tile occupant without deleting the entity
         self.__grid.clear_occupant(entity_x, entity_y, entity_info.id)
-        # Remove
-        for temp_entity in self.__entity_list:
-            temp_entity_info = temp_entity.get_info()
-            if temp_entity_info.id == entity_info.id:
-                self.__entity_list.remove(temp_entity)
+        # Find and remove the entity from the entity list
+        for entity in self.__entity_list:
+            if entity.get_info().id == entity_id:
+                self.__entity_list.remove(entity)
                 break
 
     # Update Entity
@@ -250,6 +261,7 @@ class GameState:
             pass
         else:
             entity.update_stats(self)
+            self.mark_as_unsaved()
 
     """    # Update Entity From Info
     # Updates the matching entity from entity info
@@ -285,6 +297,7 @@ class GameState:
         )  # append real entity object to list, not copy
         # Update Entity
         self.update_entity(self.__entity_ids_issued - 1)
+        self.mark_as_unsaved()
 
     # Spawn Loot
     # Spawns loot on game grid
@@ -293,6 +306,7 @@ class GameState:
     # Returns: None
     def spawn_loot(self, x, y, item_name):
         self.__grid.add_item_to_tile_item_list(int(x), int(y), item_name)
+        self.mark_as_unsaved()
 
     # Entities Exist
     # Returns t/f if entities exist
@@ -310,6 +324,7 @@ class GameState:
     #           item_name - Item - name of item to remove
     # Returns: item removed from tile
     def remove_item_from_tile(self, x, y, item_name):
+        self.mark_as_unsaved()
         return self.__grid.remove_item_from_tile_item_list(int(x), int(y), item_name)
 
     # Add Item From Tile
@@ -318,7 +333,7 @@ class GameState:
     #           item_name - Item - name of item to add
     # Returns: None
     def add_item_to_tile(self, x, y, item_name):
-
+        self.mark_as_unsaved()
         self.__grid.add_item_to_tile_item_list(int(x), int(y), item_name)
 
     # Add Item From Backpack From Info
@@ -331,6 +346,7 @@ class GameState:
         # get Item from item name
         item = equipment.create_equipment(item_name.lower())
         entity.add_item_to_backpack(item)
+        self.mark_as_unsaved()
 
     # Remove Item From Backpack From Info
     # Removes provided item from the backpack based on entity info
@@ -362,6 +378,7 @@ class GameState:
         entity.equip_item(item, slot)
         # Update entity stats
         self.update_entity(entity_id)
+        self.mark_as_unsaved()
 
     # Use Consumable
     # Uses provided consumable based on entity info
@@ -375,6 +392,7 @@ class GameState:
         Consumable.use_consumable(item, entity, self)
         # Remove item from backpack
         entity.remove_item_from_backpack(item_name)
+        self.mark_as_unsaved()
 
     # Move Entity
     # Moves entity to x, y
@@ -392,6 +410,7 @@ class GameState:
         entity.move_to(x, y)
         # Update entity stats after move
         entity.update_stats(self)
+        self.mark_as_unsaved()
 
     # Attack Entity
     # Attacks entity with another entity
@@ -404,6 +423,7 @@ class GameState:
         defender = self.get_entity_from_list(defender_id)
         # Attack
         damage = attacker.attack_entity(defender)
+        self.mark_as_unsaved()
         return damage
 
     # Cast Spell
@@ -420,6 +440,7 @@ class GameState:
         spell = get_spell(spell_name.lower())
         # Cast Spell
         effect = spell.cast_spell(caster, target, self)
+        self.mark_as_unsaved()
         return effect
 
     # Update Single Entity Stat
@@ -449,6 +470,20 @@ class GameState:
         spell = get_spell(spell_name)
         return spell.get_info()
 
+    # Get Game State Info
+    # Returns the relevant game state information
+    # Params: None
+    # Returns: info - tuple - turn number, entity count, and svae status
+    def get_game_state_info(self):
+        return (self.__turn_number, len(self.__entity_list), self.__is_saved)
+
+    # Game State Is Active
+    # Returns true if game state is initialized
+    # Params: None
+    # Returns: Bool - True if game state exists, else false
+    def game_state_is_active(self):
+        return self.__grid is not None and self.__map_created
+
     # Create Memento
     # Creates memento of the game state
     # Params: None
@@ -465,6 +500,9 @@ class GameState:
 
         for entity in self.__entity_list:
             entity_mementos.append(entity.create_memento())
+
+        # Mark as saved
+        self.__is_saved = True
 
         return GameState.Memento(
             grid_memento=grid_memento,
@@ -511,11 +549,11 @@ class GameState:
 
             # Ensure the Entity type is valid
             if entity is None:
-                raise ValueError(
-                    f"Unable to restore Entity " f"{base_memento.entity_id}"
-                )
+                raise ValueError(f"Unable to restore Entity {base_memento.entity_id}")
 
             # Restore the Entity's saved state
+            # Entity.restore() must convert Memento collections into mutable
+            # collections for live gameplay.
             entity.restore(entity_memento)
 
             # Add the restored Entity to the new list
@@ -530,14 +568,15 @@ class GameState:
                 memento.grid_memento.height,
             )
 
+            # Grid.restore() rebuilds mutable Grid and Tile collections
             restored_grid.restore(memento.grid_memento)
 
         # Replace the current GameState only after restoration succeeds
         self.__grid = restored_grid
-        self.__entity_list = restored_entities
+        self.__entity_list = list(restored_entities)
         self.__entity_ids_issued = memento.entity_ids_issued
         self.__map_created = memento.map_created
         self.__turn_number = memento.turn_number
 
-        # Successfully restored state is considered saved
-        self.__is_saved = True
+        # Resets save status after restoration
+        self.__is_saved = False

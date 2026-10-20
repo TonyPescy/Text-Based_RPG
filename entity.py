@@ -195,9 +195,9 @@ class Entity:
     # Return: None
     def update_stats(self, game_state):
         # starting health - used to set health after reset
-        """starting_health = self.__health
+        starting_health = self.__health
         if hasattr(self, "Mana"):
-            starting_mana = self.__mana"""
+            starting_mana = self.__mana
         # Clear active modifiers to avoid double counting of modifiers
         self.__active_modifiers["Flat_modifiers"] = {}
         self.__active_modifiers["Percent_modifiers"] = {}
@@ -255,9 +255,9 @@ class Entity:
         # Since stats will be changed and overwritten, we need the entity stats set to their bases
         self.reset_stats()
         # Set health and mana if applicable back to normal
-        """self.__health = starting_health
+        self.__health = starting_health
         if hasattr(self, "mana"):
-            self.__mana = starting_mana"""
+            self.__mana = starting_mana
         # Calculate the entities final stats
         self.calculate_final_stats()
         # Update max stats
@@ -437,13 +437,11 @@ class Entity:
     # Processes turn tick on entity - temp buffs updates, ...
     # Only temp buffs right now, may need updates in future with new functionality
     # Params: None
-    # Returns: bool - bool - True if entity is to be removed
+    # Returns: bool - True if entity is to be removed
     def process_tick_on_entity(self):
-        # Check if entity is already dead
-        if not self.is_alive():
-            return True
         # Update the buffs of the entity
         buffs_to_remove = self.update_temp_buffs()
+
         # If there are buffs to remove
         if len(buffs_to_remove) > 0:
             # Remove them
@@ -603,7 +601,7 @@ class Entity:
 
         self.__id = memento.entity_id
         self.__e_type = memento.e_type
-        self.__position = deepcopy(memento.position)
+        self.__position = list(memento.position)
         self.__health = memento.health
         self.__max_health = memento.max_health
         self.__attack = memento.attack
@@ -611,7 +609,7 @@ class Entity:
         self.__speed = memento.speed
         self.__inventory = deepcopy(memento.inventory)
         self.__active_modifiers = deepcopy(memento.active_modifiers)
-        self.__backpack = deepcopy(memento.backpack)
+        self.__backpack = list(deepcopy(memento.backpack))
         self.__attack_type = memento.attack_type
         self.__temp_buffs = deepcopy(memento.temp_buffs)
 

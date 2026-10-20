@@ -98,6 +98,7 @@ Tony Pescatore
 **Contraints:**  (x,y) must be integers within current grid bounds and map must have been created.
 - **Spawn Entity:** entity_type must be within list of valid entity types and there must not be any other entity already present at the given grid position.
 - **Spawn Loot:** item_name must be within list of valid equipment types.
+
 ### Swap
 **Description:** Will equip provided item in the given, or determined, inventory slot to a "player".
 
@@ -182,6 +183,27 @@ Tony Pescatore
 
 **Contraints:** Map must be created.
 
+### Save
+**Description:** Captures the snapshot of the game state via the memento pattern and converts it to JSON through GameStateManager. Then writes save data to given file name, and updates save status.
+
+**Called as:** save [filename]
+
+**Contraints:** Game state must be created and active.
+
+### Load
+**Description:** Reads the specified file, parses the save data, restores the game state, and resets the sessions save status.
+
+**Called as:** load [filename]
+
+**Contraints:** File must exist that matches given file name.
+
+### State-Info
+**Description:** Displays metadata about the current session (Turn Count, Active Entities, Save Status etc).
+
+**Called as:** state-info
+
+**Contraints:** Game state must be created and active.
+
 ## Design Decisions
 [Table of Contents](#table-of-contents)
 
@@ -194,6 +216,7 @@ Tony Pescatore
 - It has is_passable, within_bounds, is_valid_grid_position, etc. helper functions which help to verify the values that interact with the grid, especially in the CLI.
 - Grid distances will be calculating using Manhattan Distance.
 - When using A* pathing, entities will not block their tiles. So you will be able to move through entities but will not be able to end on the same tile as an entity.
+- Creates and resotres its own memento to follow Single Responsibility Principle.
 
 ### Tiles - ToDo: Reduce future cyclomatic complexity
 - Tiles are what make up the grid. Each Tile has its typing, a boolean determining whether they are passable or not for collision/movement restrictions, and a list of occupants. 
@@ -227,6 +250,7 @@ Tony Pescatore
 - Entities will have 5 spaces open for their backpack, this is where they store their items in their inventory as well as any backup items and consumables.
 - When an entity dies they will remain on the map for 3 turns, for looting purposes, and will be given the "Dead" status as a temporary buff. This will prevent them from making any actions or being targetted, but will keep them present on the map.
 - After 3 turns on the map, the "Dead" entity will be removed from the game completely.
+- Creates and resotres its own memento to follow Single Responsibility Principle.
 
 ### Equipment
 - The equipment class represents items that will be held within an entity's inventory. There are only 3 types, weapon, armor, and accessory, all of which can only have 1 equipped in a single slot at a time. These items will have modifiers that will be to calculate the final stat values for the entity that they are equipped to. 
@@ -247,12 +271,15 @@ Tony Pescatore
 - Manages time passing in game through ticks.
 - The game state will house the current game grid of tiles, a list of the current entities, an entity id tracker, a boolean to determine if the map was already created, a turn tracker, and a boolean to determine the save status.
 - Interacts with the other files and classes for the command line interface to protect sensitive information.
+- Creates and resotres its own memento to follow Single Responsibility Principle.
+- Dead Entities stay on the entity list because we do not want them to be fully removed until their "Dead" timer runs out.
 
 ### Game State Manager
 - Gathers all immutable read-only mementos that are required for saving, Game State, Entities within active entity list, active Equipment Grid, and Tiles, by using their classes create_memento methods. Then utilizes JSON to save them to a file that will be used to load them.
 - Handles loading mementos from files and uses the respective class method, restore, to restore to a game-ready object.
 - Classes that have stats that change such as entity, grid, and gamestate will need the momentos created, other than that new instances will be created for static valued instances (Example: Items will always have the same stat so they will be recreated when loading a save). These static instances can be created from their name so where they are saved will just be a name to recreate them.
 - Cleans and validates save data before calling resotre functions to ensure game state is restored correctly and completely.
+- Handles loading and saving from files as well as conversion to mementos. Calls other classes to restore their own memento to follow Single Responsibility Principle.
 
 ### Other
 - Values for entities, tiles, spells, equipment, grids, and game state are marked as private (__varname). To access this information x.getinfo() will return a immutable copy to prevent any of that private data from being public and able to be modified. When these do need to be changed, such as an entity losing health, it is handled within its own class.

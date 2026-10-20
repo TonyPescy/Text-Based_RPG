@@ -631,6 +631,7 @@ class TestGameState(unittest.TestCase):
             self.assertIsNone(GameState.restore(None))"""
 
     # Checks that the Memento preserves the game state's current values.
+    # Checks that the Memento preserves the game state's current values.
     def test_create_memento(self):
         self.create_test_grid(5, 6)
         self.create_spawned_entity("warrior", 1, 2)
@@ -642,10 +643,21 @@ class TestGameState(unittest.TestCase):
         self.assertEqual(memento.grid_memento.width, 5)
         self.assertEqual(memento.grid_memento.height, 6)
         self.assertEqual(len(memento.entity_mementos), 1)
-        self.assertEqual(memento.entity_mementos[0].entity_id, 1)
+
+        # Get the base Entity Memento if the entity is a Mage.
+        entity_memento = memento.entity_mementos[0]
+
+        if isinstance(entity_memento, ent.Mage.Memento):
+            entity_memento = entity_memento.entity_memento
+
+        self.assertEqual(entity_memento.entity_id, 1)
         self.assertEqual(memento.entity_ids_issued, 2)
         self.assertTrue(memento.map_created)
         self.assertEqual(memento.turn_number, 1)
+        self.assertTrue(memento.is_saved)
+
+        # Check that creating a Memento marks the game state as saved.
+        self.assertTrue(self.game_state.get_game_state_info()[2])
 
     # Checks that creating a Memento works when no grid or entities exist.
     def test_create_memento_empty_game_state(self):
@@ -720,6 +732,13 @@ class TestGameState(unittest.TestCase):
         )
         self.assertEqual(restored_memento.turn_number, original_memento.turn_number)
         self.assertIsNot(self.game_state.get_entity_from_list(1), entity)
+        # testing
+        self.game_state.restore(original_memento)
+
+        print("Getter result:", self.game_state.get_game_state_info())
+        self.assertFalse(self.game_state.get_game_state_info()[2])
+        # Check that restoring marks the game state as unsaved.
+        self.assertFalse(self.game_state.get_game_state_info()[2])
 
     # Checks that restoring an invalid Memento raises a TypeError.
     def test_restore_invalid_memento(self):
@@ -825,6 +844,27 @@ class TestGameState(unittest.TestCase):
         restored_memento = self.game_state.create_memento()
 
         self.assertTrue(restored_memento.is_saved)
+
+    # Checks that game state information is returned correctly.
+    def test_get_game_state_info(self):
+        self.create_test_grid(5, 6)
+        self.create_spawned_entity("warrior", 1, 2)
+
+        game_state_info = self.game_state.get_game_state_info()
+
+        self.assertEqual(game_state_info[0], 1)
+        self.assertEqual(game_state_info[1], 1)
+        self.assertTrue(game_state_info[2])
+
+    # Checks that an uninitialized game state is not active.
+    def test_game_state_is_active_false(self):
+        self.assertFalse(self.game_state.game_state_is_active())
+
+    # Checks that a game state with an initialized grid is active.
+    def test_game_state_is_active_true(self):
+        self.create_test_grid(5, 6)
+
+        self.assertTrue(self.game_state.game_state_is_active())
 
 
 # Run the tests

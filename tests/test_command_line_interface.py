@@ -1995,6 +1995,123 @@ class TestCLI(unittest.TestCase):
 
     # Initialization and Full Spawn Coverage End
 
+    # Test saving a game with a valid filename
+    def test_save_command_success(self):
+        test_cli = self.create_test_cli()
+        self.create_test_map(test_cli)
+
+        with patch("command_line_interface.GameStateManager.save_game") as mock_save:
+            output = self.process_command_and_get_output(
+                test_cli, "save test_save.json"
+            )
+
+        mock_save.assert_called_once_with(test_cli.game_state, "test_save.json")
+        self.assertIn("ok: game saved to test_save.json", output)
+
+    # Test saving when the game state is not initialized
+    def test_save_command_inactive_game_state(self):
+        test_cli = self.create_test_cli()
+
+        output = self.process_command_and_get_output(test_cli, "save test_save.json")
+
+        self.assertIn("error: save_failed", output)
+        self.assertIn("Game State is not initialized", output)
+
+    # Test saving with an invalid number of arguments
+    def test_save_command_invalid_arguments(self):
+        test_cli = self.create_test_cli()
+
+        output = self.process_command_and_get_output(test_cli, "save")
+
+        self.assertIn("error: save_failed - Invalid command!", output)
+
+    # Test handling an error while saving
+    def test_save_command_save_error(self):
+        test_cli = self.create_test_cli()
+        self.create_test_map(test_cli)
+
+        with patch(
+            "command_line_interface.GameStateManager.save_game",
+            side_effect=OSError("Unable to write file"),
+        ):
+            output = self.process_command_and_get_output(
+                test_cli, "save test_save.json"
+            )
+
+        self.assertIn("error: save_failed", output)
+        self.assertIn("Unable to write file", output)
+
+    # Test loading a game with a valid filename
+    def test_load_command_success(self):
+        test_cli = self.create_test_cli()
+
+        with patch("command_line_interface.GameStateManager.load_game") as mock_load:
+            output = self.process_command_and_get_output(
+                test_cli, "load test_save.json"
+            )
+
+        mock_load.assert_called_once_with(test_cli.game_state, "test_save.json")
+        self.assertIn("ok: game loaded from test_save.json", output)
+
+    # Test loading with an invalid number of arguments
+    def test_load_command_invalid_arguments(self):
+        test_cli = self.create_test_cli()
+
+        output = self.process_command_and_get_output(test_cli, "load")
+
+        self.assertIn("error: load_failed - Invalid command!", output)
+
+    # Test handling an error while loading
+    def test_load_command_load_error(self):
+        test_cli = self.create_test_cli()
+
+        with patch(
+            "command_line_interface.GameStateManager.load_game",
+            side_effect=ValueError("Invalid save data"),
+        ):
+            output = self.process_command_and_get_output(
+                test_cli, "load test_save.json"
+            )
+
+        self.assertIn("error: load_failed", output)
+        self.assertIn("Invalid save data", output)
+
+    # Test displaying information about an active game state
+    def test_state_info_command_success(self):
+        test_cli = self.create_test_cli()
+        self.create_test_map(test_cli)
+        self.create_test_entity(test_cli)
+
+        output = self.process_command_and_get_output(test_cli, "state-info")
+
+        self.assertIn("ok: turn ", output)
+        self.assertIn("entities:1", output)
+        self.assertIn("saved:", output)
+
+    # Test displaying state information when the game is inactive
+    def test_state_info_command_inactive_game_state(self):
+        test_cli = self.create_test_cli()
+
+        output = self.process_command_and_get_output(test_cli, "state-info")
+
+        self.assertIn("error: state-info_failed", output)
+        self.assertIn("Game State is not initialized", output)
+
+    # Test handling an error while retrieving state information
+    def test_state_info_command_error(self):
+        test_cli = self.create_test_cli()
+        self.create_test_map(test_cli)
+
+        with patch.object(
+            test_cli.game_state,
+            "get_game_state_info",
+            side_effect=ValueError("Unable to retrieve state"),
+        ):
+            output = self.process_command_and_get_output(test_cli, "state-info")
+
+        self.assertIn("error: state_info_failed", output)
+        self.assertIn("Unable to retrieve state", output)
+
 
 if __name__ == "__main__":
     unittest.main()
