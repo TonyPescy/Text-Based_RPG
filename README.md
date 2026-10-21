@@ -272,14 +272,14 @@ Tony Pescatore
 - The game state will house the current game grid of tiles, a list of the current entities, an entity id tracker, a boolean to determine if the map was already created, a turn tracker, and a boolean to determine the save status.
 - Interacts with the other files and classes for the command line interface to protect sensitive information.
 - Creates and resotres its own memento to follow Single Responsibility Principle.
-- Dead Entities stay on the entity list because we do not want them to be fully removed until their "Dead" timer runs out.
 
 ### Game State Manager
 - Gathers all immutable read-only mementos that are required for saving, Game State, Entities within active entity list, active Equipment Grid, and Tiles, by using their classes create_memento methods. Then utilizes JSON to save them to a file that will be used to load them.
 - Handles loading mementos from files and uses the respective class method, restore, to restore to a game-ready object.
-- Classes that have stats that change such as entity, grid, and gamestate will need the momentos created, other than that new instances will be created for static valued instances (Example: Items will always have the same stat so they will be recreated when loading a save). These static instances can be created from their name so where they are saved will just be a name to recreate them.
-- Cleans and validates save data before calling resotre functions to ensure game state is restored correctly and completely.
-- Handles loading and saving from files as well as conversion to mementos. Calls other classes to restore their own memento to follow Single Responsibility Principle.
+- Classes that have stats that change such as entity, grid, and game state will need the momentos created, other than that new instances will be created for static valued instances (Example: Items will always have the same stat so they will be recreated when loading a save). These static instances can be created from their name so where they are saved will just be a name to recreate them.
+- Cleans and validates save data before calling restore functions to ensure game state is restored correctly and completely.
+- Handles loading and saving from files as well as conversion to JSON from mementos. Calls other classes to create and to restore their own memento to follow Single Responsibility Principle.
 
 ### Other
 - Values for entities, tiles, spells, equipment, grids, and game state are marked as private (__varname). To access this information x.getinfo() will return a immutable copy to prevent any of that private data from being public and able to be modified. When these do need to be changed, such as an entity losing health, it is handled within its own class.
+- Mementos are snapshots of the current game state and include the information that is necessary to rebuild the object in its current state. These are immutable and do not expose the private fields as they use a dataclass that will then have the information copied into its fields.

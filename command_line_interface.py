@@ -288,21 +288,6 @@ class CLI:
                 value = CLI.capitalize_if_string(value)
                 print(f"{stat}: {value}")
 
-        """for stat, value in entity_stats.items():
-            if stat != "Active_modifiers":
-                value = CLI.capitalize_if_string(value)
-                print(f"{stat}: {value}")
-            # Special case for dictionaries inside of active modifiers
-            elif stat == "Active_modifiers":
-                count = 0
-                # count all modifiers
-                for (
-                    dict,
-                    contents,
-                ) in value.items():  # dictionaries inside of dictionaries
-                    count += len(contents)
-                print(f"{stat}: {count}")"""
-
     # Process Tile Command Start
     # Will describe the tile at the given grid position
     # Params: command_pieces - list - list of strings that make up the command
@@ -413,26 +398,6 @@ class CLI:
                 tile_item = item  # Just the item name
                 break
 
-        """for grid_item in e_tile.item_list:
-
-            # Tile contains an equipment class
-            if isinstance(grid_item, type):
-                if grid_item.__name__.lower() == item_name.lower():
-                    tile_item = grid_item
-                    break
-
-            # Tile contains an equipment instance
-            elif hasattr(grid_item, "name"):
-                if grid_item.name.lower() == item_name.lower():
-                    tile_item = grid_item
-                    break
-
-            # Tile contains an item name as a string
-            elif isinstance(grid_item, str):
-                if grid_item.lower() == item_name.lower():
-                    tile_item = grid_item
-                    break
-        """
         # Ensure item is on the tile
         if tile_item is None:
             print("error: pickup_failed - Item not in tiles item list!")
@@ -1088,18 +1053,6 @@ class CLI:
             self.game_state.spawn_loot(x, y, item_name)
             print(f"ok: spawn_loot {item_name} at {x}, {y}!")
             return
-
-    """# Assign Entity from list
-    # Assign entity with matching id from cli.entity_list
-    # Entitys existence is confirmed prior to this being called - so will always return one
-    # Params: e_id - int - Cleaned/valid int to look for in entity list
-    # Return: entity - entity - Matching entity in entity list
-    def assign_entity_from_list(self, e_id):
-        for temp_entity in self.entity_list:
-            if temp_entity.id == e_id:
-                entity = temp_entity
-                break
-        return entity"""
 
     # Capitalize If String Start
     # Will capitalize and return string if it is a string

@@ -32,31 +32,6 @@ import equipment
 class TestDomainLibrary(unittest.TestCase):
 
     # Repeated Test Functions
-    """
-    # Get Expected Equipment Types
-    # Returns the expected class for each equipment dictionary key
-    # Params: None
-    # Returns: expected_equipment_types - dict - equipment names and classes
-    def get_expected_equipment_types(self):
-        return {
-            "ironsword": equipment.IronSword,
-            "curseddagger": equipment.CursedDagger,
-            "magestaff": equipment.MageStaff,
-            "ironchestplate": equipment.IronChestplate,
-            "leathertunic": equipment.LeatherTunic,
-            "scoutarmor": equipment.ScoutArmor,
-            "ringofthesorcerer": equipment.RingOfTheSorcerer,
-            "amuletofvitality": equipment.AmuletOfVitality,
-            "ringofhaste": equipment.RingOfHaste,
-            "none_wep": equipment.NoneWeapon,
-            "none_armor": equipment.NoneArmor,
-            "none_acc": equipment.NoneAccessory,
-            "smallhealthpotion": equipment.SmallHealthPotion,
-            "greaterhealthpotion": equipment.GreaterHealthPotion,
-            "superiorhealthpotion": equipment.SuperiorHealthPotion,
-            "manapotion": equipment.ManaPotion,
-            "turtlemasterpotion": equipment.TurtleMasterPotion,
-        }"""
 
     # Assert Enum Values
     # Checks that an enum contains the expected values in order
@@ -94,82 +69,6 @@ class TestDomainLibrary(unittest.TestCase):
             dl.are_valid_ints("zilch", 0),
         )
 
-    """
-    # Equipment Dictionary Tests
-
-    # Test equipment dictionary keys
-    def test_equipment_types(self):
-        self.assertEqual(
-            set(dl.EQUIPMENT_TYPES.keys()),
-            set(self.get_expected_equipment_types().keys()),
-        )
-
-    # Test equipment dictionary values
-    def test_equipment_types_values(self):
-        expected_equipment_types = self.get_expected_equipment_types()
-
-        for item_name, expected_class in expected_equipment_types.items():
-            with self.subTest(item_name=item_name):
-                temp_equipment = dl.EQUIPMENT_TYPES[item_name]()
-
-                self.assertIsInstance(
-                    temp_equipment,
-                    expected_class,
-                )
-
-    # Test all equipment dictionary values create Equipment objects
-    def test_equipment_types_are_equipment(self):
-        for item_name, item_type in dl.EQUIPMENT_TYPES.items():
-            with self.subTest(item_name=item_name):
-                temp_equipment = item_type()
-
-                self.assertIsInstance(
-                    temp_equipment,
-                    equipment.Equipment,
-                )
-
-    # Test create_equipment with valid equipment
-    def test_create_equipment_success(self):
-        temp_equipment = dl.create_equipment("ironsword")
-
-        self.assertIsInstance(
-            temp_equipment,
-            equipment.IronSword,
-        )
-        self.assertEqual(
-            temp_equipment.name,
-            "IronSword",
-        )
-        self.assertEqual(
-            temp_equipment.slot,
-            "Weapon",
-        )
-        self.assertDictEqual(
-            temp_equipment.effects,
-            {"Attack": "+12"},
-        )
-
-    # Test create_equipment with invalid equipment
-    def test_create_equipment_invalid(self):
-        temp_equipment = dl.create_equipment("invalid_equipment")
-
-        self.assertIsNone(
-            temp_equipment,
-        )
-
-    # Test create_equipment with every equipment type
-    def test_create_equipment_all_types(self):
-        expected_equipment_types = self.get_expected_equipment_types()
-
-        for item_name, expected_class in expected_equipment_types.items():
-            with self.subTest(item_name=item_name):
-                temp_equipment = dl.create_equipment(item_name)
-
-                self.assertIsInstance(
-                    temp_equipment,
-                    expected_class,
-                )
-    """
     # Base Inventory Tests
 
     # Test BASE_INVENTORY initialization
@@ -233,27 +132,6 @@ class TestDomainLibrary(unittest.TestCase):
             (0, 1, 2),
         )
 
-    """
-        # Test valid consumable names
-        def test_valid_consumables(self):
-            self.assert_enum_values(
-                dl.ConsumableType,
-                (
-                    "smallhealthpotion",
-                    "greaterhealthpotion",
-                    "superiorhealthpotion",
-                    "manapotion",
-                    "turtlemasterpotion",
-                ),
-            )
-
-        # Test valid entity types
-        def test_entity_types(self):
-            self.assert_enum_values(
-                dl.EntityType,
-                ("Warrior", "Mage", "Skeleton", "Goblin"),
-            )
-    """
     # Entity Validation Tests
 
     # Test is_valid_entity with warrior
@@ -309,40 +187,6 @@ class TestDomainLibrary(unittest.TestCase):
             3,
         )
 
-    """
-        # Spell Name Tests
-
-        # Test Fireball spell name
-        def test_spell_names_fireball(self):
-            self.assert_spell_name(
-                dl.SpellNames.FIREBALL,
-                "Fireball",
-            )
-
-        # Test Heal spell name
-        def test_spell_names_heal(self):
-            self.assert_spell_name(
-                dl.SpellNames.HEAL,
-                "Heal",
-            )
-
-        # Test Frostbolt spell name
-        def test_spell_names_frostbolt(self):
-            self.assert_spell_name(
-                dl.SpellNames.FROSTBOLT,
-                "Frostbolt",
-            )
-
-        # Test that all spell names exist
-        def test_spell_names_contains_all_spells(self):
-            self.assertEqual(
-                len(dl.SpellNames),
-                3,
-            )
-            self.assertIn(dl.SpellNames.FIREBALL, dl.SpellNames)
-            self.assertIn(dl.SpellNames.HEAL, dl.SpellNames)
-            self.assertIn(dl.SpellNames.FROSTBOLT, dl.SpellNames)
-    """
     # Spell Type Tests
 
     # Test Offensive spell type

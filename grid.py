@@ -122,23 +122,6 @@ class Grid:
 
     # Is Passable End
 
-    """   # Get Stats Start
-        # Gets all relevant stats of the tile at designated position and returns them
-        # Params: x,y - int - position of tile
-        # Returns tuple - Contains all stats needed for Command Line Interface commands
-        #       (int x coord, int y coord, str t_type, bool passable, list occupants)
-        def get_stats(self, x, y):
-            stat_tuple = (
-                x,
-                y,
-                self.__grid[x][y].__t_type,
-                self.__grid[x][y].__passable,
-                self.__grid[x][y].__occupants,
-            )
-            return stat_tuple
-
-        # Get Stats End"""
-
     # Within Bounds start
     # checks to see if width and height are within bounds - only runs if they are valid ints
     # Params: width/height - ints
@@ -201,20 +184,6 @@ class Grid:
 
         # return updated grid
         return new_entity
-
-    """
-        # Reset Grid start
-        # resets grid to prevent any errors during testing
-        # Params: None
-        # Return: None
-        def reset_grid(self):
-            # reset grid stats
-            self.__width = 0
-            self.__height = 0
-            self.__grid = []
-            # return grid to CLI
-            return Grid.grid
-    """
 
     # Add Item To Tile List Start
     # Adds the provided item to the current grids

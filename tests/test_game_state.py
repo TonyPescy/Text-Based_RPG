@@ -616,20 +616,6 @@ class TestGameState(unittest.TestCase):
 
     # Placeholder Tests
 
-    """    # Create Momento
-        # Checks the current placeholder method returns None.
-        # Params: None
-        # Returns: None
-        def test_create_momento_placeholder(self):
-            self.assertIsNone(GameState.create_momento())
-
-        # Restore Momento
-        # Checks the current placeholder method returns None.
-        # Params: None
-        # Returns: None
-        def test_restore_momento_placeholder(self):
-            self.assertIsNone(GameState.restore(None))"""
-
     # Checks that the Memento preserves the game state's current values.
     # Checks that the Memento preserves the game state's current values.
     def test_create_memento(self):
@@ -854,7 +840,7 @@ class TestGameState(unittest.TestCase):
 
         self.assertEqual(game_state_info[0], 1)
         self.assertEqual(game_state_info[1], 1)
-        self.assertTrue(game_state_info[2])
+        self.assertFalse(game_state_info[2])
 
     # Checks that an uninitialized game state is not active.
     def test_game_state_is_active_false(self):

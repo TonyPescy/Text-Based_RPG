@@ -564,6 +564,8 @@ class TestEntity(unittest.TestCase):
     def test_process_tick_on_dead_entity(self):
         entity = self.create_test_entity(Warrior, 0)
         entity.handle_death()
+        entity.process_tick_on_entity()
+        entity.process_tick_on_entity()
         self.assertTrue(entity.process_tick_on_entity())
 
     # Tests for GameState entity management

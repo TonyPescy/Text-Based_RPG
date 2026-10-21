@@ -55,14 +55,6 @@ class Spell:
         self.__target_type = target_type
         self.__spell_power_modifier = spell_power_modifier
 
-    """
-        # Get Range
-        # Gets the range of spell this is called on
-        # Params:   spell
-        # Returns: range - int - Spell range
-        def get_range(self):
-            return self.__spell_range"""
-
     # Get Info
     # Gets the info of spell this is called on
     # Params: None
@@ -276,36 +268,6 @@ class Frostbolt(EffectSpell):
             {"Flat_modifiers": {"Speed": -2}, "Percent_modifiers": {}},
             1,
         )
-
-
-"""# Spells Dictionary
-SPELLS = {
-    dl.SpellNames.FIREBALL.value: Fireball,
-    dl.SpellNames.HEAL.value: Heal,
-    dl.SpellNames.FROSTBOLT.value: Frostbolt,
-}"""
-
-"""
-# Spells Factory
-# Creates a spell object based on the given spell name
-# Params:   spell_name - str - Name of spell to create
-# Returns:  Spell instance if valid, otherwise None
-def create_spell(spell_name):
-    # Normalize spell name
-    spell_name = str(spell_name).lower()
-
-    # Create spell based on name
-    match spell_name:
-        case "fireball":
-            return Fireball()
-        case "heal":
-            return Heal()
-        case "frostbolt":
-            return Frostbolt()
-        case _:
-            # Invalid spell name
-            return None
-"""
 
 
 # Get Spell - Spell Factory

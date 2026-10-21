@@ -263,13 +263,6 @@ class GameState:
             entity.update_stats(self)
             self.mark_as_unsaved()
 
-    """    # Update Entity From Info
-    # Updates the matching entity from entity info
-    # Params: entity_info - EntityInfo - entity info to update entity with
-    # Returns: None
-    def update_entity_from_info(self, entity_info):
-        self.update_entity(entity_info.id)"""
-
     # Is Valid Grid Position
     # Returns t/f is grid positon is valid
     # Params: x/y - ints - grid position

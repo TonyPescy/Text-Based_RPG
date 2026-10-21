@@ -15,28 +15,6 @@ import equipment
 from enum import Enum
 
 # Constants
-"""# Equipment Types Dictionary - CHANGE TO MATCH SPELL NAMES
-EQUIPMENT_TYPES = {
-    "ironsword": equipment.IronSword,
-    "curseddagger": equipment.CursedDagger,
-    "magestaff": equipment.MageStaff,
-    "ironchestplate": equipment.IronChestplate,
-    "leathertunic": equipment.LeatherTunic,
-    "scoutarmor": equipment.ScoutArmor,
-    "ringofthesorcerer": equipment.RingOfTheSorcerer,
-    "amuletofvitality": equipment.AmuletOfVitality,
-    "ringofhaste": equipment.RingOfHaste,
-    "none_wep": equipment.NoneWeapon,
-    "none_armor": equipment.NoneArmor,
-    "none_acc": equipment.NoneAccessory,
-    "smallhealthpotion": equipment.SmallHealthPotion,
-    "greaterhealthpotion": equipment.GreaterHealthPotion,
-    "superiorhealthpotion": equipment.SuperiorHealthPotion,
-    "manapotion": equipment.ManaPotion,
-    "turtlemasterpotion": equipment.TurtleMasterPotion,
-}
-
-"""
 
 
 # Enums for equipment slots
@@ -52,24 +30,6 @@ class EquipmentSlotIndex(Enum):
     ARMOR = 1
     ACCESSORY = 2
 
-    """# Valid consumables Enums
-    class ConsumableType(Enum):
-        SMALL_HEALTH_POTION = "smallhealthpotion"
-        GREATER_HEALTH_POTION = "greaterhealthpotion"
-        SUPERIOR_HEALTH_POTION = "superiorhealthpotion"
-        MANA_POTION = "manapotion"
-        TURTLE_MASTER_POTION = "turtlemasterpotion"
-
-
-    # Entity Types Constant
-    # Entity Constants enum
-    class EntityType(Enum):
-        WARRIOR = "Warrior"
-        MAGE = "Mage"
-        SKELETON = "Skeleton"
-        GOBLIN = "Goblin"
-    """
-
 
 # Attack Types Constants Enums
 class AttackTypes(Enum):
@@ -82,34 +42,11 @@ MELEE_RANGE = 1
 RANGED_RANGE = 3  # May want to restrict to be 2-3 only not 1-3 so it doesnt completely outclass melee
 
 
-"""# Spell name enums
-class SpellNames(Enum):
-    FIREBALL = "Fireball"
-    HEAL = "Heal"
-    FROSTBOLT = "Frostbolt"
-"""
-
-
 # Spell Type enums
 class SpellTypes(Enum):
     OFFENSIVE = "Offensive"
     SUPPORT = "Support"
     CONTROL = "Control"
-
-
-"""# Equipment Factory Start
-# Used to create all of the equipment based on item_name provided
-# Params: item_name - string - name of item to be created
-# Returns: Initialized matching item
-def create_equipment(item_name):
-    # Get item from equipment types dictionary
-    equipment_type = EQUIPMENT_TYPES.get(item_name)
-
-    # Check for error finding item with given name
-    if equipment_type is None:
-        return None  # Handle error on other end
-
-    return equipment_type()  # Return initialized item"""
 
 
 # Base Invetory for all Entities

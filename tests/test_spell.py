@@ -178,20 +178,6 @@ class TestSpell(unittest.TestCase):
             spell_power_modifier,
         )
 
-    """
-        # Assert Spell Dictionary Entry
-        # Checks that the spell dictionary contains the expected class
-        # Params: spell_name - str - Name of the spell
-        #         spell_class - class - Expected spell class
-        # Returns: None
-        def assert_spell_dictionary_entry(self, spell_name, spell_class):
-            # Verify spell exists
-            self.assertIn(spell_name, spell.SPELLS)
-
-            # Verify spell class
-            self.assertEqual(spell.SPELLS[spell_name], spell_class)
-    """
-
     # Assert Get Spell Returns
     # Checks that get_spell returns an instance of the expected spell class
     # Params: spell_name - str - Name of the spell to retrieve
@@ -615,44 +601,6 @@ class TestSpell(unittest.TestCase):
             frostbolt.over_time_effects,
             frostbolt.duration,
         )
-
-    """    # Spell Dictionary Tests
-
-    # Test spell dictionary contains all spells
-    def test_spell_dictionary_contains_all_spells(self):
-        self.assert_spell_dictionary_entry(
-            "Fireball",
-            spell.Fireball,
-        )
-        self.assert_spell_dictionary_entry(
-            dl.SpellNames.HEAL.value,
-            spell.Heal,
-        )
-        self.assert_spell_dictionary_entry(
-            "Frostbolt",
-            spell.Frostbolt,
-        )
-
-    # Test spell dictionary returns the Fireball class
-    def test_spell_dictionary_returns_correct_fireball_class(self):
-        self.assert_spell_dictionary_entry(
-            "Fireball",
-            spell.Fireball,
-        )
-
-    # Test spell dictionary returns the Heal class
-    def test_spell_dictionary_returns_correct_heal_class(self):
-        self.assert_spell_dictionary_entry(
-            "Heal",
-            spell.Heal,
-        )
-
-    # Test spell dictionary returns the Frostbolt class
-    def test_spell_dictionary_returns_correct_frostbolt_class(self):
-        self.assert_spell_dictionary_entry(
-            "Frostbolt",
-            spell.Frostbolt,
-        )"""
 
     # Get Spell Tests
 

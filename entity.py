@@ -134,25 +134,6 @@ class Entity:
             ),
         )
 
-    """
-        # Get Stats Start
-        # Gets all relevant stats of the entity and returns them
-        # Params: None
-        # Returns dictionary - Contains all stats needed for Command Line Interface commands
-        #       (int id, str e_type, tuple x/y coords, int health, int attack, int defence, int speed, list of two dictionaries active_modifiers)
-        def get_stats(self):
-            stat_dict = {
-                "Id": self.__id,
-                "Type": self.__e_type,
-                "Position": self.__position,
-                "Health": self.__health,
-                "Attack": self.__attack,
-                "Defence": self.__defence,
-                "Speed": self.__speed,
-                "Active_modifiers": self.__active_modifiers,
-            }
-            return stat_dict"""
-
     # Get Stats End
 
     # Get Stat
@@ -852,25 +833,6 @@ class Mage(Entity):
         self.__max_mana = memento.max_mana
         self.__spell_power = memento.spell_power
 
-    """# Get Stats Start
-    # Gets all relevant stats of the entity and returns them
-    # Params: None
-    # Returns dictionary - Contains all stats needed for Command Line Interface commands
-    #       (int id, str e_type, tuple x/y coords, int health, int mana, int attack, int defence, int speed, list of two dictionaries active_modifiers)
-    def get_stats(self):
-        stat_dict = {
-            "Id": self.id,
-            "Type": self.e_type,
-            "Position": self.position,
-            "Health": self.health,
-            "Mana": self.mana,
-            "Attack": self.attack,
-            "Defence": self.defence,
-            "Speed": self.speed,
-            "Active_modifiers": self.active_modifiers,
-        }
-        return stat_dict"""
-
     # Get Stats End
 
     # Reset Stats Start
@@ -921,60 +883,8 @@ class Mage(Entity):
     # Return: None
     def update_stats(self, game_state):
         super().update_stats(game_state)
-        """# starting health - used to set health after reset
-        # starting_health = self.__health
-        # starting mana - used to set mana after reset
-        # starting_mana = self.__mana
-        # Clear active modifiers to avoid double counting of modifiers
-        self._Entity__active_modifiers["Flat_modifiers"] = {}
-        self._Entity__active_modifiers["Percent_modifiers"] = {}
-        # Stats to be checked
-        # stats = ("Health", "Attack", "Defence", "Speed")
-        # Check all inventory slots for modifiers to add to active_modifiers of entity
-        for slot in self._Entity__inventory:
-            slot_info = slot.get_info()
-            # Iterate through all stats modified within current slot
-            for stat, modifier in slot_info.effects:
-                # Handle modifiers split between flat and percent
-                self.handle_modifiers(stat, modifier)
 
-        # Tile modifiers
-        # Get entity grid position
-        x = self._Entity__position[0]
-        y = self._Entity__position[1]
-
-        # Get current tile
-        tile = game_state.get_game_tile_info(x, y)
-
-        # Handle modifiers for tile - split due to way tile modifiers are setup - FIX?
-        for stat, modifier in tile.modifiers:
-            self.handle_modifiers(stat, modifier)
-
-        # Handle temp buffs
-        for buff in self.__temp_buffs:
-            for modifier_type, modifiers in buff["Effects"].items():
-                for stat, amount in modifiers.items():
-
-                    # Convert modifier into handle_modifiers format
-                    if modifier_type == "Flat_modifiers":
-                        modifier = str(amount)
-
-                    elif modifier_type == "Percent_modifiers":
-                        modifier = str(amount) + "%"
-
-                    else:
-                        continue
-
-                    self.handle_modifiers(stat, modifier)
-
-        # Since stats will be changed and overwritten, we need the entity stats set to their bases
-        self.reset_stats()
-        # Calculate the entities final stats
-        self.calculate_final_stats()
-        # Update max stats
-        self.calculate_max_stats()"""
-
-        # Update Stats End
+    # Update Stats End
 
     # Calculate Max Values
     # Calculates the max health and/or mana of entity

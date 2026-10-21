@@ -1921,6 +1921,8 @@ class TestCLI(unittest.TestCase):
         self.create_test_map(test_cli)
         self.create_dead_entity(test_cli, "Warrior", 1, 1)
         # Process tick
+        self.process_command_and_get_output(test_cli, "tick")
+        self.process_command_and_get_output(test_cli, "tick")
         output = self.process_command_and_get_output(test_cli, "tick")
         # Check dead entity was removed from the entity list and tile
         self.assertIn("advanced to turn", output)
@@ -1933,6 +1935,8 @@ class TestCLI(unittest.TestCase):
         self.create_test_map(test_cli)
         self.create_dead_entity(test_cli, "Warrior", 1, 1)
         self.create_dead_entity(test_cli, "Goblin", 2, 1, entity_id=2)
+        self.process_command_and_get_output(test_cli, "tick")
+        self.process_command_and_get_output(test_cli, "tick")
         # Process tick
         output = self.process_command_and_get_output(test_cli, "tick")
         # Check all dead entities were removed
@@ -2085,7 +2089,7 @@ class TestCLI(unittest.TestCase):
         output = self.process_command_and_get_output(test_cli, "state-info")
 
         self.assertIn("ok: turn ", output)
-        self.assertIn("entities:1", output)
+        self.assertIn("entities: 1", output)
         self.assertIn("saved:", output)
 
     # Test displaying state information when the game is inactive
