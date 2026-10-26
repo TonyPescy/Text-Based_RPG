@@ -6,6 +6,8 @@ Test-based RPG where a grid of tiles is occupied by players, monsters, and items
 Tony Pescatore
 
 ## Table of Contents
+[Running The Game](#running-the-game)
+
 [Entities](#entities)
 
 [Equipment](#equipment)
@@ -19,6 +21,14 @@ Tony Pescatore
 [Design Decisions](#design-decisions)
 
 [Game Commands](#game-commands)
+
+## Running The Game
+[Table of Contents](#table-of-contents)
+Run the by using the following command in your terminal:
+
+```
+python main.py
+```
 
 ## Entities
 [Table of Contents](#table-of-contents)

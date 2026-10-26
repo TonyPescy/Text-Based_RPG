@@ -1064,23 +1064,3 @@ class CLI:
             return value.capitalize()
         else:
             return value
-
-
-# Main to run the command line interface
-# While true to get user inputs
-def main():
-    # Create command line interface
-    main_cli = CLI()
-    while True:
-        command = input("Enter Command (or 'quit' to exit)> ")
-        # Exit command sent
-        if command.lower() == "quit":
-            print("Thank you for playing!")
-            break
-
-        # Process command
-        main_cli.process_command(command)
-
-
-if __name__ == "__main__":
-    main()
