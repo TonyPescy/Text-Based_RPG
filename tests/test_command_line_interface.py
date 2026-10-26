@@ -867,7 +867,7 @@ class TestCLI(unittest.TestCase):
     def test_main_quits(self, mock_input):
         # Capture output
         with patch("sys.stdout", new=io.StringIO()) as mock_stdout:
-            from command_line_interface import main
+            from main import main
 
             main()
         # Check output
@@ -2115,6 +2115,55 @@ class TestCLI(unittest.TestCase):
 
         self.assertIn("error: state_info_failed", output)
         self.assertIn("Unable to retrieve state", output)
+
+    # Test Undo Command With No Commands
+    # Verify that undo fails when no commands have been executed
+    # Returns: None
+    def test_undo_command_no_commands(self):
+        test_cli = self.create_test_cli()
+
+        output = self.process_command_and_get_output(test_cli, "undo")
+
+        self.assertIn("error: undo_failed - No commands to undo!", output)
+
+    # Test Undo Command Invalid Arguments
+    # Verify that undo rejects commands with extra arguments
+    # Returns: None
+    def test_undo_command_invalid_arguments(self):
+        test_cli = self.create_test_cli()
+
+        output = self.process_command_and_get_output(test_cli, "undo extra")
+
+        self.assertIn("error: undo_failed - Invalid command!", output)
+
+    # Test Undo Command Successfully Undoes Move
+    # Verify that undo reverses the last successfully executed move
+    # Returns: None
+    def test_undo_command_success(self):
+        test_cli = self.create_test_cli()
+        self.create_test_map(test_cli)
+        self.create_test_entity(test_cli, "Warrior", 1, 1)
+
+        # Execute a move command to create an undoable command
+        move_output = self.process_command_and_get_output(test_cli, "move 1 2 1")
+
+        # Ensure the move command succeeded before testing undo
+        self.assertNotIn("error:", move_output.lower())
+
+        # Undo the move
+        output = self.process_command_and_get_output(test_cli, "undo")
+
+        self.assertIn("ok: undone Move!", output)
+
+    # Test Undo Command Only Accepts One Argument
+    # Verify that undo rejects multiple extra arguments
+    # Returns: None
+    def test_undo_command_multiple_invalid_arguments(self):
+        test_cli = self.create_test_cli()
+
+        output = self.process_command_and_get_output(test_cli, "undo extra arguments")
+
+        self.assertIn("error: undo_failed - Invalid command!", output)
 
 
 if __name__ == "__main__":

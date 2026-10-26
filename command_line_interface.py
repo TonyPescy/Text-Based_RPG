@@ -10,16 +10,14 @@ Filename: command_line_interface.py
 Purpose: Run all public facing functions that the player will use to interact with the game. Handles user inputted commands and parses them accordingly.
 """
 
-# Always Update Stats before using or checking them in case changes have happened
-# Examples: Tiles moved, item equipped, combat, etc
-# Could also update after these movements - pick one to reduce redundancy (Probs do the latter)
-
 # Imports
 import equipment
 import domain_library as dl
 from grid import Grid, Tile
 from entity import Entity, EntityInfo, MageInfo
 from game_state_manager import GameStateManager
+from command_manager import CommandManager
+from command import MoveCommand
 
 # from spell import get_spell
 from game_state import GameState
@@ -32,6 +30,7 @@ class CLI:
     def __init__(self):
         self.game_state = GameState()
         self.game_state_manager = GameStateManager()
+        self.command_manager = CommandManager()
 
     # Process Command Start
     # Handles all commands that user can write
@@ -67,6 +66,7 @@ class CLI:
             "save": self.process_save_command,
             "load": self.process_load_command,
             "state-info": self.process_state_info_command,
+            "undo": self.process_undo_command,
         }
 
         # Match handler to command
@@ -733,8 +733,12 @@ class CLI:
             return
         # Success Case
         else:
+            # Create and execute move command
+            command = MoveCommand(self.game_state, entity_info.id, x, y)
             # Move entity
-            self.game_state.move_entity(entity_info.id, x, y)
+            self.command_manager.execute_command(command)
+
+            # self.game_state.move_entity(entity_info.id, x, y)
             print(f"ok: moved {entity_id} to {x}, {y}!")
             return
 
@@ -1053,6 +1057,24 @@ class CLI:
             self.game_state.spawn_loot(x, y, item_name)
             print(f"ok: spawn_loot {item_name} at {x}, {y}!")
             return
+
+    # Process Undo Command
+    # Reverses the last successfully executed command
+    # Params: command_pieces - list - list of strings that make up the command
+    # Returns: None
+    def process_undo_command(self, command_pieces):
+        if len(command_pieces) != 1:
+            print("error: undo_failed - Invalid command!")
+            return
+
+        # Get command after undoing it
+        is_undone, command_undone = self.command_manager.undo_last_command()
+
+        if is_undone:
+            name = command_undone.get_name()
+            print(f"ok: undone {name}!")
+        else:
+            print("error: undo_failed - No commands to undo!")
 
     # Capitalize If String Start
     # Will capitalize and return string if it is a string

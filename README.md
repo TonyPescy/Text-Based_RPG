@@ -24,7 +24,7 @@ Tony Pescatore
 
 ## Running The Game
 [Table of Contents](#table-of-contents)
-Run the by using the following command in your terminal:
+Run the game by entering the following command in your terminal:
 
 ```
 python main.py
@@ -214,6 +214,13 @@ python main.py
 
 **Contraints:** Game state must be created and active.
 
+### Undo
+**Description:** Undos the most recent command if it is able to be undone.
+
+**Called as:** state-info
+
+**Contraints:** Game state must be created and active.
+
 ## Design Decisions
 [Table of Contents](#table-of-contents)
 
@@ -289,6 +296,13 @@ python main.py
 - Classes that have stats that change such as entity, grid, and game state will need the momentos created, other than that new instances will be created for static valued instances (Example: Items will always have the same stat so they will be recreated when loading a save). These static instances can be created from their name so where they are saved will just be a name to recreate them.
 - Cleans and validates save data before calling restore functions to ensure game state is restored correctly and completely.
 - Handles loading and saving from files as well as conversion to JSON from mementos. Calls other classes to create and to restore their own memento to follow Single Responsibility Principle.
+
+### Command
+- Commands ... NEEDED
+- Game state verification checks are done prior to the execution of the commands being undone or redone, so the reverification is redundant here.
+
+### Command Manager
+
 
 ### Other
 - Values for entities, tiles, spells, equipment, grids, and game state are marked as private (__varname). To access this information x.getinfo() will return a immutable copy to prevent any of that private data from being public and able to be modified. When these do need to be changed, such as an entity losing health, it is handled within its own class.
