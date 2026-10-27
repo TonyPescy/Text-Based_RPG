@@ -407,6 +407,7 @@ class Entity:
                 if buff_name == buff["Name"]:
                     # Check for dead status for special case handling
                     if buff["Name"] == "Dead":
+                        self.__temp_buffs.remove(buff)
                         return True
 
                     self.__temp_buffs.remove(buff)

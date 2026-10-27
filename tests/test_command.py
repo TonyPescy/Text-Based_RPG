@@ -349,6 +349,55 @@ class TestCommand(unittest.TestCase):
         test_game_state.restore_entity_health.assert_called_once_with(2, 10)
         self.assertEqual(test_command.get_damage(), 10)
 
+    # Test Attack Command Undo Removes Dead Status
+    def test_attack_command_undo_removes_dead_status(self):
+        game_state = MagicMock()
+        entity = MagicMock()
+        entity_info = MagicMock()
+
+        entity_info.temp_buffs = ((("Name", "Dead"), ("Effects", []), ("Turns", 0)),)
+        entity.get_info.return_value = entity_info
+        game_state.get_entity_from_list.return_value = entity
+
+        command = AttackCommand(game_state, 1, 2)
+        command.execute()
+        command.undo()
+
+        entity.remove_temp_buffs.assert_called_once_with(["Dead"])
+        game_state.restore_entity_health.assert_called_once_with(
+            2, command.get_damage()
+        )
+
+    # Test Attack Command Undo Without Dead Status
+    def test_attack_command_undo_without_dead_status(self):
+        game_state = MagicMock()
+        entity = MagicMock()
+        entity_info = MagicMock()
+
+        entity_info.temp_buffs = ()
+        entity.get_info.return_value = entity_info
+        game_state.get_entity_from_list.return_value = entity
+
+        command = AttackCommand(game_state, 1, 2)
+        command.execute()
+        command.undo()
+
+        entity.remove_temp_buffs.assert_not_called()
+        game_state.restore_entity_health.assert_called_once_with(
+            2, command.get_damage()
+        )
+
+    # Test Attack Command Undo Before Execute
+    def test_attack_command_undo_before_execute(self):
+        game_state = MagicMock()
+        command = AttackCommand(game_state, 1, 2)
+
+        with self.assertRaises(ValueError):
+            command.undo()
+
+        game_state.get_entity_from_list.assert_not_called()
+        game_state.restore_entity_health.assert_not_called()
+
 
 if __name__ == "__main__":
     unittest.main()

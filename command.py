@@ -217,6 +217,19 @@ class AttackCommand(Command):
     def undo(self):
         if self.__damage is None:
             raise ValueError("Attack has not been executed!")
+        # Get entity and check for dead status
+        entity = self.__game_state.get_entity_from_list(self.__target_id)
+        entity_info = entity.get_info()
+        # Check if entity has the Dead status
+        is_dead = any(
+            dict(temp_buff).get("Name") == "Dead"
+            for temp_buff in entity_info.temp_buffs
+        )
+
+        # If entity had Dead status
+        if is_dead:
+            # Remove it
+            entity.remove_temp_buffs(["Dead"])
 
         self.__game_state.restore_entity_health(self.__target_id, self.__damage)
 
