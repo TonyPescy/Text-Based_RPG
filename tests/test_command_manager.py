@@ -94,7 +94,6 @@ class TestCommandManager(unittest.TestCase):
         self.assertIs(command_undone, first_command)
         first_command.undo.assert_called_once()
 
-    """
     # Test Redo Last Command
     # Verify that redo repeats the most recently undone command
     # Returns: None
@@ -167,7 +166,7 @@ class TestCommandManager(unittest.TestCase):
 
         self.assertFalse(is_redone)
         self.assertIsNone(command_redone)
-        first_command.redo.assert_not_called()"""
+        first_command.redo.assert_not_called()
 
     # Test Clear History
     # Verify that clearing history empties both undo and redo stacks
@@ -182,12 +181,12 @@ class TestCommandManager(unittest.TestCase):
         test_manager.clear_history()
 
         is_undone, command_undone = test_manager.undo_last_command()
-        # is_redone, command_redone = test_manager.redo_last_command()
+        is_redone, command_redone = test_manager.redo_last_command()
 
         self.assertFalse(is_undone)
         self.assertIsNone(command_undone)
-        """self.assertFalse(is_redone)
-        self.assertIsNone(command_redone)"""
+        self.assertFalse(is_redone)
+        self.assertIsNone(command_redone)
 
         test_command.undo.assert_called_once()
         test_command.redo.assert_not_called()
@@ -243,7 +242,6 @@ class TestCommandManager(unittest.TestCase):
         # The command should remain available in undo history
         test_command.undo.assert_called_once()
 
-    """
     # Test Failed Redo Behavior
     # Verify that a failed redo does not lose the command from redo history
     # Returns: None
@@ -259,7 +257,7 @@ class TestCommandManager(unittest.TestCase):
             test_manager.redo_last_command()
 
         # The command should remain available in redo history
-        test_command.redo.assert_called_once()"""
+        test_command.redo.assert_called_once()
 
 
 if __name__ == "__main__":

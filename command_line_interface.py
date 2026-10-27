@@ -17,7 +17,7 @@ from grid import Grid, Tile
 from entity import Entity, EntityInfo, MageInfo
 from game_state_manager import GameStateManager
 from command_manager import CommandManager
-from command import MoveCommand
+from command import MoveCommand, SpawnCommand, SpawnLootCommand, AttackCommand
 
 # from spell import get_spell
 from game_state import GameState
@@ -67,6 +67,7 @@ class CLI:
             "load": self.process_load_command,
             "state-info": self.process_state_info_command,
             "undo": self.process_undo_command,
+            "redo": self.process_redo_command,
         }
 
         # Match handler to command
@@ -799,8 +800,12 @@ class CLI:
         if self.game_state.is_within_range(
             attacker_x, attacker_y, defender_x, defender_y, attack_range
         ):
-            # Continue attack as defender is within attack range
-            damage = self.game_state.attack_entity(attacker_info.id, defender_info.id)
+            # Create command and execute it
+            command = AttackCommand(self.game_state, attacker_info.id, defender_info.id)
+            # Execute command
+            self.command_manager.execute_command(command)
+            # Get damage
+            damage = command.get_damage()
             # Print success message
             print(
                 f"ok: attack {attacker_id} dealt {damage} {attacker_info.attack_type} damage to {defender_id}!"
@@ -1023,8 +1028,10 @@ class CLI:
             return
         # All valid inputs
         else:
-            # updates grid with new entity
-            self.game_state.spawn_entity(x, y, entity_type)
+            # Creates and executes the command
+            command = SpawnCommand(self.game_state, entity_type, x, y)
+            # Spawn entity
+            self.command_manager.execute_command(command)
             # success output
             print(
                 f"ok: Spawned {entity_type} at {x}, {y}. id: {self.game_state.get_entity_id_from_tile(x, y)}!"
@@ -1054,7 +1061,10 @@ class CLI:
             print("error: spawn_failed - Item name not found!")
             return
         else:  # Success
-            self.game_state.spawn_loot(x, y, item_name)
+            # Create command and execute it
+            command = SpawnLootCommand(self.game_state, item_name, x, y)
+            # Spawn loot
+            self.command_manager.execute_command(command)
             print(f"ok: spawn_loot {item_name} at {x}, {y}!")
             return
 
@@ -1075,6 +1085,24 @@ class CLI:
             print(f"ok: undone {name}!")
         else:
             print("error: undo_failed - No commands to undo!")
+
+    # Process Redo Command
+    # Reverses the most recently undo if a command has not been since the last undo
+    # Params: command_pieces - list - list of strings making up the command
+    # Returns: None
+    def process_redo_command(self, command_pieces):
+        if len(command_pieces) != 1:
+            print("error: redo_failed - Invalid command!")
+            return
+
+        # Get command after undoing it
+        is_redone, command_redone = self.command_manager.redo_last_command()
+
+        if is_redone:
+            name = command_redone.get_name()
+            print(f"ok: redone {name}!")
+        else:
+            print("error: redo_failed - No commands to redo!")
 
     # Capitalize If String Start
     # Will capitalize and return string if it is a string

@@ -463,7 +463,7 @@ class TestEntity(unittest.TestCase):
         defender = self.create_test_entity(Goblin, 1)
         defender.update_single_stat("Health", 5)
         damage = attacker.attack_entity(defender)
-        self.assertEqual(damage, 12)
+        self.assertEqual(damage, 5)
         self.assertEqual(defender.get_info().health, 0)
         self.assertFalse(defender.is_alive())
 

@@ -475,13 +475,18 @@ class Entity:
     def attack_entity(self, target):
         # Get damage dealt
         damage = max(1, (self.__attack - target.__defence))
+        # Decide on what the damage should be - based on if damage will kill the entity or not
+        if damage > target.__health:
+            return_damage = target.__health
+        else:
+            return_damage = damage
         # Subtract health from defender with max at 0 - prevents underflow
         target.__health = max(0, (target.__health - damage))
         # Handle target death
         if target.__health == 0:
             target.handle_death()
         # return damage for success message
-        return damage
+        return return_damage
 
     # Is Alive
     # Checks entity to see if they are alive

@@ -852,6 +852,77 @@ class TestGameState(unittest.TestCase):
 
         self.assertTrue(self.game_state.game_state_is_active())
 
+    # Test Undo Spawn
+    def test_undo_spawn(self):
+        self.create_test_grid()
+        self.create_spawned_entity()
+
+        self.game_state.undo_spawn(1)
+
+        self.assertIsNone(self.game_state.get_entity_from_list(1))
+
+    # Test Undo Spawn Decreases Entity Counter
+    def test_undo_spawn_decreases_entity_counter(self):
+        self.create_test_grid()
+        self.create_spawned_entity()
+
+        self.game_state.undo_spawn(1)
+
+        # Spawn another entity and verify its ID
+        self.game_state.spawn_entity(1, 1, "warrior")
+
+        entity_info = self.game_state.get_entity_info_from_list(1)
+        self.assertIsNotNone(entity_info)
+
+    # Test Undo Spawn Removes Entity From Grid
+    def test_undo_spawn_removes_entity_from_grid(self):
+        self.create_test_grid()
+        self.create_spawned_entity(x=0, y=0)
+
+        self.game_state.undo_spawn(1)
+
+        # Verify the entity no longer occupies its original tile
+        self.assertIsNone(self.game_state.get_entity_id_from_tile(0, 0))
+
+        # Test Restore Entity Health
+
+    def test_restore_entity_health(self):
+        self.create_test_grid()
+        self.create_spawned_entity()
+
+        original_health = self.game_state.get_entity_info_from_list(1).health
+
+        self.game_state.update_single_entity_stat(1, "Health", 100)
+        self.game_state.restore_entity_health(1, 20)
+
+        entity_info = self.game_state.get_entity_info_from_list(1)
+        self.assertEqual(entity_info.health, original_health)
+
+    # Test Restore Entity Health With Partial Damage
+    def test_restore_entity_health_partial_damage(self):
+        self.create_test_grid()
+        self.create_spawned_entity()
+
+        damage = 10
+
+        self.game_state.update_single_entity_stat(1, "Health", 100)
+        self.game_state.restore_entity_health(1, damage)
+
+        entity_info = self.game_state.get_entity_info_from_list(1)
+        self.assertEqual(entity_info.health, 110)
+
+    # Test Restore Entity Health With Zero Damage
+    def test_restore_entity_health_zero_damage(self):
+        self.create_test_grid()
+        self.create_spawned_entity()
+
+        original_health = self.game_state.get_entity_info_from_list(1).health
+
+        self.game_state.restore_entity_health(1, 0)
+
+        entity_info = self.game_state.get_entity_info_from_list(1)
+        self.assertEqual(entity_info.health, original_health)
+
 
 # Run the tests
 if __name__ == "__main__":

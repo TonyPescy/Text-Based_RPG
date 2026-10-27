@@ -180,9 +180,12 @@ class GameState:
     def get_entity_id_from_tile(self, x, y):
         # Get tile info
         tile_info = self.__grid.get_tile_info(int(x), int(y))
-        return tile_info.occupants[0]
+        # None is occupants is 0
+        if len(tile_info.occupants) == 0:
+            return None
+        else:
+            return tile_info.occupants[0]
 
-    # REDO UPON RESTRUCTURE OF ENTITY - HERE
     # Get entity from list
     # Gets real entity from entity list
     # Params: id - int - entity ID
@@ -276,7 +279,7 @@ class GameState:
     # Spawns entity for game grid
     # Params:   x/y - ints - positions on grid
     #           entity_type - String - type of entity to spawn
-    # Returns: None
+    # Returns: id - int - entity id
     def spawn_entity(self, x, y, entity_type):
         # Spawned entity should be a immutable copy of the entity spawned, so that it can be updated without affecting the original entity
         spawned_entity = self.__grid.spawn_entity(
@@ -291,6 +294,7 @@ class GameState:
         # Update Entity
         self.update_entity(self.__entity_ids_issued - 1)
         self.mark_as_unsaved()
+        return self.__entity_ids_issued - 1
 
     # Spawn Loot
     # Spawns loot on game grid
@@ -573,3 +577,27 @@ class GameState:
 
         # Resets save status after restoration
         self.__is_saved = False
+
+    # Undo Spawn
+    # Undos a spawn and decreases the entity counter
+    # Params: entity_id - int - entity to remove
+    # Returns:
+    def undo_spawn(self, entity_id):
+        # Remove entity
+        self.remove_entity_from_game(entity_id)
+        # Reduce ids counter
+        self.__entity_ids_issued -= 1
+
+    # Restore Entity Health
+    # Restores entity health when any damage is undone against the target
+    # Params:   entity_id - int - id of target for the attack
+    #           damage - int - damage to recover
+    # Returns: None
+    def restore_entity_health(self, entity_id, damage):
+        # Get entity info
+        entity = self.get_entity_from_list(entity_id)
+        entity_info = entity.get_info()
+        # Calculate new health value
+        new_health = entity_info.health + damage
+        # Update stats
+        self.update_single_entity_stat(entity_id, "Health", new_health)

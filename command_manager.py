@@ -27,6 +27,8 @@ class CommandManager:
         # Execute before recording so failed commands aren't added
         command.execute()
         self.__undo_history.append(command)
+        # Resets redo history - prevents undoing a move then redoing one that should not be possible
+        self.__redo_history.clear()
 
     # Undo Last Command
     # Reverses the most recently executed command
@@ -41,6 +43,21 @@ class CommandManager:
         # Add commmand to redo history
         self.__redo_history.append(command)
         command.undo()
+        return True, command
+
+    # Redo Last Command
+    # Reverses the most recently undone command
+    # Params: None
+    # Returns:  bool - True if a command was redone
+    #           command - Command - command that was redone
+    def redo_last_command(self):
+        if len(self.__redo_history) == 0:
+            return False, None
+
+        command = self.__redo_history.pop()
+        # Add command to undo history
+        self.__undo_history.append(command)
+        command.redo()
         return True, command
 
     # Clear History

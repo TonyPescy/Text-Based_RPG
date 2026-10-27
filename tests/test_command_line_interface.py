@@ -15,9 +15,8 @@ import unittest
 from unittest.mock import patch
 import io
 from command_line_interface import CLI
-from grid import Grid, Tile
 from entity import Entity
-import domain_library as dl
+from unittest.mock import MagicMock
 
 
 class TestCLI(unittest.TestCase):
@@ -2156,14 +2155,60 @@ class TestCLI(unittest.TestCase):
         self.assertIn("ok: undone Move!", output)
 
     # Test Undo Command Only Accepts One Argument
-    # Verify that undo rejects multiple extra arguments
-    # Returns: None
     def test_undo_command_multiple_invalid_arguments(self):
         test_cli = self.create_test_cli()
 
         output = self.process_command_and_get_output(test_cli, "undo extra arguments")
 
         self.assertIn("error: undo_failed - Invalid command!", output)
+
+        # Test Process Redo Command
+
+    # Tests that the redo command redoes the last undone command
+    def test_process_redo_command(self):
+        test_cli = self.create_test_cli()
+
+        # Add a command to the redo history
+        command = MagicMock()
+        command.get_name.return_value = "Move"
+        test_cli.command_manager.redo_last_command = MagicMock(
+            return_value=(True, command)
+        )
+
+        # Process redo command
+        output = self.process_command_and_get_output(test_cli, "redo")
+
+        # Verify the command was redone
+        test_cli.command_manager.redo_last_command.assert_called_once()
+        self.assertEqual(output.strip(), "ok: redone Move!")
+
+    # Test Process Redo Command With Invalid Arguments
+    # Tests that redo rejects commands with additional arguments
+    def test_process_redo_command_invalid_arguments(self):
+        test_cli = self.create_test_cli()
+
+        # Process redo command with extra arguments
+        output = self.process_command_and_get_output(test_cli, "redo extra")
+
+        # Verify the error message
+        self.assertEqual(output.strip(), "error: redo_failed - Invalid command!")
+
+    # Test Process Redo Command With Empty History
+    # Tests that redo reports an error when there are no commands to redo
+    def test_process_redo_command_empty_history(self):
+        test_cli = self.create_test_cli()
+
+        # Simulate an empty redo history
+        test_cli.command_manager.redo_last_command = MagicMock(
+            return_value=(False, None)
+        )
+
+        # Process redo command
+        output = self.process_command_and_get_output(test_cli, "redo")
+
+        # Verify the error message
+        test_cli.command_manager.redo_last_command.assert_called_once()
+        self.assertEqual(output.strip(), "error: redo_failed - No commands to redo!")
 
 
 if __name__ == "__main__":

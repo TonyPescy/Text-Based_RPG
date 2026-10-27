@@ -217,9 +217,23 @@ python main.py
 ### Undo
 **Description:** Undos the most recent command if it is able to be undone.
 
-**Called as:** state-info
+**Called as:** undo
 
-**Contraints:** Game state must be created and active.
+**Contraints:** An undo-able command must be within the undo stack.
+
+### Redo
+**Description:** Redos the most recently undone command if it is able to be redone.
+
+**Called as:** redo
+
+**Contraints:** An redo-able command must be within the redo stack.
+
+### History
+**Description:** Summarizes the list of recent commands in the undo and redo stacks.
+
+**Called as:** history
+
+**Contraints:** None
 
 ## Design Decisions
 [Table of Contents](#table-of-contents)
