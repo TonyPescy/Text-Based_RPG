@@ -236,6 +236,17 @@ class TestDomainLibrary(unittest.TestCase):
             },
         )
 
+    # Success
+    def test_spell_effects_enum(self):
+        # Check Frostbolt spell effect value
+        self.assertEqual(dl.SpellEffects.FROSTBOLT.value, "Frostbolt")
+
+        # Check Frostbolt spell effect name
+        self.assertEqual(dl.SpellEffects.FROSTBOLT.name, "FROSTBOLT")
+
+        # Check Frostbolt spell effect lookup
+        self.assertEqual(dl.SpellEffects("Frostbolt"), dl.SpellEffects.FROSTBOLT)
+
 
 if __name__ == "__main__":
     unittest.main()

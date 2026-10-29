@@ -17,7 +17,20 @@ from grid import Grid, Tile
 from entity import Entity, EntityInfo, MageInfo
 from game_state_manager import GameStateManager
 from command_manager import CommandManager
-from command import MoveCommand, SpawnCommand, SpawnLootCommand, AttackCommand
+from command import (
+    MoveCommand,
+    SpawnCommand,
+    SpawnLootCommand,
+    AttackCommand,
+    CastSpellCommand,
+    SetTileCommand,
+    PickupCommand,
+    GiveItemCommand,
+    DropItemCommand,
+    SwapItemCommand,
+    UseItemCommand,
+    TickCommand,
+)
 
 # from spell import get_spell
 from game_state import GameState
@@ -143,16 +156,11 @@ class CLI:
             print("error: set_tile_failed - Tile type provided was invalid!")
 
         else:
-            # updates grid with new tile
-            self.game_state.set_game_grid_tile(x, y, tile_type)
-            # update entity if present
-            if self.game_state.is_grid_tile_occupied(x, y):
-                # update entity
-                self.game_state.update_entity(
-                    self.game_state.get_entity_id_from_tile(x, y)
-                )
-            else:
-                pass
+            # Create Command
+            command = SetTileCommand(self.game_state, x, y, tile_type)
+
+            # Execute command
+            command.execute()
             # success output -  with special case for shallowwater
             if tile_type.lower() == "shallowwater":
                 print(f"ok: tile_set {x}, {y} type: ShallowWater!")
@@ -404,20 +412,18 @@ class CLI:
             print("error: pickup_failed - Item not in tiles item list!")
             return
         else:  # item is present and there is backpack space - pickup
-            # Remove item from item_list in grid - returns immutable item info object
-            removed_item = self.game_state.remove_item_from_tile(
-                entity_x, entity_y, tile_item
+            # Create  Command
+            command = PickupCommand(
+                self.game_state,
+                entity_info.id,
+                tile_item,
             )
-            if removed_item is None:
-                print("error: pickup_failed - Item not found!")
-            # Add to backpack
-            self.game_state.add_item_to_backpack_based_on_info(
-                entity_info.id, removed_item.name
-            )
+
+            # Execute command
+            command.execute()
+
             # Success message
-            print(
-                f"ok: picked_up {removed_item.name} into backpack!"
-            )  # change to get name when item is encapsulated
+            print(f"ok: picked_up {tile_item} into backpack!")
 
     # Process Give Item Command
     # Gives matching entity the provided item
@@ -465,10 +471,16 @@ class CLI:
             print("error: give_failed - Backpack if full!")
             return
         else:
-            # Give item to entity
-            self.game_state.add_item_to_backpack_based_on_info(
-                entity_info.id, item_name
+            #  Create Command
+            command = GiveItemCommand(
+                self.game_state,
+                entity_info.id,
+                item_name,
             )
+
+            # Execute command
+            command.execute()
+
             # Success message
             print(f"ok: added {item_name} to {entity_info.id}'s backpack!")
 
@@ -525,17 +537,17 @@ class CLI:
         if item == None:
             print("error: drop_failed - Item not in backpack!")
         else:  # Success case
-            # Add item to the tile
-            self.game_state.add_item_to_tile(entity_x, entity_y, item)
-            # Remove item from entitys bag
-            self.game_state.remove_item_from_backpack_based_on_info(
-                entity_info.id, item
+            # Create Command
+            command = DropItemCommand(
+                self.game_state,
+                entity_info.id,
+                item,
             )
-            # Check if item was in entity's inventory
-            self.game_state.update_inventory_based_on_info(entity_info.id)
-            # update entity's stats - incase item removed was equipped
-            self.game_state.update_entity(entity_info.id)
-            # success message
+
+            # Execute command
+            command.execute()
+
+            # Success message
             print(f"ok: dropped {item} onto tile!")
 
     # Process Swap Item Command
@@ -602,10 +614,18 @@ class CLI:
             print("error: swap_failed - Slot incorrect for item type!")
             return
         else:  # Success - assign item
-            self.game_state.equip_item_based_on_info(entity_info.id, item.name, slot)
+            # Create Command
+            command = SwapItemCommand(
+                self.game_state,
+                entity_info.id,
+                slot,
+                item.name,
+            )
+
+            # Execute Command
+            command.execute()
 
         # Success message and stat update
-        self.game_state.update_entity(entity_info.id)
         print("Valid items:", ", ".join(equipment.get_equipment_names()))
         print(
             "Valid slots:",
@@ -662,7 +682,12 @@ class CLI:
             return
         else:  # Success case
             # Use consumable
-            self.game_state.use_consumable(entity_info.id, item.name)
+            # Create Use Item Command
+            command = UseItemCommand(self.game_state, entity_info.id, item.name)
+
+            # Execute Command
+            command.execute()
+
             print(f"ok: used {item.name}!")
 
     # Process Move Command
@@ -734,9 +759,9 @@ class CLI:
             return
         # Success Case
         else:
-            # Create and execute move command
+            # Create command
             command = MoveCommand(self.game_state, entity_info.id, x, y)
-            # Move entity
+            # Execute command
             self.command_manager.execute_command(command)
 
             # self.game_state.move_entity(entity_info.id, x, y)
@@ -800,7 +825,7 @@ class CLI:
         if self.game_state.is_within_range(
             attacker_x, attacker_y, defender_x, defender_y, attack_range
         ):
-            # Create command and execute it
+            # Create command
             command = AttackCommand(self.game_state, attacker_info.id, defender_info.id)
             # Execute command
             self.command_manager.execute_command(command)
@@ -885,12 +910,17 @@ class CLI:
         if self.game_state.is_within_range(
             caster_x, caster_y, target_x, target_y, spell_info.spell_range
         ):
-            # cast spell on target
-            effect = self.game_state.cast_spell(
-                caster_info.id, target_info.id, spell_info.name
+            # Create Command
+            command = CastSpellCommand(
+                self.game_state,
+                caster_info.id,
+                target_info.id,
+                spell_info.name,
             )
-            # update unit stats
-            # target.update_stats(self)
+            # Execute the command
+            command.execute()
+            # Get spell effect
+            effect = command.get_spell_result()
             # Print success message
             print(
                 f"ok: cast {spell_info.name} from {caster_info.id} to {target_info.id} effect: {effect}"
@@ -924,10 +954,11 @@ class CLI:
             for entity_id in entities_to_remove:
                 self.game_state.remove_entity_from_game(entity_id)
 
-        # Mark game state as unsaved
-        self.game_state.mark_as_unsaved()
-        # Advance turn
-        self.game_state.advance_turn()
+        # Create Tick Command
+        command = TickCommand(self.game_state)
+
+        # Execute Command
+        command.execute()
 
     # Process Save Command
     # Saves the game state to given file
@@ -1061,7 +1092,7 @@ class CLI:
             print("error: spawn_failed - Item name not found!")
             return
         else:  # Success
-            # Create command and execute it
+            # Create command
             command = SpawnLootCommand(self.game_state, item_name, x, y)
             # Spawn loot
             self.command_manager.execute_command(command)

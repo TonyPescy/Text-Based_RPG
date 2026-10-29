@@ -14,7 +14,21 @@ Purpose: Tests the Command methods and classes.
 import unittest
 from types import SimpleNamespace
 from unittest.mock import MagicMock
-from command import Command, MoveCommand, SpawnCommand, SpawnLootCommand, AttackCommand
+from command import (
+    Command,
+    MoveCommand,
+    SpawnCommand,
+    SpawnLootCommand,
+    AttackCommand,
+    CastSpellCommand,
+    SetTileCommand,
+    PickupCommand,
+    GiveItemCommand,
+    DropItemCommand,
+    SwapItemCommand,
+    UseItemCommand,
+    TickCommand,
+)
 
 
 # Test Command
@@ -397,6 +411,1677 @@ class TestCommand(unittest.TestCase):
 
         game_state.get_entity_from_list.assert_not_called()
         game_state.restore_entity_health.assert_not_called()
+
+    # Test Cast Spell Command Execute
+    def test_cast_spell_command_execute(self):
+        test_game_state = MagicMock()
+        caster = MagicMock()
+        target = MagicMock()
+
+        caster.get_info.return_value.mana = 100
+        target.get_info.return_value.health = 70
+
+        test_game_state.get_entity_from_list.side_effect = lambda entity_id: (
+            caster if entity_id == 1 else target
+        )
+        test_game_state.cast_spell.return_value = "Dealt 15 damage to 2!"
+
+        test_command = CastSpellCommand(test_game_state, "1", "2", "Fireball")
+        test_command.execute()
+
+        test_game_state.cast_spell.assert_called_once_with(1, 2, "Fireball")
+        self.assertEqual(
+            test_command.get_spell_result(),
+            "Dealt 15 damage to 2!",
+        )
+
+    # Test Cast Spell Command Undo
+    def test_cast_spell_command_undo(self):
+        test_game_state = MagicMock()
+        caster = MagicMock()
+        target = MagicMock()
+
+        caster.get_info.return_value.mana = 100
+        target.get_info.return_value.health = 70
+        target.get_info.return_value.temp_buffs = ()
+
+        test_game_state.get_entity_from_list.side_effect = lambda entity_id: (
+            caster if entity_id == 1 else target
+        )
+        test_game_state.cast_spell.return_value = "Dealt 15 damage to 2!"
+
+        test_command = CastSpellCommand(test_game_state, 1, 2, "Fireball")
+        test_command.execute()
+        test_command.undo()
+
+        test_game_state.undo_cast.assert_called_once_with(1, 2, "Fireball", 100, 70)
+
+    # Test Cast Spell Command Undo Before Execute
+    def test_cast_spell_command_undo_before_execute(self):
+        test_game_state = MagicMock()
+        test_command = CastSpellCommand(test_game_state, 1, 2, "Fireball")
+
+        with self.assertRaisesRegex(ValueError, "Spell has not been cast!"):
+            test_command.undo()
+
+        test_game_state.get_entity_from_list.assert_not_called()
+        test_game_state.undo_cast.assert_not_called()
+
+    # Test Cast Spell Command Redo
+    def test_cast_spell_command_redo(self):
+        test_game_state = MagicMock()
+        caster = MagicMock()
+        target = MagicMock()
+
+        caster.get_info.return_value.mana = 100
+        target.get_info.return_value.health = 70
+
+        test_game_state.get_entity_from_list.side_effect = lambda entity_id: (
+            caster if entity_id == 1 else target
+        )
+        test_game_state.cast_spell.return_value = "Dealt 15 damage to 2!"
+
+        test_command = CastSpellCommand(test_game_state, 1, 2, "Fireball")
+        test_command.execute()
+
+        test_game_state.cast_spell.reset_mock()
+        test_command.redo()
+
+        test_game_state.cast_spell.assert_called_once_with(1, 2, "Fireball")
+
+    # Test Cast Spell Command Redo Before Execute
+    def test_cast_spell_command_redo_before_execute(self):
+        test_game_state = MagicMock()
+        test_command = CastSpellCommand(test_game_state, 1, 2, "Fireball")
+
+        with self.assertRaisesRegex(ValueError, "Spell has not been cast!"):
+            test_command.redo()
+
+        test_game_state.cast_spell.assert_not_called()
+
+    # Test Cast Spell Command Get Name
+    def test_cast_spell_command_get_name(self):
+        test_game_state = MagicMock()
+        test_command = CastSpellCommand(test_game_state, 1, 2, "Fireball")
+
+        self.assertEqual(test_command.get_name(), "Cast")
+
+    # Test Cast Spell Command Get Spell Result
+    def test_cast_spell_command_get_spell_result(self):
+        test_game_state = MagicMock()
+        caster = MagicMock()
+        target = MagicMock()
+
+        caster.get_info.return_value.mana = 100
+        target.get_info.return_value.health = 70
+
+        test_game_state.get_entity_from_list.side_effect = lambda entity_id: (
+            caster if entity_id == 1 else target
+        )
+        test_game_state.cast_spell.return_value = "Dealt 15 damage to 2!"
+
+        test_command = CastSpellCommand(test_game_state, 1, 2, "Fireball")
+        test_command.execute()
+
+        self.assertEqual(
+            test_command.get_spell_result(),
+            "Dealt 15 damage to 2!",
+        )
+
+    # Test Cast Spell Command Execute And Undo
+    def test_cast_spell_command_execute_and_undo(self):
+        test_game_state = MagicMock()
+        caster = MagicMock()
+        target = MagicMock()
+
+        caster.get_info.return_value.mana = 80
+        target.get_info.return_value.health = 50
+        target.get_info.return_value.temp_buffs = ()
+
+        test_game_state.get_entity_from_list.side_effect = lambda entity_id: (
+            caster if entity_id == 1 else target
+        )
+        test_game_state.cast_spell.return_value = "Dealt 15 damage to 2!"
+
+        test_command = CastSpellCommand(test_game_state, 1, 2, "Fireball")
+        test_command.execute()
+        test_command.undo()
+
+        test_game_state.cast_spell.assert_called_once_with(1, 2, "Fireball")
+        test_game_state.undo_cast.assert_called_once_with(1, 2, "Fireball", 80, 50)
+
+    # Test Cast Spell Command Undo Removes Dead Status
+    def test_cast_spell_command_undo_removes_dead_status(self):
+        test_game_state = MagicMock()
+        caster = MagicMock()
+        target = MagicMock()
+
+        caster.get_info.return_value.mana = 100
+        target_info = MagicMock()
+        target_info.health = 0
+        target_info.temp_buffs = ((("Name", "Dead"), ("Effects", []), ("Turns", 0)),)
+        target.get_info.return_value = target_info
+
+        test_game_state.get_entity_from_list.side_effect = lambda entity_id: (
+            caster if entity_id == 1 else target
+        )
+        test_game_state.cast_spell.return_value = "Target died!"
+
+        test_command = CastSpellCommand(test_game_state, 1, 2, "Fireball")
+        test_command.execute()
+        test_command.undo()
+
+        target.remove_temp_buffs.assert_called_once_with(["Dead"])
+        test_game_state.undo_cast.assert_called_once_with(1, 2, "Fireball", 100, 0)
+
+    # Test Cast Spell Command Undo Without Dead Status
+    def test_cast_spell_command_undo_without_dead_status(self):
+        test_game_state = MagicMock()
+        caster = MagicMock()
+        target = MagicMock()
+
+        caster.get_info.return_value.mana = 100
+        target_info = MagicMock()
+        target_info.health = 50
+        target_info.temp_buffs = ()
+        target.get_info.return_value = target_info
+
+        test_game_state.get_entity_from_list.side_effect = lambda entity_id: (
+            caster if entity_id == 1 else target
+        )
+        test_game_state.cast_spell.return_value = "Dealt 15 damage to 2!"
+
+        test_command = CastSpellCommand(test_game_state, 1, 2, "Fireball")
+        test_command.execute()
+        test_command.undo()
+
+        target.remove_temp_buffs.assert_not_called()
+        test_game_state.undo_cast.assert_called_once_with(1, 2, "Fireball", 100, 50)
+
+    # Test Cast Spell Command Undo Removes Spell Effect
+    def test_cast_spell_command_undo_removes_spell_effect(self):
+        test_game_state = MagicMock()
+        caster = MagicMock()
+        target = MagicMock()
+
+        caster.get_info.return_value.mana = 100
+        target_info = MagicMock()
+        target_info.health = 50
+        target_info.temp_buffs = (
+            (
+                ("Name", "Frostbolt"),
+                ("Effects", []),
+                ("Turns", 1),
+            ),
+        )
+        target.get_info.return_value = target_info
+
+        test_game_state.get_entity_from_list.side_effect = lambda entity_id: (
+            caster if entity_id == 1 else target
+        )
+        test_game_state.cast_spell.return_value = "Applied Frostbolt effect!"
+
+        test_command = CastSpellCommand(test_game_state, 1, 2, "Frostbolt")
+        test_command.execute()
+        test_command.undo()
+
+        target.remove_temp_buffs.assert_called_once_with(["Frostbolt"])
+        test_game_state.undo_cast.assert_called_once_with(1, 2, "Frostbolt", 100, 50)
+
+    # Success
+    def test_set_tile_command_execute(self):
+        # Create mock game state
+        game_state = MagicMock()
+
+        # Create original tile info
+        old_tile = MagicMock()
+        old_tile.tile_type = "Floor"
+        game_state.get_game_tile_info.return_value = old_tile
+
+        # Set tile as unoccupied
+        game_state.is_grid_tile_occupied.return_value = False
+
+        # Create command
+        command = SetTileCommand(game_state, 1, 2, "ShallowWater")
+
+        # Execute command
+        command.execute()
+
+        # Check original tile was retrieved
+        game_state.get_game_tile_info.assert_called_once_with(1, 2)
+
+        # Check new tile was set
+        game_state.set_game_grid_tile.assert_called_once_with(1, 2, "ShallowWater")
+
+        # Check entity was not updated
+        game_state.update_entity.assert_not_called()
+
+    # Success
+    def test_set_tile_command_execute_updates_occupied_tile(self):
+        # Create mock game state
+        game_state = MagicMock()
+
+        # Create original tile info
+        old_tile = MagicMock()
+        old_tile.tile_type = "Floor"
+        game_state.get_game_tile_info.return_value = old_tile
+
+        # Set tile as occupied
+        game_state.is_grid_tile_occupied.return_value = True
+        game_state.get_entity_id_from_tile.return_value = 1
+
+        # Create command
+        command = SetTileCommand(game_state, 1, 2, "ShallowWater")
+
+        # Execute command
+        command.execute()
+
+        # Check tile was set
+        game_state.set_game_grid_tile.assert_called_once_with(1, 2, "ShallowWater")
+
+        # Check entity was updated
+        game_state.update_entity.assert_called_once_with(1)
+
+    # Success
+    def test_set_tile_command_undo(self):
+        # Create mock game state
+        game_state = MagicMock()
+
+        # Create original tile info
+        old_tile = MagicMock()
+        old_tile.tile_type = "Floor"
+        game_state.get_game_tile_info.return_value = old_tile
+
+        # Set tile as unoccupied
+        game_state.is_grid_tile_occupied.return_value = False
+
+        # Create command
+        command = SetTileCommand(game_state, 1, 2, "ShallowWater")
+
+        # Execute command
+        command.execute()
+
+        # Reset mock call history
+        game_state.set_game_grid_tile.reset_mock()
+
+        # Undo command
+        command.undo()
+
+        # Check original tile was restored
+        game_state.set_game_grid_tile.assert_called_once_with(1, 2, "Floor")
+
+    # Failure
+    def test_set_tile_command_undo_before_execute(self):
+        # Create mock game state
+        game_state = MagicMock()
+
+        # Create command
+        command = SetTileCommand(game_state, 1, 2, "ShallowWater")
+
+        # Check undo raises an error
+        with self.assertRaisesRegex(ValueError, "Tile has not been set!"):
+            command.undo()
+
+        # Check tile was not changed
+        game_state.set_game_grid_tile.assert_not_called()
+
+    # Success
+    def test_set_tile_command_redo(self):
+        # Create mock game state
+        game_state = MagicMock()
+
+        # Create original tile info
+        old_tile = MagicMock()
+        old_tile.tile_type = "Floor"
+        game_state.get_game_tile_info.return_value = old_tile
+
+        # Set tile as unoccupied
+        game_state.is_grid_tile_occupied.return_value = False
+
+        # Create command
+        command = SetTileCommand(game_state, 1, 2, "ShallowWater")
+
+        # Execute command
+        command.execute()
+
+        # Undo command
+        command.undo()
+
+        # Reset mock call history
+        game_state.set_game_grid_tile.reset_mock()
+
+        # Redo command
+        command.redo()
+
+        # Check tile was set again
+        game_state.set_game_grid_tile.assert_called_once_with(1, 2, "ShallowWater")
+
+    # Failure
+    def test_set_tile_command_redo_before_undo(self):
+        # Create mock game state
+        game_state = MagicMock()
+
+        # Create original tile info
+        old_tile = MagicMock()
+        old_tile.tile_type = "Floor"
+        game_state.get_game_tile_info.return_value = old_tile
+
+        # Set tile as unoccupied
+        game_state.is_grid_tile_occupied.return_value = False
+
+        # Create command
+        command = SetTileCommand(game_state, 1, 2, "ShallowWater")
+
+        # Execute command
+        command.execute()
+
+        # Check redo raises an error
+        with self.assertRaisesRegex(ValueError, "Tile has already been set!"):
+            command.redo()
+
+    # Success
+    def test_set_tile_command_get_name(self):
+        # Create mock game state
+        game_state = MagicMock()
+
+        # Create command
+        command = SetTileCommand(game_state, 1, 2, "ShallowWater")
+
+        # Check command name
+        self.assertEqual(command.get_name(), "Set")
+
+    # Success
+    def test_set_tile_command_converts_coordinates_to_integers(self):
+        # Create mock game state
+        game_state = MagicMock()
+
+        # Create command with string coordinates
+        command = SetTileCommand(game_state, "1", "2", "ShallowWater")
+
+        # Create original tile info
+        old_tile = MagicMock()
+        old_tile.tile_type = "Floor"
+        game_state.get_game_tile_info.return_value = old_tile
+
+        # Set tile as unoccupied
+        game_state.is_grid_tile_occupied.return_value = False
+
+        # Execute command
+        command.execute()
+
+        # Check coordinates were converted to integers
+        game_state.set_game_grid_tile.assert_called_once_with(1, 2, "ShallowWater")
+
+    # Success
+    def test_pickup_command_execute(self):
+        # Create mock game state
+        game_state = MagicMock()
+
+        # Create entity info
+        entity_info = MagicMock()
+        entity_info.position = (1, 2)
+        game_state.get_entity_info_from_list.return_value = entity_info
+
+        # Create tile info
+        tile_info = MagicMock()
+        tile_info.item_list = ["SmallHealthPotion"]
+        game_state.get_game_tile_info.return_value = tile_info
+
+        # Create removed item
+        removed_item = MagicMock()
+        removed_item.name = "SmallHealthPotion"
+        game_state.remove_item_from_tile.return_value = removed_item
+
+        # Create command
+        command = PickupCommand(game_state, 1, "SmallHealthPotion")
+
+        # Execute command
+        command.execute()
+
+        # Check tile item was removed
+        game_state.remove_item_from_tile.assert_called_once_with(
+            1, 2, "SmallHealthPotion"
+        )
+
+        # Check item was added to backpack
+        game_state.add_item_to_backpack_based_on_info.assert_called_once_with(
+            1, "SmallHealthPotion"
+        )
+
+    # Failure
+    def test_pickup_command_execute_item_not_on_tile(self):
+        # Create mock game state
+        game_state = MagicMock()
+
+        # Create entity info
+        entity_info = MagicMock()
+        entity_info.position = (1, 2)
+        game_state.get_entity_info_from_list.return_value = entity_info
+
+        # Create tile info without the requested item
+        tile_info = MagicMock()
+        tile_info.item_list = ["IronSword"]
+        game_state.get_game_tile_info.return_value = tile_info
+
+        # Create command
+        command = PickupCommand(game_state, 1, "SmallHealthPotion")
+
+        # Check execute raises an error
+        with self.assertRaisesRegex(ValueError, "Item not found on tile!"):
+            command.execute()
+
+        # Check item was not removed
+        game_state.remove_item_from_tile.assert_not_called()
+
+        # Check item was not added to backpack
+        game_state.add_item_to_backpack_based_on_info.assert_not_called()
+
+    # Failure
+    def test_pickup_command_execute_item_removal_fails(self):
+        # Create mock game state
+        game_state = MagicMock()
+
+        # Create entity info
+        entity_info = MagicMock()
+        entity_info.position = (1, 2)
+        game_state.get_entity_info_from_list.return_value = entity_info
+
+        # Create tile info
+        tile_info = MagicMock()
+        tile_info.item_list = ["SmallHealthPotion"]
+        game_state.get_game_tile_info.return_value = tile_info
+
+        # Simulate failed item removal
+        game_state.remove_item_from_tile.return_value = None
+
+        # Create command
+        command = PickupCommand(game_state, 1, "SmallHealthPotion")
+
+        # Check execute raises an error
+        with self.assertRaisesRegex(ValueError, "Item could not be removed from tile!"):
+            command.execute()
+
+        # Check item was not added to backpack
+        game_state.add_item_to_backpack_based_on_info.assert_not_called()
+
+    # Success
+    def test_pickup_command_execute_case_insensitive_item_name(self):
+        # Create mock game state
+        game_state = MagicMock()
+
+        # Create entity info
+        entity_info = MagicMock()
+        entity_info.position = (1, 2)
+        game_state.get_entity_info_from_list.return_value = entity_info
+
+        # Create tile info
+        tile_info = MagicMock()
+        tile_info.item_list = ["SmallHealthPotion"]
+        game_state.get_game_tile_info.return_value = tile_info
+
+        # Create removed item
+        removed_item = MagicMock()
+        removed_item.name = "SmallHealthPotion"
+        game_state.remove_item_from_tile.return_value = removed_item
+
+        # Create command with different capitalization
+        command = PickupCommand(game_state, 1, "smallhealthpotion")
+
+        # Execute command
+        command.execute()
+
+        # Check actual tile item was removed
+        game_state.remove_item_from_tile.assert_called_once_with(
+            1, 2, "SmallHealthPotion"
+        )
+
+        # Check item was added to backpack
+        game_state.add_item_to_backpack_based_on_info.assert_called_once_with(
+            1, "SmallHealthPotion"
+        )
+
+    # Success
+    def test_pickup_command_undo(self):
+        # Create mock game state
+        game_state = MagicMock()
+
+        # Create entity info
+        entity_info = MagicMock()
+        entity_info.position = (1, 2)
+        game_state.get_entity_info_from_list.return_value = entity_info
+
+        # Create tile info
+        tile_info = MagicMock()
+        tile_info.item_list = ["SmallHealthPotion"]
+        game_state.get_game_tile_info.return_value = tile_info
+
+        # Create removed item
+        removed_item = MagicMock()
+        removed_item.name = "SmallHealthPotion"
+        game_state.remove_item_from_tile.return_value = removed_item
+
+        # Create command
+        command = PickupCommand(game_state, 1, "SmallHealthPotion")
+
+        # Execute command
+        command.execute()
+
+        # Reset mock call history
+        game_state.set_game_grid_tile.reset_mock()
+
+        # Undo command
+        command.undo()
+
+        # Check item was removed from backpack
+        game_state.remove_item_from_backpack.assert_called_once_with(
+            1, "SmallHealthPotion"
+        )
+
+        # Check item was returned to original tile
+        game_state.add_item_to_tile.assert_called_once_with(1, 2, "SmallHealthPotion")
+
+    # Failure
+    def test_pickup_command_undo_before_execute(self):
+        # Create mock game state
+        game_state = MagicMock()
+
+        # Create command
+        command = PickupCommand(game_state, 1, "SmallHealthPotion")
+
+        # Check undo raises an error
+        with self.assertRaisesRegex(ValueError, "Item has not been picked up!"):
+            command.undo()
+
+        # Check item was not returned to tile
+        game_state.add_item_to_tile.assert_not_called()
+
+        # Check item was not removed from backpack
+        game_state.remove_item_from_backpack.assert_not_called()
+
+    # Success
+    def test_pickup_command_redo(self):
+        # Create mock game state
+        game_state = MagicMock()
+
+        # Create entity info
+        entity_info = MagicMock()
+        entity_info.position = (1, 2)
+        game_state.get_entity_info_from_list.return_value = entity_info
+
+        # Create tile info
+        tile_info = MagicMock()
+        tile_info.item_list = ["SmallHealthPotion"]
+        game_state.get_game_tile_info.return_value = tile_info
+
+        # Create removed item
+        removed_item = MagicMock()
+        removed_item.name = "SmallHealthPotion"
+        game_state.remove_item_from_tile.return_value = removed_item
+
+        # Create command
+        command = PickupCommand(game_state, 1, "SmallHealthPotion")
+
+        # Execute command
+        command.execute()
+
+        # Undo command
+        command.undo()
+
+        # Reset mock call history
+        game_state.add_item_to_backpack_based_on_info.reset_mock()
+        game_state.remove_item_from_tile.reset_mock()
+
+        # Redo command
+        command.redo()
+
+        # Check item was removed from tile again
+        game_state.remove_item_from_tile.assert_called_once_with(
+            1, 2, "SmallHealthPotion"
+        )
+
+        # Check item was added to backpack again
+        game_state.add_item_to_backpack_based_on_info.assert_called_once_with(
+            1, "SmallHealthPotion"
+        )
+
+    # Failure
+    def test_pickup_command_redo_before_undo(self):
+        # Create mock game state
+        game_state = MagicMock()
+
+        # Create entity info
+        entity_info = MagicMock()
+        entity_info.position = (1, 2)
+        game_state.get_entity_info_from_list.return_value = entity_info
+
+        # Create tile info
+        tile_info = MagicMock()
+        tile_info.item_list = ["SmallHealthPotion"]
+        game_state.get_game_tile_info.return_value = tile_info
+
+        # Create removed item
+        removed_item = MagicMock()
+        removed_item.name = "SmallHealthPotion"
+        game_state.remove_item_from_tile.return_value = removed_item
+
+        # Create command
+        command = PickupCommand(game_state, 1, "SmallHealthPotion")
+
+        # Execute command
+        command.execute()
+
+        # Check redo raises an error
+        with self.assertRaisesRegex(ValueError, "Item has already been picked up!"):
+            command.redo()
+
+    # Success
+    def test_pickup_command_get_name(self):
+        # Create mock game state
+        game_state = MagicMock()
+
+        # Create command
+        command = PickupCommand(game_state, 1, "SmallHealthPotion")
+
+        # Check command name
+        self.assertEqual(command.get_name(), "Pickup")
+
+    # Success
+    def test_pickup_command_converts_entity_id_to_integer(self):
+        # Create mock game state
+        game_state = MagicMock()
+
+        # Create entity info
+        entity_info = MagicMock()
+        entity_info.position = (1, 2)
+        game_state.get_entity_info_from_list.return_value = entity_info
+
+        # Create tile info
+        tile_info = MagicMock()
+        tile_info.item_list = ["SmallHealthPotion"]
+        game_state.get_game_tile_info.return_value = tile_info
+
+        # Create removed item
+        removed_item = MagicMock()
+        removed_item.name = "SmallHealthPotion"
+        game_state.remove_item_from_tile.return_value = removed_item
+
+        # Create command with string entity ID
+        command = PickupCommand(game_state, "1", "SmallHealthPotion")
+
+        # Execute command
+        command.execute()
+
+        # Check entity ID was converted to integer
+        game_state.get_entity_info_from_list.assert_called_with(1)
+
+        # Check item was added to correct backpack
+        game_state.add_item_to_backpack_based_on_info.assert_called_once_with(
+            1, "SmallHealthPotion"
+        )
+
+    # Success
+    def test_give_item_command_execute(self):
+        # Create mock game state
+        game_state = MagicMock()
+
+        # Create command
+        command = GiveItemCommand(game_state, 1, "SmallHealthPotion")
+
+        # Execute command
+        command.execute()
+
+        # Check item was added to backpack
+        game_state.add_item_to_backpack_based_on_info.assert_called_once_with(
+            1, "SmallHealthPotion"
+        )
+
+    # Success
+    def test_give_item_command_execute_converts_entity_id_to_integer(self):
+        # Create mock game state
+        game_state = MagicMock()
+
+        # Create command with string entity ID
+        command = GiveItemCommand(game_state, "1", "SmallHealthPotion")
+
+        # Execute command
+        command.execute()
+
+        # Check item was added using integer entity ID
+        game_state.add_item_to_backpack_based_on_info.assert_called_once_with(
+            1, "SmallHealthPotion"
+        )
+
+    # Success
+    def test_give_item_command_undo(self):
+        # Create mock game state
+        game_state = MagicMock()
+
+        # Create command
+        command = GiveItemCommand(game_state, 1, "SmallHealthPotion")
+
+        # Execute command
+        command.execute()
+
+        # Undo command
+        command.undo()
+
+        # Check item was removed from backpack
+        game_state.remove_item_from_backpack.assert_called_once_with(
+            1, "SmallHealthPotion"
+        )
+
+    # Failure
+    def test_give_item_command_undo_before_execute(self):
+        # Create mock game state
+        game_state = MagicMock()
+
+        # Create command
+        command = GiveItemCommand(game_state, 1, "SmallHealthPotion")
+
+        # Check undo raises an error
+        with self.assertRaisesRegex(ValueError, "Item has not been given!"):
+            command.undo()
+
+        # Check item was not removed from backpack
+        game_state.remove_item_from_backpack.assert_not_called()
+
+    # Success
+    def test_give_item_command_redo(self):
+        # Create mock game state
+        game_state = MagicMock()
+
+        # Create command
+        command = GiveItemCommand(game_state, 1, "SmallHealthPotion")
+
+        # Execute command
+        command.execute()
+
+        # Undo command
+        command.undo()
+
+        # Reset mock call history
+        game_state.add_item_to_backpack_based_on_info.reset_mock()
+
+        # Redo command
+        command.redo()
+
+        # Check item was added again
+        game_state.add_item_to_backpack_based_on_info.assert_called_once_with(
+            1, "SmallHealthPotion"
+        )
+
+    # Failure
+    def test_give_item_command_redo_before_undo(self):
+        # Create mock game state
+        game_state = MagicMock()
+
+        # Create command
+        command = GiveItemCommand(game_state, 1, "SmallHealthPotion")
+
+        # Execute command
+        command.execute()
+
+        # Check redo raises an error
+        with self.assertRaisesRegex(ValueError, "Item has already been given!"):
+            command.redo()
+
+        # Check item was only added once
+        game_state.add_item_to_backpack_based_on_info.assert_called_once_with(
+            1, "SmallHealthPotion"
+        )
+
+    # Success
+    def test_give_item_command_get_name(self):
+        # Create mock game state
+        game_state = MagicMock()
+
+        # Create command
+        command = GiveItemCommand(game_state, 1, "SmallHealthPotion")
+
+        # Check command name
+        self.assertEqual(command.get_name(), "Give")
+
+    # Success
+    def test_drop_item_command_execute(self):
+        # Create mock game state
+        game_state = MagicMock()
+
+        # Create item info
+        item_info = MagicMock()
+        item_info.name = "SmallHealthPotion"
+
+        # Create entity info
+        entity_info = MagicMock()
+        entity_info.position = (1, 2)
+        entity_info.backpack = (item_info,)
+        game_state.get_entity_info_from_list.return_value = entity_info
+
+        # Create command
+        command = DropItemCommand(game_state, 1, "SmallHealthPotion")
+
+        # Execute command
+        command.execute()
+
+        # Check item was added to tile
+        game_state.add_item_to_tile.assert_called_once_with(1, 2, "SmallHealthPotion")
+
+        # Check item was removed from backpack
+        game_state.remove_item_from_backpack_based_on_info.assert_called_once_with(
+            1, "SmallHealthPotion"
+        )
+
+        # Check inventory was updated
+        game_state.update_inventory_based_on_info.assert_called_once_with(1)
+
+        # Check entity was updated
+        game_state.update_entity.assert_called_once_with(1)
+
+    # Failure
+    def test_drop_item_command_execute_item_not_in_backpack(self):
+        # Create mock game state
+        game_state = MagicMock()
+
+        # Create entity info without the requested item
+        entity_info = MagicMock()
+        entity_info.position = (1, 2)
+        entity_info.backpack = ()
+        game_state.get_entity_info_from_list.return_value = entity_info
+
+        # Create command
+        command = DropItemCommand(game_state, 1, "SmallHealthPotion")
+
+        # Check execute raises an error
+        with self.assertRaisesRegex(ValueError, "Item not found in backpack!"):
+            command.execute()
+
+        # Check item was not added to tile
+        game_state.add_item_to_tile.assert_not_called()
+
+        # Check item was not removed from backpack
+        game_state.remove_item_from_backpack_based_on_info.assert_not_called()
+
+    # Success
+    def test_drop_item_command_execute_case_insensitive_item_name(self):
+        # Create mock game state
+        game_state = MagicMock()
+
+        # Create item info
+        item_info = MagicMock()
+        item_info.name = "SmallHealthPotion"
+
+        # Create entity info
+        entity_info = MagicMock()
+        entity_info.position = (1, 2)
+        entity_info.backpack = (item_info,)
+        game_state.get_entity_info_from_list.return_value = entity_info
+
+        # Create command with different capitalization
+        command = DropItemCommand(game_state, 1, "smallhealthpotion")
+
+        # Execute command
+        command.execute()
+
+        # Check actual item name was used
+        game_state.add_item_to_tile.assert_called_once_with(1, 2, "SmallHealthPotion")
+
+        # Check item was removed from backpack
+        game_state.remove_item_from_backpack_based_on_info.assert_called_once_with(
+            1, "SmallHealthPotion"
+        )
+
+    # Success
+    def test_drop_item_command_undo(self):
+        # Create mock game state
+        game_state = MagicMock()
+
+        # Create item info
+        item_info = MagicMock()
+        item_info.name = "SmallHealthPotion"
+
+        # Create entity info
+        entity_info = MagicMock()
+        entity_info.position = (1, 2)
+        entity_info.backpack = (item_info,)
+        game_state.get_entity_info_from_list.return_value = entity_info
+
+        # Create command
+        command = DropItemCommand(game_state, 1, "SmallHealthPotion")
+
+        # Execute command
+        command.execute()
+
+        # Reset mock call history
+        game_state.remove_item_from_tile.reset_mock()
+        game_state.add_item_to_backpack_based_on_info.reset_mock()
+
+        # Undo command
+        command.undo()
+
+        # Check item was removed from tile
+        game_state.remove_item_from_tile.assert_called_once_with(
+            1, 2, "SmallHealthPotion"
+        )
+
+        # Check item was returned to backpack
+        game_state.add_item_to_backpack_based_on_info.assert_called_once_with(
+            1, "SmallHealthPotion"
+        )
+
+        # Check inventory and entity were updated
+        self.assertEqual(game_state.update_inventory_based_on_info.call_count, 2)
+        self.assertEqual(game_state.update_entity.call_count, 2)
+
+    # Failure
+    def test_drop_item_command_undo_before_execute(self):
+        # Create mock game state
+        game_state = MagicMock()
+
+        # Create command
+        command = DropItemCommand(game_state, 1, "SmallHealthPotion")
+
+        # Check undo raises an error
+        with self.assertRaisesRegex(ValueError, "Item has not been dropped!"):
+            command.undo()
+
+        # Check item was not removed from tile
+        game_state.remove_item_from_tile.assert_not_called()
+
+        # Check item was not added to backpack
+        game_state.add_item_to_backpack_based_on_info.assert_not_called()
+
+    # Success
+    def test_drop_item_command_redo(self):
+        # Create mock game state
+        game_state = MagicMock()
+
+        # Create item info
+        item_info = MagicMock()
+        item_info.name = "SmallHealthPotion"
+
+        # Create entity info
+        entity_info = MagicMock()
+        entity_info.position = (1, 2)
+        entity_info.backpack = (item_info,)
+        game_state.get_entity_info_from_list.return_value = entity_info
+
+        # Create command
+        command = DropItemCommand(game_state, 1, "SmallHealthPotion")
+
+        # Execute command
+        command.execute()
+
+        # Undo command
+        command.undo()
+
+        # Reset mock call history
+        game_state.add_item_to_tile.reset_mock()
+        game_state.remove_item_from_backpack_based_on_info.reset_mock()
+
+        # Redo command
+        command.redo()
+
+        # Check item was added to tile again
+        game_state.add_item_to_tile.assert_called_once_with(1, 2, "SmallHealthPotion")
+
+        # Check item was removed from backpack again
+        game_state.remove_item_from_backpack_based_on_info.assert_called_once_with(
+            1, "SmallHealthPotion"
+        )
+
+    # Failure
+    def test_drop_item_command_redo_before_undo(self):
+        # Create mock game state
+        game_state = MagicMock()
+
+        # Create item info
+        item_info = MagicMock()
+        item_info.name = "SmallHealthPotion"
+
+        # Create entity info
+        entity_info = MagicMock()
+        entity_info.position = (1, 2)
+        entity_info.backpack = (item_info,)
+        game_state.get_entity_info_from_list.return_value = entity_info
+
+        # Create command
+        command = DropItemCommand(game_state, 1, "SmallHealthPotion")
+
+        # Execute command
+        command.execute()
+
+        # Check redo raises an error
+        with self.assertRaisesRegex(ValueError, "Item has already been dropped!"):
+            command.redo()
+
+        # Check item was only dropped once
+        game_state.add_item_to_tile.assert_called_once_with(1, 2, "SmallHealthPotion")
+
+    # Success
+    def test_drop_item_command_get_name(self):
+        # Create mock game state
+        game_state = MagicMock()
+
+        # Create command
+        command = DropItemCommand(game_state, 1, "SmallHealthPotion")
+
+        # Check command name
+        self.assertEqual(command.get_name(), "Drop")
+
+    # Success
+    def test_drop_item_command_converts_entity_id_to_integer(self):
+        # Create mock game state
+        game_state = MagicMock()
+
+        # Create item info
+        item_info = MagicMock()
+        item_info.name = "SmallHealthPotion"
+
+        # Create entity info
+        entity_info = MagicMock()
+        entity_info.position = (1, 2)
+        entity_info.backpack = (item_info,)
+        game_state.get_entity_info_from_list.return_value = entity_info
+
+        # Create command with string entity ID
+        command = DropItemCommand(game_state, "1", "SmallHealthPotion")
+
+        # Execute command
+        command.execute()
+
+        # Check entity ID was converted to integer
+        game_state.get_entity_info_from_list.assert_called_with(1)
+
+        # Check correct entity was updated
+        game_state.update_entity.assert_called_once_with(1)
+
+    # Success
+    def test_swap_item_command_execute(self):
+        # Create GameState
+        test_game_state = MagicMock()
+
+        # Create backpack item
+        backpack_item = MagicMock()
+        backpack_item.name = "Iron Sword"
+        backpack_item.slot = "Weapon"
+
+        # Create previously equipped item
+        old_item = MagicMock()
+        old_item.name = "None"
+        old_item.slot = "Weapon"
+
+        # Create entity info
+        entity_info = MagicMock()
+        entity_info.backpack = [backpack_item]
+
+        # Mock GameState methods
+        test_game_state.get_entity_info_from_list.return_value = entity_info
+        test_game_state.get_equipped_item_info.return_value = old_item
+
+        # Create Swap Item Command
+        test_command = SwapItemCommand(test_game_state, 1, "Weapon", "Iron Sword")
+
+        # Execute Command
+        test_command.execute()
+
+        # Verify results
+        test_game_state.get_entity_info_from_list.assert_called_once_with(1)
+        test_game_state.get_equipped_item_info.assert_called_once_with(1, "Weapon")
+        test_game_state.equip_item_based_on_info.assert_called_once_with(
+            1, "Iron Sword", "Weapon"
+        )
+        test_game_state.update_entity.assert_called_once_with(1)
+
+    # Success
+    def test_swap_item_command_converts_entity_id_to_integer(self):
+        # Create GameState
+        test_game_state = MagicMock()
+
+        # Create Swap Item Command
+        test_command = SwapItemCommand(test_game_state, "1", "Weapon", "Iron Sword")
+
+        # Verify entity ID conversion
+        self.assertEqual(test_command._SwapItemCommand__entity_id, 1)
+
+    # Failure
+    def test_swap_item_command_execute_item_not_in_backpack(self):
+        # Create GameState
+        test_game_state = MagicMock()
+
+        # Create entity info
+        entity_info = MagicMock()
+        entity_info.backpack = []
+
+        # Mock GameState method
+        test_game_state.get_entity_info_from_list.return_value = entity_info
+
+        # Create Swap Item Command
+        test_command = SwapItemCommand(test_game_state, 1, "Weapon", "Iron Sword")
+
+        # Verify error is raised
+        with self.assertRaisesRegex(ValueError, "Item not found in backpack!"):
+            test_command.execute()
+
+        # Verify item was not equipped
+        test_game_state.equip_item_based_on_info.assert_not_called()
+        test_game_state.update_entity.assert_not_called()
+
+    # Success
+    def test_swap_item_command_execute_finds_item_case_insensitive(self):
+        # Create GameState
+        test_game_state = MagicMock()
+
+        # Create backpack item
+        backpack_item = MagicMock()
+        backpack_item.name = "Iron Sword"
+        backpack_item.slot = "Weapon"
+
+        # Create previously equipped item
+        old_item = MagicMock()
+        old_item.name = "None"
+        old_item.slot = "Weapon"
+
+        # Create entity info
+        entity_info = MagicMock()
+        entity_info.backpack = [backpack_item]
+
+        # Mock GameState methods
+        test_game_state.get_entity_info_from_list.return_value = entity_info
+        test_game_state.get_equipped_item_info.return_value = old_item
+
+        # Create Swap Item Command
+        test_command = SwapItemCommand(test_game_state, 1, "Weapon", "iron sword")
+
+        # Execute Command
+        test_command.execute()
+
+        # Verify matching item was equipped
+        test_game_state.equip_item_based_on_info.assert_called_once_with(
+            1, "Iron Sword", "Weapon"
+        )
+
+    # Success
+    def test_swap_item_command_undo(self):
+        # Create GameState
+        test_game_state = MagicMock()
+
+        # Create backpack item
+        backpack_item = MagicMock()
+        backpack_item.name = "Iron Sword"
+        backpack_item.slot = "Weapon"
+
+        # Create previously equipped item
+        old_item = MagicMock()
+        old_item.name = "None"
+        old_item.slot = "Weapon"
+
+        # Create entity info
+        entity_info = MagicMock()
+        entity_info.backpack = [backpack_item]
+
+        # Mock GameState methods
+        test_game_state.get_entity_info_from_list.return_value = entity_info
+        test_game_state.get_equipped_item_info.return_value = old_item
+
+        # Create Swap Item Command
+        test_command = SwapItemCommand(test_game_state, 1, "Weapon", "Iron Sword")
+
+        # Execute Command
+        test_command.execute()
+
+        # Reset method call history
+        test_game_state.equip_item_based_on_info.reset_mock()
+        test_game_state.update_entity.reset_mock()
+
+        # Undo Command
+        test_command.undo()
+
+        # Verify previous item was restored
+        test_game_state.equip_item_based_on_info.assert_called_once_with(
+            1, "None", "Weapon"
+        )
+        test_game_state.update_entity.assert_called_once_with(1)
+
+    # Failure
+    def test_swap_item_command_undo_before_execute(self):
+        # Create GameState
+        test_game_state = MagicMock()
+
+        # Create Swap Item Command
+        test_command = SwapItemCommand(test_game_state, 1, "Weapon", "Iron Sword")
+
+        # Verify error is raised
+        with self.assertRaisesRegex(ValueError, "Item has not been swapped!"):
+            test_command.undo()
+
+    # Success
+    def test_swap_item_command_redo_after_undo(self):
+        # Create GameState
+        test_game_state = MagicMock()
+
+        # Create backpack item
+        backpack_item = MagicMock()
+        backpack_item.name = "Iron Sword"
+        backpack_item.slot = "Weapon"
+
+        # Create previously equipped item
+        old_item = MagicMock()
+        old_item.name = "None"
+        old_item.slot = "Weapon"
+
+        # Create entity info
+        entity_info = MagicMock()
+        entity_info.backpack = [backpack_item]
+
+        # Mock GameState methods
+        test_game_state.get_entity_info_from_list.return_value = entity_info
+        test_game_state.get_equipped_item_info.return_value = old_item
+
+        # Create Swap Item Command
+        test_command = SwapItemCommand(test_game_state, 1, "Weapon", "Iron Sword")
+
+        # Execute Command
+        test_command.execute()
+
+        # Undo Command
+        test_command.undo()
+
+        # Reset call history
+        test_game_state.equip_item_based_on_info.reset_mock()
+        test_game_state.update_entity.reset_mock()
+
+        # Redo Command
+        test_command.redo()
+
+        # Verify item was equipped again
+        test_game_state.equip_item_based_on_info.assert_called_once_with(
+            1, "Iron Sword", "Weapon"
+        )
+        test_game_state.update_entity.assert_called_once_with(1)
+
+    # Failure
+    def test_swap_item_command_redo_before_undo(self):
+        # Create GameState
+        test_game_state = MagicMock()
+
+        # Create backpack item
+        backpack_item = MagicMock()
+        backpack_item.name = "Iron Sword"
+        backpack_item.slot = "Weapon"
+
+        # Create entity info
+        entity_info = MagicMock()
+        entity_info.backpack = [backpack_item]
+
+        # Mock GameState method
+        test_game_state.get_entity_info_from_list.return_value = entity_info
+
+        # Create Swap Item Command
+        test_command = SwapItemCommand(test_game_state, 1, "Weapon", "Iron Sword")
+
+        # Execute Command
+        test_command.execute()
+
+        # Verify error is raised
+        with self.assertRaisesRegex(ValueError, "Item has already been swapped!"):
+            test_command.redo()
+
+    # Success
+    def test_swap_item_command_get_name(self):
+        # Create GameState
+        test_game_state = MagicMock()
+
+        # Create Swap Item Command
+        test_command = SwapItemCommand(test_game_state, 1, "Weapon", "Iron Sword")
+
+        # Verify command name
+        self.assertEqual(test_command.get_name(), "Swap")
+
+    # Success
+    def test_use_item_command_execute(self):
+        # Create GameState
+        test_game_state = MagicMock()
+
+        # Create Memento
+        old_state = MagicMock()
+        test_game_state.create_memento.return_value = old_state
+
+        # Create Use Item Command
+        test_command = UseItemCommand(test_game_state, 1, "Small Health Potion")
+
+        # Execute Command
+        test_command.execute()
+
+        # Verify results
+        test_game_state.create_memento.assert_called_once_with()
+        test_game_state.use_consumable.assert_called_once_with(1, "Small Health Potion")
+
+    # Success
+    def test_use_item_command_converts_entity_id_to_integer(self):
+        # Create GameState
+        test_game_state = MagicMock()
+
+        # Create Use Item Command
+        test_command = UseItemCommand(test_game_state, "1", "Small Health Potion")
+
+        # Verify entity ID conversion
+        self.assertEqual(test_command._UseItemCommand__entity_id, 1)
+
+    # Success
+    def test_use_item_command_undo(self):
+        # Create GameState
+        test_game_state = MagicMock()
+
+        # Create Memento
+        old_state = MagicMock()
+        test_game_state.create_memento.return_value = old_state
+
+        # Create Use Item Command
+        test_command = UseItemCommand(test_game_state, 1, "Small Health Potion")
+
+        # Execute Command
+        test_command.execute()
+
+        # Reset restore method call history
+        test_game_state.restore_memento.reset_mock()
+
+        # Undo Command
+        test_command.undo()
+
+        # Verify state was restored
+        test_game_state.restore_memento.assert_called_once_with(old_state)
+
+    # Failure
+    def test_use_item_command_undo_before_execute(self):
+        # Create GameState
+        test_game_state = MagicMock()
+
+        # Create Use Item Command
+        test_command = UseItemCommand(test_game_state, 1, "Small Health Potion")
+
+        # Verify error is raised
+        with self.assertRaisesRegex(ValueError, "Item has not been used!"):
+            test_command.undo()
+
+        # Verify state was not restored
+        test_game_state.restore_memento.assert_not_called()
+
+    # Success
+    def test_use_item_command_redo_after_undo(self):
+        # Create GameState
+        test_game_state = MagicMock()
+
+        # Create Memento
+        old_state = MagicMock()
+        test_game_state.create_memento.return_value = old_state
+
+        # Create Use Item Command
+        test_command = UseItemCommand(test_game_state, 1, "Small Health Potion")
+
+        # Execute Command
+        test_command.execute()
+
+        # Undo Command
+        test_command.undo()
+
+        # Reset method call history
+        test_game_state.create_memento.reset_mock()
+        test_game_state.use_consumable.reset_mock()
+
+        # Redo Command
+        test_command.redo()
+
+        # Verify command was executed again
+        test_game_state.create_memento.assert_called_once_with()
+        test_game_state.use_consumable.assert_called_once_with(1, "Small Health Potion")
+
+    # Failure
+    def test_use_item_command_redo_before_undo(self):
+        # Create GameState
+        test_game_state = MagicMock()
+
+        # Create Memento
+        test_game_state.create_memento.return_value = MagicMock()
+
+        # Create Use Item Command
+        test_command = UseItemCommand(test_game_state, 1, "Small Health Potion")
+
+        # Execute Command
+        test_command.execute()
+
+        # Verify error is raised
+        with self.assertRaisesRegex(ValueError, "Item has already been used!"):
+            test_command.redo()
+
+        # Verify consumable was not used a second time
+        test_game_state.use_consumable.assert_called_once_with(1, "Small Health Potion")
+
+    # Success
+    def test_use_item_command_get_name(self):
+        # Create GameState
+        test_game_state = MagicMock()
+
+        # Create Use Item Command
+        test_command = UseItemCommand(test_game_state, 1, "Small Health Potion")
+
+        # Verify command name
+        self.assertEqual(test_command.get_name(), "Use")
+
+    # Success
+    def test_tick_command_execute_with_entities(self):
+        # Create GameState
+        test_game_state = MagicMock()
+
+        # Create Memento
+        old_state = MagicMock()
+        test_game_state.create_memento.return_value = old_state
+
+        # Mock entity updates
+        test_game_state.entities_exists.return_value = True
+        test_game_state.process_tick_for_all_entities.return_value = []
+
+        # Create Tick Command
+        test_command = TickCommand(test_game_state)
+
+        # Execute Command
+        test_command.execute()
+
+        # Verify entity updates
+        test_game_state.create_memento.assert_called_once_with()
+        test_game_state.entities_exists.assert_called_once_with()
+        test_game_state.process_tick_for_all_entities.assert_called_once_with()
+
+        # Verify game state updates
+        test_game_state.mark_as_unsaved.assert_called_once_with()
+        test_game_state.advance_turn.assert_called_once_with()
+
+    # Success
+    def test_tick_command_execute_without_entities(self):
+        # Create GameState
+        test_game_state = MagicMock()
+
+        # Create Memento
+        test_game_state.create_memento.return_value = MagicMock()
+
+        # Mock entity existence
+        test_game_state.entities_exists.return_value = False
+
+        # Create Tick Command
+        test_command = TickCommand(test_game_state)
+
+        # Execute Command
+        test_command.execute()
+
+        # Verify entities were not updated
+        test_game_state.process_tick_for_all_entities.assert_not_called()
+        test_game_state.remove_entity_from_game.assert_not_called()
+
+        # Verify turn still advances
+        test_game_state.mark_as_unsaved.assert_called_once_with()
+        test_game_state.advance_turn.assert_called_once_with()
+
+    # Success
+    def test_tick_command_execute_removes_entities(self):
+        # Create GameState
+        test_game_state = MagicMock()
+
+        # Create Memento
+        test_game_state.create_memento.return_value = MagicMock()
+
+        # Mock entities to remove
+        test_game_state.entities_exists.return_value = True
+        test_game_state.process_tick_for_all_entities.return_value = [1, 2, 3]
+
+        # Create Tick Command
+        test_command = TickCommand(test_game_state)
+
+        # Execute Command
+        test_command.execute()
+
+        # Verify entities were removed
+        test_game_state.remove_entity_from_game.assert_any_call(1)
+        test_game_state.remove_entity_from_game.assert_any_call(2)
+        test_game_state.remove_entity_from_game.assert_any_call(3)
+        self.assertEqual(test_game_state.remove_entity_from_game.call_count, 3)
+
+        # Verify turn advances
+        test_game_state.advance_turn.assert_called_once_with()
+
+    # Success
+    def test_tick_command_execute_with_no_entities_to_remove(self):
+        # Create GameState
+        test_game_state = MagicMock()
+
+        # Create Memento
+        test_game_state.create_memento.return_value = MagicMock()
+
+        # Mock entity updates
+        test_game_state.entities_exists.return_value = True
+        test_game_state.process_tick_for_all_entities.return_value = []
+
+        # Create Tick Command
+        test_command = TickCommand(test_game_state)
+
+        # Execute Command
+        test_command.execute()
+
+        # Verify no entities were removed
+        test_game_state.remove_entity_from_game.assert_not_called()
+
+        # Verify turn advances
+        test_game_state.advance_turn.assert_called_once_with()
+
+    # Success
+    def test_tick_command_undo(self):
+        # Create GameState
+        test_game_state = MagicMock()
+
+        # Create Memento
+        old_state = MagicMock()
+        test_game_state.create_memento.return_value = old_state
+
+        # Mock entity updates
+        test_game_state.entities_exists.return_value = False
+
+        # Create Tick Command
+        test_command = TickCommand(test_game_state)
+
+        # Execute Command
+        test_command.execute()
+
+        # Reset restore method call history
+        test_game_state.restore_memento.reset_mock()
+
+        # Undo Command
+        test_command.undo()
+
+        # Verify game state was restored
+        test_game_state.restore_memento.assert_called_once_with(old_state)
+
+    # Failure
+    def test_tick_command_undo_before_execute(self):
+        # Create GameState
+        test_game_state = MagicMock()
+
+        # Create Tick Command
+        test_command = TickCommand(test_game_state)
+
+        # Verify error is raised
+        with self.assertRaisesRegex(ValueError, "Tick has not been executed!"):
+            test_command.undo()
+
+        # Verify state was not restored
+        test_game_state.restore_memento.assert_not_called()
+
+    # Success
+    def test_tick_command_redo_after_undo(self):
+        # Create GameState
+        test_game_state = MagicMock()
+
+        # Create Memento
+        test_game_state.create_memento.return_value = MagicMock()
+
+        # Mock entity updates
+        test_game_state.entities_exists.return_value = False
+
+        # Create Tick Command
+        test_command = TickCommand(test_game_state)
+
+        # Execute Command
+        test_command.execute()
+
+        # Undo Command
+        test_command.undo()
+
+        # Reset call history
+        test_game_state.create_memento.reset_mock()
+        test_game_state.advance_turn.reset_mock()
+        test_game_state.mark_as_unsaved.reset_mock()
+
+        # Redo Command
+        test_command.redo()
+
+        # Verify tick was executed again
+        test_game_state.create_memento.assert_called_once_with()
+        test_game_state.advance_turn.assert_called_once_with()
+        test_game_state.mark_as_unsaved.assert_called_once_with()
+
+    # Failure
+    def test_tick_command_redo_before_undo(self):
+        # Create GameState
+        test_game_state = MagicMock()
+
+        # Create Memento
+        test_game_state.create_memento.return_value = MagicMock()
+
+        # Mock entity updates
+        test_game_state.entities_exists.return_value = False
+
+        # Create Tick Command
+        test_command = TickCommand(test_game_state)
+
+        # Execute Command
+        test_command.execute()
+
+        # Reset advance turn call history
+        test_game_state.advance_turn.reset_mock()
+
+        # Verify error is raised
+        with self.assertRaisesRegex(ValueError, "Tick has already been executed!"):
+            test_command.redo()
+
+        # Verify turn did not advance again
+        test_game_state.advance_turn.assert_not_called()
+
+    # Success
+    def test_tick_command_get_name(self):
+        # Create GameState
+        test_game_state = MagicMock()
+
+        # Create Tick Command
+        test_command = TickCommand(test_game_state)
+
+        # Verify command name
+        self.assertEqual(test_command.get_name(), "Tick")
 
 
 if __name__ == "__main__":

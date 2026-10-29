@@ -28,12 +28,11 @@ these functions are handled within the CLI prior to calling this function.
 import contextlib
 import io
 import unittest
-from unittest.mock import patch
-
+from unittest.mock import patch, MagicMock
 import domain_library as dl
-from game_state import GameState
 import equipment
 import entity as ent
+from game_state import GameState
 
 
 # Class for testing GameState
@@ -922,6 +921,193 @@ class TestGameState(unittest.TestCase):
 
         entity_info = self.game_state.get_entity_info_from_list(1)
         self.assertEqual(entity_info.health, original_health)
+
+    # Success
+    def test_undo_cast_restores_mana_and_health(self):
+        # Create test grid
+        self.create_test_grid()
+
+        # Create caster and target
+        self.create_spawned_entity("mage")
+        self.game_state.spawn_entity(1, 1, "goblin")
+
+        # Set original stats
+        self.game_state.update_single_entity_stat(1, "Mana", 100)
+        self.game_state.update_single_entity_stat(2, "Health", 45)
+
+        # Change stats to simulate casting a spell
+        self.game_state.update_single_entity_stat(1, "Mana", 75)
+        self.game_state.update_single_entity_stat(2, "Health", 20)
+
+        # Undo the spell cast
+        self.game_state.undo_cast(1, 2, 100, 45)
+
+        # Get updated entity info
+        caster_info = self.game_state.get_entity_info_from_list(1)
+        target_info = self.game_state.get_entity_info_from_list(2)
+
+        # Check restored stats
+        self.assertEqual(caster_info.mana, 100)
+        self.assertEqual(target_info.health, 45)
+
+    # Success
+    def test_undo_cast_marks_game_state_as_unsaved(self):
+        # Create test grid
+        self.create_test_grid()
+
+        # Create caster and target
+        self.create_spawned_entity("mage")
+        self.game_state.spawn_entity(1, 1, "goblin")
+
+        # Mark game state as saved
+        self.game_state.mark_as_saved()
+
+        # Undo the spell cast
+        self.game_state.undo_cast(1, 2, 100, 45)
+
+        # Check game state is marked as unsaved
+        self.assertFalse(self.game_state._GameState__is_saved)
+
+    # Success
+    def test_undo_cast_restores_mana_without_changing_other_stats(self):
+        # Create test grid
+        self.create_test_grid()
+
+        # Create caster and target
+        self.create_spawned_entity("mage")
+        self.game_state.spawn_entity(1, 1, "goblin")
+
+        # Get original target attack
+        original_attack = self.game_state.get_entity_info_from_list(2).attack
+
+        # Set mana and health to restore
+        self.game_state.undo_cast(1, 2, 100, 45)
+
+        # Get updated entity info
+        caster_info = self.game_state.get_entity_info_from_list(1)
+        target_info = self.game_state.get_entity_info_from_list(2)
+
+        # Check restored stats
+        self.assertEqual(caster_info.mana, 100)
+        self.assertEqual(target_info.health, 45)
+
+        # Check unrelated stats remain unchanged
+        self.assertEqual(target_info.attack, original_attack)
+
+    # Success
+    def test_get_equipped_item_info_returns_matching_slot(self):
+        # Create GameState
+        test_game_state = GameState.__new__(GameState)
+
+        # Create equipped items
+        weapon = MagicMock()
+        weapon.name = "Iron Sword"
+        weapon.slot = "Weapon"
+
+        armor = MagicMock()
+        armor.name = "Iron Chestplate"
+        armor.slot = "Armor"
+
+        # Create entity info
+        entity_info = MagicMock()
+        entity_info.inventory = [weapon, armor]
+
+        # Mock entity info lookup
+        test_game_state.get_entity_info_from_list = MagicMock(return_value=entity_info)
+
+        # Get equipped weapon info
+        result = test_game_state.get_equipped_item_info(1, "Weapon")
+
+        # Verify result
+        self.assertIs(result, weapon)
+        test_game_state.get_entity_info_from_list.assert_called_once_with(1)
+
+    # Success
+    def test_get_equipped_item_info_returns_matching_slot_case_insensitive(self):
+        # Create GameState
+        test_game_state = GameState.__new__(GameState)
+
+        # Create equipped item
+        weapon = MagicMock()
+        weapon.name = "Iron Sword"
+        weapon.slot = "Weapon"
+
+        # Create entity info
+        entity_info = MagicMock()
+        entity_info.inventory = [weapon]
+
+        # Mock entity info lookup
+        test_game_state.get_entity_info_from_list = MagicMock(return_value=entity_info)
+
+        # Get equipped item info
+        result = test_game_state.get_equipped_item_info(1, "weapon")
+
+        # Verify result
+        self.assertIs(result, weapon)
+
+    # Success
+    def test_get_equipped_item_info_accepts_equipment_slot_enum(self):
+        # Create GameState
+        test_game_state = GameState.__new__(GameState)
+
+        # Create equipped item
+        weapon = MagicMock()
+        weapon.name = "Iron Sword"
+        weapon.slot = "Weapon"
+
+        # Create entity info
+        entity_info = MagicMock()
+        entity_info.inventory = [weapon]
+
+        # Mock entity info lookup
+        test_game_state.get_entity_info_from_list = MagicMock(return_value=entity_info)
+
+        # Get equipped item info
+        result = test_game_state.get_equipped_item_info(1, dl.EquipmentSlot.WEAPON)
+
+        # Verify result
+        self.assertIs(result, weapon)
+
+    # Failure
+    def test_get_equipped_item_info_returns_none_for_empty_slot(self):
+        # Create GameState
+        test_game_state = GameState.__new__(GameState)
+
+        # Create equipped item
+        armor = MagicMock()
+        armor.name = "Iron Chestplate"
+        armor.slot = "Armor"
+
+        # Create entity info
+        entity_info = MagicMock()
+        entity_info.inventory = [armor]
+
+        # Mock entity info lookup
+        test_game_state.get_entity_info_from_list = MagicMock(return_value=entity_info)
+
+        # Get item info for an empty slot
+        result = test_game_state.get_equipped_item_info(1, "Weapon")
+
+        # Verify result
+        self.assertIsNone(result)
+
+    # Failure
+    def test_get_equipped_item_info_returns_none_for_invalid_slot(self):
+        # Create GameState
+        test_game_state = GameState.__new__(GameState)
+
+        # Create entity info
+        entity_info = MagicMock()
+        entity_info.inventory = []
+
+        # Mock entity info lookup
+        test_game_state.get_entity_info_from_list = MagicMock(return_value=entity_info)
+
+        # Get item info for an invalid slot
+        result = test_game_state.get_equipped_item_info(1, "Invalid")
+
+        # Verify result
+        self.assertIsNone(result)
 
 
 # Run the tests

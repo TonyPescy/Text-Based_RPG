@@ -49,6 +49,11 @@ class SpellTypes(Enum):
     CONTROL = "Control"
 
 
+# Spell Effects enums - Easier to add spells here
+class SpellEffects(Enum):
+    FROSTBOLT = "Frostbolt"
+
+
 # Base Invetory for all Entities
 BASE_INVENTORY = [
     equipment.create_equipment("none_wep"),

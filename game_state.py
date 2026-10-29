@@ -18,8 +18,7 @@ from grid import Grid
 from equipment import Consumable
 from spell import get_spell
 import entity as ent
-
-# import domain_library as dl
+import domain_library as dl
 import equipment
 
 
@@ -428,7 +427,7 @@ class GameState:
     # Params:   caster_id - Entity.id - id of entity to cast spell with
     #           target_id - Entity.id - id of entity to cast spell on
     #          spell_name - String - name of spell to cast
-    # Returns: None
+    # Returns: effect - string - String message about what the spell has done
     def cast_spell(self, caster_id, target_id, spell_name):
         # Needs entity object
         caster = self.get_entity_from_list(caster_id)
@@ -598,6 +597,41 @@ class GameState:
         entity = self.get_entity_from_list(entity_id)
         entity_info = entity.get_info()
         # Calculate new health value
-        new_health = entity_info.health + damage
+        new_health = min(entity_info.max_health, entity_info.health + damage)
         # Update stats
         self.update_single_entity_stat(entity_id, "Health", new_health)
+
+    # Undo Cast
+    # Undos a spell cast
+    # Params:   caster_id/Target_id - ints - ids corresponding to target and caster entities
+    #           old_mana/old_health - ints - Values of stats used to reset the corresponding stat values
+    # Returns:  None
+    def undo_cast(self, caster_id, target_id, old_mana, old_health):
+        # Restore caster mana
+        self.update_single_entity_stat(caster_id, "Mana", old_mana)
+
+        # Restore target health
+        self.update_single_entity_stat(target_id, "Health", old_health)
+
+        # Additional undo logic is needed here for temporary buffs and death status
+        self.mark_as_unsaved()
+
+    # Get Equipped Item Info
+    # Gets the item info that is equipped to the given slot
+    # Params:   entity_id - int - entity id
+    #           item_slot - string - Item slot to get item info from
+    # Returns:  item_info - EquipmentInfo - all needed item information
+    def get_equipped_item_info(self, entity_id, item_slot):
+        # Get entity info
+        entity_info = self.get_entity_info_from_list(entity_id)
+
+        # Get item slot value if an enum was provided
+        if isinstance(item_slot, dl.EquipmentSlot):
+            item_slot = item_slot.value
+
+        # Find matching equipped item
+        for item in entity_info.inventory:
+            if item.slot.lower() == item_slot.lower():
+                return item
+
+        return None
