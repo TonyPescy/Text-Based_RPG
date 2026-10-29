@@ -255,7 +255,7 @@ class GameStateManager:
                     entity_data["inventory"][slot] = item.get_info().name
 
             # Convert backpack items to names.
-            for item in base_memento.backpack:
+            for item in base_memento.backpack.items:
                 if item is None:
                     entity_data["backpack"].append(None)
                 elif isinstance(item, str):
@@ -352,6 +352,27 @@ class GameStateManager:
 
                 inventory_items.append(item)
 
+            # Reconstruct backpack items.
+            backpack_items = []
+
+            for item_name in entity_data["backpack"]:
+                if item_name is None:
+                    backpack_items.append(None)
+                    continue
+
+                item = equipment.create_equipment(item_name)
+
+                if item is None:
+                    raise ValueError(
+                        f"Could not reconstruct backpack item {item_name!r} "
+                        f"for entity {entity_data['id']}."
+                    )
+
+                backpack_items.append(item)
+
+            # Create backpack memento.
+            backpack_memento = Entity.BackpackMemento(items=tuple(backpack_items))
+
             # Reconstruct the base Entity Memento.
             entity_memento = Entity.Memento(
                 entity_id=entity_data["id"],
@@ -364,7 +385,7 @@ class GameStateManager:
                 speed=entity_data["speed"],
                 inventory=tuple(inventory_items),
                 active_modifiers=copy.deepcopy(entity_data["active_modifiers"]),
-                backpack=tuple(entity_data["backpack"]),
+                backpack=backpack_memento,
                 attack_type=AttackTypes(entity_data["attack_type"]),
                 temp_buffs=copy.deepcopy(entity_data["temp_buffs"]),
             )

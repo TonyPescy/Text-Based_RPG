@@ -540,6 +540,28 @@ class Entity:
     def add_temp_buff(self, buff):
         self.__temp_buffs.append(buff)
 
+    # Memento DataClass for backpack
+    @dataclass(frozen=True)
+    class BackpackMemento:
+        items: tuple
+
+    # Create Backpack Memento
+    # Creates a memento of the entity's backpack
+    # Params: None
+    # Returns: BackpackMemento
+    def create_backpack_memento(self):
+        return Entity.BackpackMemento(items=tuple(deepcopy(self.__backpack)))
+
+    # Restore Backpack
+    # Restores the entity's backpack based on its memento
+    # Params: memento - BackpackMemento - saved backpack data
+    # Returns: None
+    def restore_backpack(self, memento):
+        if not isinstance(memento, Entity.BackpackMemento):
+            raise TypeError("Invalid Backpack memento")
+
+        self.__backpack = list(deepcopy(memento.items))
+
     # Memento DataClass
     @dataclass(frozen=True)
     class Memento:
@@ -573,7 +595,7 @@ class Entity:
             speed=self.__speed,
             inventory=deepcopy(self.__inventory),
             active_modifiers=deepcopy(self.__active_modifiers),
-            backpack=deepcopy(self.__backpack),
+            backpack=self.create_backpack_memento(),
             attack_type=self.__attack_type,
             temp_buffs=deepcopy(self.__temp_buffs),
         )
@@ -585,7 +607,6 @@ class Entity:
     def restore(self, memento):
         if not isinstance(memento, Entity.Memento):
             raise TypeError("Invalid Entity memento")
-
         self.__id = memento.entity_id
         self.__e_type = memento.e_type
         self.__position = list(memento.position)
@@ -596,9 +617,12 @@ class Entity:
         self.__speed = memento.speed
         self.__inventory = deepcopy(memento.inventory)
         self.__active_modifiers = deepcopy(memento.active_modifiers)
-        self.__backpack = list(deepcopy(memento.backpack))
+        self.restore_backpack(memento.backpack)
         self.__attack_type = memento.attack_type
         self.__temp_buffs = deepcopy(memento.temp_buffs)
+
+        if self.__backpack is None:
+            raise ValueError(f"Backpack was not restored for entity {self.__id}")
 
     """# id
     # Solves issues with accessing if of mage which inherits from Entity
@@ -733,6 +757,7 @@ class MageInfo:
     attack: int
     defence: int
     speed: int
+    inventory: tuple
     active_modifiers: tuple  # tuple of two dictionaries - flat and percent modifiers
     backpack: tuple
     attack_type: str
@@ -797,6 +822,7 @@ class Mage(Entity):
             attack=entity_info.attack,
             defence=entity_info.defence,
             speed=entity_info.speed,
+            inventory=entity_info.inventory,
             active_modifiers=entity_info.active_modifiers,
             backpack=entity_info.backpack,
             attack_type=entity_info.attack_type,
@@ -881,7 +907,6 @@ class Mage(Entity):
 
     # Calculate Final Stats End
 
-    # NEEDS CLEANER IMPLEMENTATIO WITHOUT NAME MANGLING
     # Update Stats Start
     # Calculates final stats and updates entities stats based on their bases and modifiers
     # Called when inventory is changed or if unit is positioned on a tile that modifies stats

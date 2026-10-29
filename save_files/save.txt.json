@@ -1,0 +1,291 @@
+{
+    "game_state": {
+        "turn_number": 3,
+        "entity_ids_issued": 4,
+        "map_created": true
+    },
+    "grid": {
+        "width": "5",
+        "height": "5",
+        "tiles": [
+            [
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                }
+            ],
+            [
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                }
+            ],
+            [
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [
+                        1
+                    ],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [
+                        2
+                    ],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                }
+            ],
+            [
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [
+                        3
+                    ],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                }
+            ],
+            [
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                }
+            ]
+        ]
+    },
+    "entities": [
+        {
+            "id": 1,
+            "type": "warrior",
+            "position": [
+                2,
+                2
+            ],
+            "health": 118,
+            "max_health": 120,
+            "attack": 27,
+            "defence": 10,
+            "speed": 5,
+            "inventory": {
+                "Weapon": "IronSword",
+                "Armor": "None",
+                "Accessory": "None"
+            },
+            "active_modifiers": {
+                "Flat_modifiers": {
+                    "Attack": 12
+                },
+                "Percent_modifiers": {}
+            },
+            "backpack": [
+                "CursedDagger",
+                "IronSword"
+            ],
+            "attack_type": "Melee",
+            "temp_buffs": []
+        },
+        {
+            "id": 2,
+            "type": "goblin",
+            "position": [
+                2,
+                3
+            ],
+            "health": 21,
+            "max_health": 45,
+            "attack": 12,
+            "defence": 3,
+            "speed": 6,
+            "inventory": {
+                "Weapon": "None",
+                "Armor": "None",
+                "Accessory": "None"
+            },
+            "active_modifiers": {
+                "Flat_modifiers": {},
+                "Percent_modifiers": {}
+            },
+            "backpack": [],
+            "attack_type": "Melee",
+            "temp_buffs": []
+        },
+        {
+            "id": 3,
+            "type": "mage",
+            "position": [
+                3,
+                3
+            ],
+            "health": 70,
+            "max_health": 70,
+            "attack": 8,
+            "defence": 4,
+            "speed": 5,
+            "inventory": {
+                "Weapon": "None",
+                "Armor": "None",
+                "Accessory": "None"
+            },
+            "active_modifiers": {
+                "Flat_modifiers": {},
+                "Percent_modifiers": {}
+            },
+            "backpack": [
+                "RingOfHaste"
+            ],
+            "attack_type": "Melee",
+            "temp_buffs": [],
+            "mana": 100,
+            "max_mana": 100,
+            "spell_power": 25
+        }
+    ]
+}

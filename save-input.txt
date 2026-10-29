@@ -1,0 +1,13 @@
+init map 5 5
+spawn Warrior 2 2
+give 1 CursedDagger
+give 1 IronSword
+swap 1 Weapon IronSword
+spawn Goblin 2 3
+attack 1 2
+attack 2 1
+spawn Mage 3 3
+give 3 RingOfHaste
+tick
+tick
+save save.txt
