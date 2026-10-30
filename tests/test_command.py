@@ -28,6 +28,9 @@ from command import (
     SwapItemCommand,
     UseItemCommand,
     TickCommand,
+    InitCommand,
+    SaveCommand,
+    LoadCommand,
 )
 
 
@@ -2082,6 +2085,550 @@ class TestCommand(unittest.TestCase):
 
         # Verify command name
         self.assertEqual(test_command.get_name(), "Tick")
+
+
+# Test Init Map Command
+# Tests all methods in InitMapCommand
+class TestInitMapCommand(unittest.TestCase):
+
+    # Set Up
+    # Creates a mock GameState and InitMapCommand for testing
+    # Params: None
+    # Returns: None
+    def setUp(self):
+        # Create mock game state
+        self.game_state = MagicMock()
+
+        # Mock map does not exist
+        self.game_state.is_map_created.return_value = False
+
+        # Create command
+        self.command = InitCommand(self.game_state, 25, 25)
+
+    # Execute Tests
+
+    # Success
+    # Test initializing a map when one does not already exist
+    def test_execute_creates_map_when_map_does_not_exist(self):
+        # Execute command
+        self.command.execute()
+
+        # Test grid was created
+        self.game_state.create_grid.assert_called_once_with(25, 25)
+
+        # Test map was checked
+        self.game_state.is_map_created.assert_called_once()
+
+        # Test map was not reset
+        self.game_state.reset_map.assert_not_called()
+
+    # Success
+    # Test resetting an existing map before creating a new map
+    def test_execute_resets_existing_map_before_creating_new_map(self):
+        # Mock map already exists
+        self.game_state.is_map_created.return_value = True
+
+        # Execute command
+        self.command.execute()
+
+        # Test map was reset
+        self.game_state.reset_map.assert_called_once()
+
+        # Test new grid was created
+        self.game_state.create_grid.assert_called_once_with(25, 25)
+
+    # Success
+    # Test creating a map with string dimensions
+    def test_execute_converts_dimensions_to_integers(self):
+        # Create command with string dimensions
+        command = InitCommand(self.game_state, "10", "15")
+
+        # Execute command
+        command.execute()
+
+        # Test grid was created with integer dimensions
+        self.game_state.create_grid.assert_called_once_with(10, 15)
+
+    # Undo Tests
+
+    # Success
+    # Test undoing map initialization restores previous game state
+    def test_undo_restores_previous_game_state(self):
+        # Execute command
+        self.command.execute()
+
+        # Undo command
+        self.command.undo()
+
+        # Test previous state was restored
+        self.game_state.restore_memento.assert_called_once_with(
+            self.game_state.create_memento.return_value
+        )
+
+    # Failure
+    # Test undoing map initialization before executing command
+    def test_undo_before_execute_raises_error(self):
+        # Test undo raises ValueError
+        with self.assertRaisesRegex(ValueError, "Map has not been initialized!"):
+            self.command.undo()
+
+        # Test game state was not restored
+        self.game_state.restore_memento.assert_not_called()
+
+    # Success
+    # Test undoing map initialization only restores state once
+    def test_undo_can_only_be_performed_once(self):
+        # Execute command
+        self.command.execute()
+
+        # Undo command
+        self.command.undo()
+
+        # Attempt to undo again
+        with self.assertRaisesRegex(ValueError, "Map has not been initialized!"):
+            self.command.undo()
+
+        # Test state was restored only once
+        self.game_state.restore_memento.assert_called_once()
+
+    # Redo Tests
+
+    # Success
+    # Test redoing map initialization after undo
+    def test_redo_after_undo_reinitializes_map(self):
+        # Execute command
+        self.command.execute()
+
+        # Undo command
+        self.command.undo()
+
+        # Reset mock call history
+        self.game_state.create_grid.reset_mock()
+
+        # Redo command
+        self.command.redo()
+
+        # Test grid was recreated
+        self.game_state.create_grid.assert_called_once_with(25, 25)
+
+    # Failure
+    # Test redoing map initialization before undoing it
+    def test_redo_before_undo_raises_error(self):
+        # Execute command
+        self.command.execute()
+
+        # Test redo raises ValueError
+        with self.assertRaisesRegex(ValueError, "Map has already been initialized!"):
+            self.command.redo()
+
+        # Test grid was only created once
+        self.game_state.create_grid.assert_called_once_with(25, 25)
+
+    # Success
+    # Test getting the command name
+    def test_get_name_returns_init_map(self):
+        # Get command name
+        name = self.command.get_name()
+
+        # Test command name
+        self.assertEqual(name, "Init Map")
+
+    # Tests SaveCommand execute saves the current game state
+    def test_save_command_execute(self):
+        # Create mock GameState
+        test_game_state = MagicMock()
+
+        # Create mock GameStateManager
+        test_game_state_manager = MagicMock()
+
+        # Create Save Command
+        test_command = SaveCommand(
+            test_game_state, test_game_state_manager, "test_save"
+        )
+
+        # Execute Command
+        test_command.execute()
+
+        # Verify game state was saved
+        test_game_state_manager.save_game.assert_called_once_with(
+            test_game_state, "test_save"
+        )
+
+    # Tests SaveCommand undo deletes the created save file
+    def test_save_command_undo(self):
+        # Create mock GameState
+        test_game_state = MagicMock()
+
+        # Create mock GameStateManager
+        test_game_state_manager = MagicMock()
+
+        # Create Save Command
+        test_command = SaveCommand(
+            test_game_state, test_game_state_manager, "test_save"
+        )
+
+        # Execute Command
+        test_command.execute()
+
+        # Undo Command
+        test_command.undo()
+
+        # Verify save file was deleted
+        test_game_state_manager.delete_save.assert_called_once_with("test_save")
+
+    # Tests SaveCommand undo raises an error before execution
+    def test_save_command_undo_before_execute(self):
+        # Create mock GameState
+        test_game_state = MagicMock()
+
+        # Create mock GameStateManager
+        test_game_state_manager = MagicMock()
+
+        # Create Save Command
+        test_command = SaveCommand(
+            test_game_state, test_game_state_manager, "test_save"
+        )
+
+        # Verify error is raised
+        with self.assertRaisesRegex(ValueError, "Game has not been saved!"):
+            test_command.undo()
+
+        # Verify save file was not deleted
+        test_game_state_manager.delete_save.assert_not_called()
+
+    # Tests SaveCommand undo cannot be performed twice
+    def test_save_command_undo_twice(self):
+        # Create mock GameState
+        test_game_state = MagicMock()
+
+        # Create mock GameStateManager
+        test_game_state_manager = MagicMock()
+
+        # Create Save Command
+        test_command = SaveCommand(
+            test_game_state, test_game_state_manager, "test_save"
+        )
+
+        # Execute Command
+        test_command.execute()
+
+        # Undo Command
+        test_command.undo()
+
+        # Verify error is raised
+        with self.assertRaisesRegex(ValueError, "Game has not been saved!"):
+            test_command.undo()
+
+        # Verify save file was deleted only once
+        test_game_state_manager.delete_save.assert_called_once_with("test_save")
+
+    # Tests SaveCommand redo saves the game again after undo
+    def test_save_command_redo(self):
+        # Create mock GameState
+        test_game_state = MagicMock()
+
+        # Create mock GameStateManager
+        test_game_state_manager = MagicMock()
+
+        # Create Save Command
+        test_command = SaveCommand(
+            test_game_state, test_game_state_manager, "test_save"
+        )
+
+        # Execute Command
+        test_command.execute()
+
+        # Undo Command
+        test_command.undo()
+
+        # Reset save game call history
+        test_game_state_manager.save_game.reset_mock()
+
+        # Redo Command
+        test_command.redo()
+
+        # Verify game was saved again
+        test_game_state_manager.save_game.assert_called_once_with(
+            test_game_state, "test_save"
+        )
+
+    # Tests SaveCommand redo raises an error while already executed
+    def test_save_command_redo_before_undo(self):
+        # Create mock GameState
+        test_game_state = MagicMock()
+
+        # Create mock GameStateManager
+        test_game_state_manager = MagicMock()
+
+        # Create Save Command
+        test_command = SaveCommand(
+            test_game_state, test_game_state_manager, "test_save"
+        )
+
+        # Execute Command
+        test_command.execute()
+
+        # Verify error is raised
+        with self.assertRaisesRegex(ValueError, "Game has already been saved!"):
+            test_command.redo()
+
+        # Verify game was only saved once
+        test_game_state_manager.save_game.assert_called_once_with(
+            test_game_state, "test_save"
+        )
+
+    # Tests SaveCommand execution failure prevents undo
+    def test_save_command_execute_failure(self):
+        # Create mock GameState
+        test_game_state = MagicMock()
+
+        # Create mock GameStateManager
+        test_game_state_manager = MagicMock()
+
+        # Simulate save failure
+        test_game_state_manager.save_game.side_effect = OSError("Unable to save game!")
+
+        # Create Save Command
+        test_command = SaveCommand(
+            test_game_state, test_game_state_manager, "test_save"
+        )
+
+        # Verify execution raises an error
+        with self.assertRaises(OSError):
+            test_command.execute()
+
+        # Verify undo is not allowed
+        with self.assertRaisesRegex(ValueError, "Game has not been saved!"):
+            test_command.undo()
+
+        # Verify save file was not deleted
+        test_game_state_manager.delete_save.assert_not_called()
+
+    # Tests SaveCommand get_name returns the command name
+    def test_save_command_get_name(self):
+        # Create mock GameState
+        test_game_state = MagicMock()
+
+        # Create mock GameStateManager
+        test_game_state_manager = MagicMock()
+
+        # Create Save Command
+        test_command = SaveCommand(
+            test_game_state, test_game_state_manager, "test_save"
+        )
+
+        # Verify command name
+        self.assertEqual(test_command.get_name(), "Save")
+
+    # Tests LoadCommand execute loads the saved game state
+    def test_load_command_execute(self):
+        # Create mock GameState
+        test_game_state = MagicMock()
+
+        # Create mock GameStateManager
+        test_game_state_manager = MagicMock()
+
+        # Create mock Memento
+        test_memento = MagicMock()
+        test_game_state.create_memento.return_value = test_memento
+
+        # Create Load Command
+        test_command = LoadCommand(
+            test_game_state, test_game_state_manager, "test_save"
+        )
+
+        # Execute Command
+        test_command.execute()
+
+        # Verify current game state was saved
+        test_game_state.create_memento.assert_called_once()
+
+        # Verify saved game was loaded
+        test_game_state_manager.load_game.assert_called_once_with(
+            test_game_state, "test_save"
+        )
+
+    # Tests LoadCommand undo restores the previous game state
+    def test_load_command_undo(self):
+        # Create mock GameState
+        test_game_state = MagicMock()
+
+        # Create mock GameStateManager
+        test_game_state_manager = MagicMock()
+
+        # Create mock Memento
+        test_memento = MagicMock()
+        test_game_state.create_memento.return_value = test_memento
+
+        # Create Load Command
+        test_command = LoadCommand(
+            test_game_state, test_game_state_manager, "test_save"
+        )
+
+        # Execute Command
+        test_command.execute()
+
+        # Undo Command
+        test_command.undo()
+
+        # Verify previous game state was restored
+        test_game_state.restore_memento.assert_called_once_with(test_memento)
+
+    # Tests LoadCommand undo raises an error before execution
+    def test_load_command_undo_before_execute(self):
+        # Create mock GameState
+        test_game_state = MagicMock()
+
+        # Create mock GameStateManager
+        test_game_state_manager = MagicMock()
+
+        # Create Load Command
+        test_command = LoadCommand(
+            test_game_state, test_game_state_manager, "test_save"
+        )
+
+        # Verify error is raised
+        with self.assertRaisesRegex(ValueError, "Game has not been loaded!"):
+            test_command.undo()
+
+        # Verify game state was not restored
+        test_game_state.restore_memento.assert_not_called()
+
+    # Tests LoadCommand undo cannot be performed twice
+    def test_load_command_undo_twice(self):
+        # Create mock GameState
+        test_game_state = MagicMock()
+
+        # Create mock GameStateManager
+        test_game_state_manager = MagicMock()
+
+        # Create mock Memento
+        test_memento = MagicMock()
+        test_game_state.create_memento.return_value = test_memento
+
+        # Create Load Command
+        test_command = LoadCommand(
+            test_game_state, test_game_state_manager, "test_save"
+        )
+
+        # Execute Command
+        test_command.execute()
+
+        # Undo Command
+        test_command.undo()
+
+        # Verify error is raised
+        with self.assertRaisesRegex(ValueError, "Game has not been loaded!"):
+            test_command.undo()
+
+        # Verify previous game state was restored only once
+        test_game_state.restore_memento.assert_called_once_with(test_memento)
+
+    # Tests LoadCommand redo loads the saved game again after undo
+    def test_load_command_redo(self):
+        # Create mock GameState
+        test_game_state = MagicMock()
+
+        # Create mock GameStateManager
+        test_game_state_manager = MagicMock()
+
+        # Create mock Memento
+        test_memento = MagicMock()
+        test_game_state.create_memento.return_value = test_memento
+
+        # Create Load Command
+        test_command = LoadCommand(
+            test_game_state, test_game_state_manager, "test_save"
+        )
+
+        # Execute Command
+        test_command.execute()
+
+        # Undo Command
+        test_command.undo()
+
+        # Reset load game call history
+        test_game_state_manager.load_game.reset_mock()
+
+        # Redo Command
+        test_command.redo()
+
+        # Verify saved game was loaded again
+        test_game_state_manager.load_game.assert_called_once_with(
+            test_game_state, "test_save"
+        )
+
+    # Tests LoadCommand redo raises an error while already executed
+    def test_load_command_redo_before_undo(self):
+        # Create mock GameState
+        test_game_state = MagicMock()
+
+        # Create mock GameStateManager
+        test_game_state_manager = MagicMock()
+
+        # Create mock Memento
+        test_memento = MagicMock()
+        test_game_state.create_memento.return_value = test_memento
+
+        # Create Load Command
+        test_command = LoadCommand(
+            test_game_state, test_game_state_manager, "test_save"
+        )
+
+        # Execute Command
+        test_command.execute()
+
+        # Verify error is raised
+        with self.assertRaisesRegex(ValueError, "Game has already been loaded!"):
+            test_command.redo()
+
+        # Verify game was only loaded once
+        test_game_state_manager.load_game.assert_called_once_with(
+            test_game_state, "test_save"
+        )
+
+    # Tests LoadCommand execution failure prevents undo
+    def test_load_command_execute_failure(self):
+        # Create mock GameState
+        test_game_state = MagicMock()
+
+        # Create mock GameStateManager
+        test_game_state_manager = MagicMock()
+
+        # Simulate load failure
+        test_game_state_manager.load_game.side_effect = OSError("Unable to load game!")
+
+        # Create Load Command
+        test_command = LoadCommand(
+            test_game_state, test_game_state_manager, "test_save"
+        )
+
+        # Verify execution raises an error
+        with self.assertRaises(OSError):
+            test_command.execute()
+
+        # Verify undo is not allowed
+        with self.assertRaisesRegex(ValueError, "Game has not been loaded!"):
+            test_command.undo()
+
+        # Verify game state was not restored
+        test_game_state.restore_memento.assert_not_called()
+
+    # Tests LoadCommand get_name returns the command name
+    def test_load_command_get_name(self):
+        # Create mock GameState
+        test_game_state = MagicMock()
+
+        # Create mock GameStateManager
+        test_game_state_manager = MagicMock()
+
+        # Create Load Command
+        test_command = LoadCommand(
+            test_game_state, test_game_state_manager, "test_save"
+        )
+
+        # Verify command name
+        self.assertEqual(test_command.get_name(), "Load")
 
 
 if __name__ == "__main__":

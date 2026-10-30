@@ -24,6 +24,7 @@ Tony Pescatore
 
 ## Running The Game
 [Table of Contents](#table-of-contents)
+
 Run the game by entering the following command in your terminal:
 
 ```
@@ -91,12 +92,16 @@ python main.py
 
 **Contraints:** Width and height are integers between 5 and 50 inclusive.
 
+**Undoable/Redoable:** True
+
 ### Set Tile
 **Description:** Will set the tile at a given grid position to be the provided tile type.
 
 **Called as:** set tile x y tile_type
 
 **Contraints:** tile_type must be within list of valid tile types, (x,y) must be integers within the current grid bounds, and map must have been created.
+
+**Undoable/Redoable:** True
 
 ### Spawn
 **Description:** Will spawn specified entity or item at given grid position
@@ -109,12 +114,16 @@ python main.py
 - **Spawn Entity:** entity_type must be within list of valid entity types and there must not be any other entity already present at the given grid position.
 - **Spawn Loot:** item_name must be within list of valid equipment types.
 
+**Undoable/Redoable:** True
+
 ### Swap
 **Description:** Will equip provided item in the given, or determined, inventory slot to a "player".
 
 **Called as:** swap id slot item_name
 
 **Contraints:** item must be within the list of valid items. id must be an integer within the current entity list and slot must be within valid slots.
+
+**Undoable/Redoable:** True
 
 ### Inventory
 **Description:** Will display the current inventory of provided entity.
@@ -123,12 +132,16 @@ python main.py
 
 **Contraints:** An entity with a matching id must exist.
 
+**Undoable/Redoable:** False
+
 ### Inspect
 **Description:** Will display the stats of an entity given its id.
 
 **Called as:** inspect id
 
 **Contraints:** The id must be an integer that corresponds to a valid entity within the entity list.
+
+**Undoable/Redoable:** False
 
 ### Tile
 **Description:** Will display a description of the tile at the given grid position.
@@ -137,12 +150,16 @@ python main.py
 
 **Contraints:** (x,y) must be integers within the current grid bounds and the map must have been created.
 
+**Undoable/Redoable:** False
+
 ### Pickup
 **Description:** Will pickup the item with the given name at the given entity's current location, if it is present.
 
 **Called as:** pickup id item_name
 
 **Contraints:** id must be an integer within the current entity list, the item with the same name must be located at the same tile as the entity, and the entity must have space in their backpack for the item.
+
+**Undoable/Redoable:** True
 
 ### Drop
 **Description:** Will drop the item with the given name at the given entity's current location.
@@ -151,12 +168,16 @@ python main.py
 
 **Contraints:** id must be an integer within the current entity list and an item with the same name must be within the entity's backpack.
 
+**Undoable/Redoable:** True
+
 ### Give
 **Description:** Will give the item with the given name to the matching entity.
 
 **Called as:** give id item_name
 
 **Contraints:** id must be an integer within the current entity list and the item must be a valid item.
+
+**Undoable/Redoable:** True
 
 ### Use
 **Description:** Will use the item with the given name on the matching entity.
@@ -165,12 +186,16 @@ python main.py
 
 **Contraints:** id must be an integer within the current entity list and the item must be a valid consumable within the given entity's inventory.
 
+**Undoable/Redoable:** True
+
 ### Move
 **Description:** Will move the given entity to the grid position if they are within range and a valid.
 
 **Called as:** move id x y
 
 **Contraints:** id must be an integer within the current entity list and the x,y must correspond to a valid grid position for the entity to occupy.
+
+**Undoable/Redoable:** True
 
 ### Attack
 **Description:** First entity will attack the second entity with damage being calculated as attack vs defence. When an defender's health reaches zero they will die and receive the "Dead" status.
@@ -179,12 +204,16 @@ python main.py
 
 **Contraints:** ids must be an integer within the current entity list and the defender must be within the attack range of the attacker. 
 
+**Undoable/Redoable:** True
+
 ### Cast
 **Description:** First entity will cast a spell on the other entity. This can do damage using the spell power and the spell damage modifier against the targets defence, it can heal them, and it can apply an effect on them. When a targets health reaches zero they will die and receive the "Dead" status.
 
 **Called as:** cast caster_id target_id spell_name
 
 **Contraints:** ids must be an integer within the current entity list and the defender must be within the spell range of the caster. The spell must also exist in the valid spell list
+
+**Undoable/Redoable:** True
 
 ### Tick
 **Description:** Adavances to the next turn. Turns start at 1 and increase by 1 when tick is called.
@@ -193,12 +222,16 @@ python main.py
 
 **Contraints:** Map must be created.
 
+**Undoable/Redoable:** True
+
 ### Save
 **Description:** Captures the snapshot of the game state via the memento pattern and converts it to JSON through GameStateManager. Then writes save data to given file name, and updates save status.
 
 **Called as:** save [filename]
 
 **Contraints:** Game state must be created and active.
+
+**Undoable/Redoable:** True
 
 ### Load
 **Description:** Reads the specified file, parses the save data, restores the game state, and resets the sessions save status.
@@ -207,12 +240,16 @@ python main.py
 
 **Contraints:** File must exist that matches given file name.
 
+**Undoable/Redoable:** True
+
 ### State-Info
 **Description:** Displays metadata about the current session (Turn Count, Active Entities, Save Status etc).
 
 **Called as:** state-info
 
 **Contraints:** Game state must be created and active.
+
+**Undoable/Redoable:** False
 
 ### Undo
 **Description:** Undos the most recent command if it is able to be undone.
@@ -221,6 +258,8 @@ python main.py
 
 **Contraints:** An undo-able command must be within the undo stack.
 
+**Undoable/Redoable:** False
+
 ### Redo
 **Description:** Redos the most recently undone command if it is able to be redone.
 
@@ -228,12 +267,16 @@ python main.py
 
 **Contraints:** An redo-able command must be within the redo stack.
 
+**Undoable/Redoable:** False
+
 ### History
 **Description:** Summarizes the list of recent commands in the undo and redo stacks.
 
 **Called as:** history
 
 **Contraints:** None
+
+**Undoable/Redoable:** False
 
 ## Design Decisions
 [Table of Contents](#table-of-contents)
@@ -254,7 +297,7 @@ python main.py
 - Each tile can have more than 1 occupant, which will be represented by a list of entity IDs, or if there are no occupants it will be instead be filled with the empty tile constant value. 
 - Each tile also has an item_list for loot that can be picked up, dropped, or spawned at the tile location.
 - Impassable tiles also block Line of sight for ranged/magic attacks.
-- There are only 4 valid tile types, which are: Floor, Wall, and ShallowWater. 
+- There are only 4 valid tile types, which are: Floor, Wall, ShallowWater, and Forest. 
     - **Floor Tiles:** Act as open tiles which are passable and will not impede movement in anyway. 
     - **Wall Tiles:** Impassable tiles that will be used to enforce spatial boundaries and colision. 
     - **ShallowWater Tiles:** Passable tiles that apply a negative modifier that will impede the movement of its occupant(s).
@@ -297,6 +340,7 @@ python main.py
 - The command line interface is where the game in played. Running the command line interface will allow the user to input commands, which will be handled accordingly by the command line interfaces process_command method. This will return descriptive error messages so that users will know what was wrong with their inputs. 
 - Houses the game state variable through which interaction between files and objects are handled.
 - It also contains the main function that will prompt for the commands in the terminal, the player can exit at any time by entering 'quit'.
+- Allows for files to be piped/redirected in for inputs and will account for end of file errors.
 
 ### Game State
 - Manages time passing in game through ticks.
@@ -312,11 +356,14 @@ python main.py
 - Handles loading and saving from files as well as conversion to JSON from mementos. Calls other classes to create and to restore their own memento to follow Single Responsibility Principle.
 
 ### Command
-- Commands ... NEEDED
+- Commands are created as objects which allow for them to be run using .execute().
+- Many commands, those that change gamestate or change files (for example, save), can be undone or redone using .undo() or .redo() respectively.
+- Other commands that cannot be undone or redone will simply be passed on when it comes to undo/redo commands and history.
 - Game state verification checks are done prior to the execution of the commands being undone or redone, so the reverification is redundant here.
 
 ### Command Manager
-
+- Houses all universal functions that are useful when running commands.
+- Manages command history allowing for undo and redo to function accurately to their proper history.
 
 ### Other
 - Values for entities, tiles, spells, equipment, grids, and game state are marked as private (__varname). To access this information x.getinfo() will return a immutable copy to prevent any of that private data from being public and able to be modified. When these do need to be changed, such as an entity losing health, it is handled within its own class.

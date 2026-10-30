@@ -30,6 +30,9 @@ from command import (
     SwapItemCommand,
     UseItemCommand,
     TickCommand,
+    InitCommand,
+    SaveCommand,
+    LoadCommand,
 )
 
 # from spell import get_spell
@@ -122,9 +125,11 @@ class CLI:
             )
             return
         # Valid inputs
-        # Create grid with width and height
-        self.game_state.create_grid(width, height)
-        # Success message
+        # Create Command
+        command = InitCommand(self.game_state, width, height)
+        # Execute Command
+        self.command_manager.execute_command(command)
+        # Success Message
         print(f"ok: map_initialized width: {width} height: {height}!")
 
     # Process set command
@@ -982,9 +987,13 @@ class CLI:
         else:
             # Success - can be saved
             try:
-                # Try save game
-                self.game_state_manager.save_game(self.game_state, filename)
-                # Sucess Message
+                # Create Command
+                command = SaveCommand(
+                    self.game_state, self.game_state_manager, filename
+                )
+                # Execute Command
+                command.execute()
+                # Success Message
                 print(f"ok: game saved to {filename}")
             # Extensive error catching
             except (OSError, ValueError, TypeError, KeyError) as error:
@@ -1003,8 +1012,10 @@ class CLI:
 
         # Attempt to load game
         try:
-            # Load Game
-            self.game_state_manager.load_game(self.game_state, filename)
+            # Create Command
+            command = LoadCommand(self.game_state, self.game_state_manager, filename)
+            # Execute Command
+            command.execute()
             # Success Message
             print(f"ok: game loaded from {filename}!")
         # Extensive error catching

@@ -409,3 +409,13 @@ class GameStateManager:
             turn_number=game_data["turn_number"],
             is_saved=True,
         )
+
+    # Delete Save
+    # Deletes file with the given name
+    # Params:   filename - string - file name associated with current save
+    # Returns:  None
+    def delete_save(self, filename):
+        # Create file path
+        filepath = self.create_filepath(filename)
+        # Delete save file
+        os.remove(filepath)

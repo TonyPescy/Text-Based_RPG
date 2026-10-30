@@ -30,6 +30,7 @@ import tempfile
 from game_state import GameState
 import json
 import unittest
+from unittest.mock import patch
 
 
 # Game state manager tests
@@ -307,6 +308,57 @@ class TestGameStateManager(unittest.TestCase):
     def test_validate_non_dictionary_save_data(self):
         with self.assertRaises(ValueError):
             self.manager.validate_save_data([])
+
+    # Success
+    # Test deleting an existing save file
+    def test_delete_save_removes_existing_file(self):
+        # Create temporary save file
+        with tempfile.NamedTemporaryFile(delete=False) as temp_file:
+            filepath = temp_file.name
+
+        # Mock file path creation
+        with patch.object(self.manager, "create_filepath", return_value=filepath):
+            # Delete save file
+            self.manager.delete_save("test_save")
+
+        # Test file no longer exists
+        self.assertFalse(os.path.exists(filepath))
+
+    # Failure
+    # Test deleting a save file that does not exist
+    def test_delete_save_with_missing_file_raises_error(self):
+        # Mock file path creation
+        with patch.object(
+            self.manager, "create_filepath", return_value="missing_save.json"
+        ):
+            # Test FileNotFoundError
+            with self.assertRaises(FileNotFoundError):
+                self.manager.delete_save("missing_save")  # Success
+
+    # Test deleting an existing save file
+    def test_delete_save_removes_existing_file(self):
+        # Create temporary save file
+        with tempfile.NamedTemporaryFile(delete=False) as temp_file:
+            filepath = temp_file.name
+
+        # Mock file path creation
+        with patch.object(self.manager, "create_filepath", return_value=filepath):
+            # Delete save file
+            self.manager.delete_save("test_save")
+
+        # Test file no longer exists
+        self.assertFalse(os.path.exists(filepath))
+
+    # Failure
+    # Test deleting a save file that does not exist
+    def test_delete_save_with_missing_file_raises_error(self):
+        # Mock file path creation
+        with patch.object(
+            self.manager, "create_filepath", return_value="missing_save.json"
+        ):
+            # Test FileNotFoundError
+            with self.assertRaises(FileNotFoundError):
+                self.manager.delete_save("missing_save")
 
 
 if __name__ == "main":

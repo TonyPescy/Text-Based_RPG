@@ -34,15 +34,13 @@ class Command(ABC):
     def undo(self):
         pass
 
-    """ MIGHT JUST USE EXECUTE
-        # Redo
-        # Re-executes the requested game action
-        # Params: None
-        # Returns: None
-        @abstractmethod
-        def redo(self):
-            pass
-    """
+    # Redo
+    # Re-executes the requested game action
+    # Params: None
+    # Returns: None
+    @abstractmethod
+    def redo(self):
+        pass
 
     # Get Name
     # Gets name of command
@@ -934,5 +932,182 @@ class TickCommand(Command):
     # Gets the command name
     # Params: None
     # Returns: string - Name of command
+    def get_name(self):
+        return self.__name
+
+
+# Init Map Command extends Command
+class InitCommand(Command):
+    def __init__(self, game_state, width, height):
+        self.__game_state = game_state
+        self.__width = int(width)
+        self.__height = int(height)
+        self.__name = "Init Map"
+        self.__old_state = None
+        self.__executed = False
+
+    # Execute
+    # Creates a new map
+    # Params: None
+    # Returns: None
+    def execute(self):
+        # Save current state before initializing map
+        if not self.__executed:
+            self.__old_state = self.__game_state.create_memento()
+
+        # Reset map if one already exists
+        if self.__game_state.is_map_created():
+            self.__game_state.reset_map()
+
+        # Create new map
+        self.__game_state.create_grid(self.__width, self.__height)
+
+        # Mark command as executed
+        self.__executed = True
+
+    # Undo
+    # Restores the game state before the map was initialized
+    # Params: None
+    # Returns: None
+    def undo(self):
+        # Command has not been executed
+        if not self.__executed:
+            raise ValueError("Map has not been initialized!")
+
+        # Restore previous game state
+        self.__game_state.restore_memento(self.__old_state)
+
+        # Mark command as not executed
+        self.__executed = False
+
+    # Redo
+    # Reinitializes the map
+    # Params: None
+    # Returns: None
+    def redo(self):
+        # Command has already been executed
+        if self.__executed:
+            raise ValueError("Map has already been initialized!")
+        # Execute command again
+        self.execute()
+
+    # Get Name
+    # Gets the name of the command
+    # Params: None
+    # Returns: name - string - Name of command
+    def get_name(self):
+        return self.__name
+
+
+# Save Command extends Commad
+class SaveCommand(Command):
+    def __init__(self, game_state, game_state_manager, filename):
+        self.__game_state = game_state
+        self.__game_state_manager = game_state_manager
+        self.__filename = filename
+        self.__name = "Save"
+        self.__executed = False
+
+    # Execute
+    # Saves the current game state to a file
+    # Params: None
+    # Returns: None
+    def execute(self):
+        # Save game state
+        self.__game_state_manager.save_game(self.__game_state, self.__filename)
+
+        # Mark command as executed
+        self.__executed = True
+
+    # Undo
+    # Deletes the save file created by this command
+    # Params: None
+    # Returns: None
+    def undo(self):
+        # Command has not been executed
+        if not self.__executed:
+            raise ValueError("Game has not been saved!")
+
+        # Delete save file
+        self.__game_state_manager.delete_save(self.__filename)
+
+        # Mark command as not executed
+        self.__executed = False
+
+    # Redo
+    # Saves the game state again
+    # Params: None
+    # Returns: None
+    def redo(self):
+        # Command has already been executed
+        if self.__executed:
+            raise ValueError("Game has already been saved!")
+
+        # Execute command again
+        self.execute()
+
+    # Get Name
+    # Gets the name of the command
+    # Params: None
+    # Returns: name - string - Name of command
+    def get_name(self):
+        return self.__name
+
+
+# Load Command extends Command
+class LoadCommand(Command):
+    def __init__(self, game_state, game_state_manager, filename):
+        self.__game_state = game_state
+        self.__game_state_manager = game_state_manager
+        self.__filename = filename
+        self.__name = "Load"
+        self.__memento = None
+        self.__executed = False
+
+    # Execute Command
+    # Loads the saved game state
+    # Params: None
+    # Returns: None
+    def execute(self):
+        # Save current game state before loading
+        self.__memento = self.__game_state.create_memento()
+
+        # Load saved game state
+        self.__game_state_manager.load_game(self.__game_state, self.__filename)
+
+        # Mark command as executed
+        self.__executed = True
+
+    # Undo Command
+    # Restores game state from before loading
+    # Params: None
+    # Returns: None
+    def undo(self):
+        # Verify command was executed
+        if not self.__executed:
+            raise ValueError("Game has not been loaded!")
+
+        # Restore previous game state
+        self.__game_state.restore_memento(self.__memento)
+
+        # Mark command as undone
+        self.__executed = False
+
+    # Redo Command
+    # Loads the saved game state again
+    # Params: None
+    # Returns: None
+    def redo(self):
+        # Verify command was undone
+        if self.__executed:
+            raise ValueError("Game has already been loaded!")
+
+        # Execute Command
+        self.execute()
+
+    # Get Name
+    # Gets the command name
+    # Params: None
+    # Returns: string - command name
     def get_name(self):
         return self.__name
