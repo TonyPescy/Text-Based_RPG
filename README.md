@@ -31,6 +31,9 @@ Run the game by entering the following command in your terminal:
 python main.py
 ```
 
+Exit the game by using the keyboard interrupt or by entering "quit" as a command.
+
+
 ## Entities
 [Table of Contents](#table-of-contents)
 
@@ -333,7 +336,7 @@ python main.py
 
 ### Test Suite 
 - The test suite tests the public facing methods as they will call and use the other private facing methods. This means that these private facing methods will also be tested in tandem. It incldues verbose tests includings tests on the boundary values, the validity of inputs, and ensures that all public facing methods and private methods are working as intended. 
-- All other aspects of the project are tested within this suite including the Command Line Interface, Equipment, Entities, Grid, Game State, Game State Manager, Spells, and Tiles.
+- All other aspects of the project are tested within this suite including the Command Line Interface, Equipment, Entities, Grid, Game State, Game State Manager, Spells, Tiles, Command, and Command Manager.
 - Each suite has a set of helper functions to reduce the amount of code needed, but does not detract from the readability of the code.
 
 ### Command Line Interface
@@ -359,7 +362,8 @@ python main.py
 - Commands are created as objects which allow for them to be run using .execute().
 - Many commands, those that change gamestate or change files (for example, save), can be undone or redone using .undo() or .redo() respectively.
 - Other commands that cannot be undone or redone will simply be passed on when it comes to undo/redo commands and history.
-- Game state verification checks are done prior to the execution of the commands being undone or redone, so the reverification is redundant here.
+- Game state verification checks are done prior to the execution of the commands being undone or redone, so the reverification is redundant here. Before they are added to history all of the relevant variables are checked and preserved so that undoing or redoing can be done without errors.
+- Few commands cannot be redone as they either do not change the game state or files, or they are either undo/redo.
 
 ### Command Manager
 - Houses all universal functions that are useful when running commands.

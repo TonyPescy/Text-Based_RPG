@@ -12,7 +12,8 @@ Purpose: Houses all the logic needed for the commands.
 
 # Imports
 from abc import ABC, abstractmethod
-from domain_library import SpellEffects
+from domain_library import SpellEffects, are_valid_ints
+from entity import Entity
 
 
 # Command
@@ -49,6 +50,13 @@ class Command(ABC):
     @abstractmethod
     def get_name(self):
         pass
+
+    # Is Undoable
+    # Determines whether the command should be added to undo history
+    # Params: None
+    # Returns: bool - True if command can be undone
+    def is_undoable(self):
+        return True
 
 
 # Move Command extends from Command
@@ -1111,3 +1119,438 @@ class LoadCommand(Command):
     # Returns: string - command name
     def get_name(self):
         return self.__name
+
+
+# Inspect Command extends from Command
+class InspectCommand(Command):
+
+    # Initialize Inspect Command
+    def __init__(self, game_state, entity_id):
+        self.__game_state = game_state
+        self.__entity_id = int(entity_id)
+        self.__name = "Inspect"
+
+    # Execute
+    # Displays information about the specified entity
+    # Params: None
+    # Returns: None
+    def execute(self):
+        entity_info = self.__game_state.get_entity_info_from_list(self.__entity_id)
+
+        if entity_info is None:
+            raise ValueError("Entity does not exist!")
+
+        print(f"Id: {entity_info.id}")
+        print(f"Type: {entity_info.e_type}")
+        print(f"Position: {entity_info.position}")
+        print(f"Health: {entity_info.health}/{entity_info.max_health}")
+        print(f"Attack: {entity_info.attack}")
+        print(f"Defence: {entity_info.defence}")
+        print(f"Speed: {entity_info.speed}")
+        print(f"Active Modifiers: {entity_info.active_modifiers}")
+
+    # Undo
+    # No action required because this command does not modify game state
+    # Params: None
+    # Returns: None
+    def undo(self):
+        pass
+
+    # Redo
+    # Re-executes the inspect command
+    # Params: None
+    # Returns: None
+    def redo(self):
+        self.execute()
+
+    # Get Name
+    # Gets the name of the command
+    # Params: None
+    # Returns: name - String - command name
+    def get_name(self):
+        return self.__name
+
+    # Is Undoable
+    # Determines whether the command should be added to undo history
+    # Params: None
+    # Returns: bool - False if command cant be undone
+    def is_undoable(self):
+        return False
+
+
+# Inventory Command extends from Command
+class InventoryCommand(Command):
+
+    # Initialize Inventory Command
+    def __init__(self, game_state, entity_id):
+        self.__game_state = game_state
+        self.__entity_id = int(entity_id)
+        self.__name = "Inventory"
+
+    # Execute
+    # Displays the inventory of the specified entity
+    # Params: None
+    # Returns: None
+    def execute(self):
+        # Get entity information
+        entity_info = self.__game_state.get_entity_info_from_list(self.__entity_id)
+
+        # Get entity for is_alive check
+        entity = self.__game_state.get_entity_from_list(self.__entity_id)
+
+        # Check if entity exists
+        if entity_info is None:
+            raise ValueError("Player entity does not exist!")
+        # Check if entity is alive
+        elif not entity.is_alive():
+            raise ValueError("Player entity is dead!")
+
+        # Display equipped items
+        print(f"Weapon: {entity_info.inventory[0]}")
+        print(f"Armor: {entity_info.inventory[1]}")
+        print(f"Accessory: {entity_info.inventory[2]}")
+
+        # Display backpack slots
+        print("Backpack Slots:")
+
+        # Iterate through all backpack slots
+        for index in range(Entity.BACKPACK_SIZE):
+            # Check if slot contains an item
+            if index < len(entity_info.backpack):
+                item = entity_info.backpack[index]
+
+                if item is None:
+                    item_name = "Empty"
+                else:
+                    item_name = item
+            else:
+                # Slot is empty
+                item_name = "Empty"
+
+            # Display slot number and item
+            print(f"{index + 1}. {item_name}")
+
+    # Undo
+    # No action required because this command does not modify game state
+    # Params: None
+    # Returns: None
+    def undo(self):
+        pass
+
+    # Redo
+    # Re-executes the inventory command
+    # Params: None
+    # Returns: None
+    def redo(self):
+        self.execute()
+
+    # Get Name
+    # Gets the name of the command
+    # Params: None
+    # Returns: name - String - command name
+    def get_name(self):
+        return self.__name
+
+    # Is Undoable
+    # Determines whether the command should be added to undo history
+    # Params: None
+    # Returns: bool - False because inventory does not modify game state
+    def is_undoable(self):
+        return False
+
+
+# Tile Command extends from Command
+class TileCommand(Command):
+
+    # Initialize Tile Command
+    def __init__(self, game_state, x, y):
+        self.__game_state = game_state
+        self.__x = x
+        self.__y = y
+        self.__name = "Tile"
+
+    # Execute
+    # Displays information about the tile at the specified grid position
+    # Params: None
+    # Returns: None
+    def execute(self):
+        # Ensure map exists
+        if not self.__game_state.is_map_created():
+            raise ValueError("Map does not exist!")
+
+        # Check if x and y are valid integers
+        elif not are_valid_ints(self.__x, self.__y):
+            raise ValueError("x and y are not valid integers!")
+
+        # Check if x and y exceed grid bounds
+        elif not self.__game_state.is_valid_grid_position(self.__x, self.__y):
+            raise ValueError("x and y exceed current grid bounds!")
+
+        # Display coordinates
+        print(f"Coordinate: {self.__x}, {self.__y}")
+
+        # Get tile information
+        current_tile_info = self.__game_state.get_game_tile_info(
+            int(self.__x), int(self.__y)
+        )
+
+        if current_tile_info is None:
+            raise ValueError("No tile exists at this position!")
+
+        # Display tile type
+        # Special case with shallowwater for proper capitalization
+        if current_tile_info.tile_type.lower() == "shallowwater":
+            print("Type: ShallowWater")
+        else:
+            print(f"Type: {current_tile_info.tile_type.capitalize()}")
+
+        # Display passable
+        print(f"Passable: {current_tile_info.passable}")
+
+        # Display occupants
+        if len(current_tile_info.occupants) == 0:
+            print("Occupants: None")
+        else:
+            print(f"Occupants: {current_tile_info.occupants[0]}")
+
+    # Undo
+    # No action required because this command does not modify game state
+    # Params: None
+    # Returns: None
+    def undo(self):
+        pass
+
+    # Redo
+    # Re-executes the tile command
+    # Params: None
+    # Returns: None
+    def redo(self):
+        self.execute()
+
+    # Get Name
+    # Gets the name of the command
+    # Params: None
+    # Returns: name - String - command name
+    def get_name(self):
+        return self.__name
+
+    # Is Undoable
+    # Determines whether the command should be added to undo history
+    # Params: None
+    # Returns: bool - False because this command does not modify game state
+    def is_undoable(self):
+        return False
+
+
+# State Info Command extends from Command
+class StateInfoCommand(Command):
+
+    # Initialize State Info Command
+    def __init__(self, game_state):
+        self.__game_state = game_state
+        self.__name = "State-Info"
+
+    # Execute
+    # Displays information about the current game state
+    # Params: None
+    # Returns: None
+    def execute(self):
+        # Check that game state exists and is active
+        if not self.__game_state.game_state_is_active():
+            raise ValueError(" Game State is not initialized!")
+
+        else:
+            # Get game state information
+            try:
+                game_state_info = self.__game_state.get_game_state_info()
+
+                print(
+                    f"ok: turn {game_state_info[0]}, entities: {game_state_info[1]}, saved: {str(game_state_info[2]).lower()}"
+                )
+
+            # Extensive error checking
+            except (AttributeError, TypeError, ValueError) as error:
+                raise error
+
+    # Undo
+    # No action required because this command does not modify game state
+    # Params: None
+    # Returns: None
+    def undo(self):
+        pass
+
+    # Redo
+    # Re-executes the state-info command
+    # Params: None
+    # Returns: None
+    def redo(self):
+        self.execute()
+
+    # Get Name
+    # Gets the name of the command
+    # Params: None
+    # Returns: name - String - command name
+    def get_name(self):
+        return self.__name
+
+    # Is Undoable
+    # Determines whether the command should be added to undo history
+    # Params: None
+    # Returns: bool - False because this command does not modify game state
+    def is_undoable(self):
+        return False
+
+
+# History Command extends from Command
+# Displays the number of commands in the undo and redo histories
+class HistoryCommand(Command):
+
+    # Initialize History Command
+    # Params: command_manager - CommandManager - Command manager instance
+    # Returns: None
+    def __init__(self, command_manager):
+        self.__command_manager = command_manager
+        self.__name = "History"
+
+    # Execute
+    # Displays the undo and redo history counts
+    # Params: None
+    # Returns: None
+    def execute(self):
+        history_info = self.__command_manager.get_history_info()
+
+        print(f"ok: undo_stack:{history_info[0]}, redo_stack:{history_info[1]}")
+
+    # Undo
+    # History is not an undoable command
+    # Params: None
+    # Returns: None
+    def undo(self):
+        pass
+
+    # Redo
+    # Re-displays the history information
+    # Params: None
+    # Returns: None
+    def redo(self):
+        self.execute()
+
+    # Get Name
+    # Returns name of command
+    # Params: None
+    # Returns: command name - String
+    def get_name(self):
+        return self.__name
+
+    # Is Undoable
+    # History is not an undoable command
+    # Params: None
+    # Returns: False
+    def is_undoable(self):
+        return False
+
+
+# Undo Command extends from Command
+# Reverses the last successfully executed command
+class UndoCommand(Command):
+
+    # Initialize Undo Command
+    # Params: command_manager - CommandManager - Command manager instance
+    # Returns: None
+    def __init__(self, command_manager):
+        self.__command_manager = command_manager
+        self.__name = "Undo"
+
+    # Execute
+    # Reverses the last command in the undo history
+    # Params: None
+    # Returns: None
+    def execute(self):
+        is_undone, command_undone = self.__command_manager.undo_last_command()
+
+        if is_undone:
+            name = command_undone.get_name()
+            print(f"ok: undone {name}!")
+        else:
+            print("error: undo_failed - No commands to undo!")
+
+    # Undo
+    # Undo commands cannot themselves be undone
+    # Params: None
+    # Returns: None
+    def undo(self):
+        pass
+
+    # Redo
+    # Repeats the undo operation
+    # Params: None
+    # Returns: None
+    def redo(self):
+        self.execute()
+
+    # Get Name
+    # Returns name of command
+    # Params: None
+    # Returns: command name - String
+    def get_name(self):
+        return self.__name
+
+    # Is Undoable
+    # Determines if it will be added to history
+    # Params: None
+    # Returns: False
+    def is_undoable(self):
+        return False
+
+
+# Redo Command extends from Command
+# Re-executes the most recently undone command
+class RedoCommand(Command):
+
+    # Initialize Redo Command
+    # Params: command_manager - CommandManager - Command manager instance
+    # Returns: None
+    def __init__(self, command_manager):
+        self.__command_manager = command_manager
+        self.__name = "Redo"
+
+    # Execute
+    # Re-executes the last command in the redo history
+    # Params: None
+    # Returns: None
+    def execute(self):
+        is_redone, command_redone = self.__command_manager.redo_last_command()
+
+        if is_redone:
+            name = command_redone.get_name()
+            print(f"ok: redone {name}!")
+        else:
+            print("error: redo_failed - No commands to redo!")
+
+    # Undo
+    # Redo commands cannot themselves be undone
+    # Params: None
+    # Returns: None
+    def undo(self):
+        pass
+
+    # Redo
+    # Repeats the redo operation
+    # Params: None
+    # Returns: None
+    def redo(self):
+        self.execute()
+
+    # Get Name
+    # Returns name of command
+    # Params: None
+    # Returns: command name - String
+    def get_name(self):
+        return self.__name
+
+    # Is Undoable
+    # Determines if it will be added to history
+    # Params: None
+    # Returns: False
+    def is_undoable(self):
+        return False

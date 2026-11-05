@@ -13,7 +13,10 @@ Purpose: Tests the Command methods and classes.
 # Imports
 import unittest
 from types import SimpleNamespace
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
+from types import SimpleNamespace
+from entity import Entity
+from io import StringIO
 from command import (
     Command,
     MoveCommand,
@@ -31,6 +34,13 @@ from command import (
     InitCommand,
     SaveCommand,
     LoadCommand,
+    InspectCommand,
+    InventoryCommand,
+    TileCommand,
+    StateInfoCommand,
+    HistoryCommand,
+    UndoCommand,
+    RedoCommand,
 )
 
 
@@ -2086,11 +2096,6 @@ class TestCommand(unittest.TestCase):
         # Verify command name
         self.assertEqual(test_command.get_name(), "Tick")
 
-
-# Test Init Map Command
-# Tests all methods in InitMapCommand
-class TestInitMapCommand(unittest.TestCase):
-
     # Set Up
     # Creates a mock GameState and InitMapCommand for testing
     # Params: None
@@ -2629,6 +2634,984 @@ class TestInitMapCommand(unittest.TestCase):
 
         # Verify command name
         self.assertEqual(test_command.get_name(), "Load")
+
+    # Test Inspect Command Initialization
+    # Verify that InspectCommand stores the entity ID and command name
+    # Returns: None
+    def test_inspect_command_initialization(self):
+        test_game_state = MagicMock()
+
+        test_command = InspectCommand(test_game_state, "1")
+
+        self.assertEqual(test_command.get_name(), "Inspect")
+
+        # Verify that initialization does not retrieve the entity
+        test_game_state.get_entity_info_from_list.assert_not_called()
+
+    # Test Inspect Command With Invalid Entity
+    # Verify that InspectCommand raises an error if the entity does not exist
+    # Returns: None
+    def test_inspect_command_invalid_entity(self):
+        test_game_state = MagicMock()
+        test_game_state.get_entity_info_from_list.return_value = None
+
+        test_command = InspectCommand(test_game_state, 999)
+
+        with self.assertRaises(ValueError):
+            test_command.execute()
+
+        test_game_state.get_entity_info_from_list.assert_called_once_with(999)
+
+    # Test Inspect Command Execute
+    # Verify that executing the command displays the entity information
+    # Returns: None
+    def test_inspect_command_execute(self):
+        test_game_state = MagicMock()
+        test_game_state.get_entity_info_from_list.return_value = SimpleNamespace(
+            id=1,
+            e_type="warrior",
+            position=(2, 3),
+            health=120,
+            max_health=120,
+            attack=15,
+            defence=10,
+            speed=5,
+            active_modifiers=("strength",),
+        )
+
+        test_command = InspectCommand(test_game_state, 1)
+
+        with patch("sys.stdout", new_callable=StringIO) as mock_stdout:
+            test_command.execute()
+
+        output = mock_stdout.getvalue()
+
+        self.assertIn("Id: 1", output)
+        self.assertIn("Type: warrior", output)
+        self.assertIn("Position: (2, 3)", output)
+        self.assertIn("Health: 120/120", output)
+        self.assertIn("Attack: 15", output)
+        self.assertIn("Defence: 10", output)
+        self.assertIn("Speed: 5", output)
+        self.assertIn("Active Modifiers: ('strength',)", output)
+
+        test_game_state.get_entity_info_from_list.assert_called_once_with(1)
+
+    # Test Inspect Command Undo
+    # Verify that undo does not modify the game state
+    # Returns: None
+    def test_inspect_command_undo(self):
+        test_game_state = MagicMock()
+
+        test_command = InspectCommand(test_game_state, 1)
+
+        test_command.undo()
+
+        test_game_state.assert_not_called()
+
+    # Test Inspect Command Execute And Undo
+    # Verify that executing and undoing an inspect command does not modify game state
+    # Returns: None
+    def test_inspect_command_execute_and_undo(self):
+        test_game_state = MagicMock()
+        test_game_state.get_entity_info_from_list.return_value = SimpleNamespace(
+            id=1,
+            e_type="warrior",
+            position=(2, 3),
+            health=120,
+            max_health=120,
+            attack=15,
+            defence=10,
+            speed=5,
+            active_modifiers=(),
+        )
+
+        test_command = InspectCommand(test_game_state, 1)
+
+        with patch("sys.stdout", new_callable=StringIO):
+            test_command.execute()
+            test_command.undo()
+
+        test_game_state.get_entity_info_from_list.assert_called_once_with(1)
+
+    # Test Inspect Command Redo
+    # Verify that redo displays the entity information again
+    # Returns: None
+    def test_inspect_command_redo(self):
+        test_game_state = MagicMock()
+        test_game_state.get_entity_info_from_list.return_value = SimpleNamespace(
+            id=1,
+            e_type="warrior",
+            position=(2, 3),
+            health=120,
+            max_health=120,
+            attack=15,
+            defence=10,
+            speed=5,
+            active_modifiers=(),
+        )
+
+        test_command = InspectCommand(test_game_state, 1)
+
+        with patch("sys.stdout", new_callable=StringIO) as mock_stdout:
+            test_command.redo()
+
+        output = mock_stdout.getvalue()
+
+        self.assertIn("Id: 1", output)
+        self.assertIn("Health: 120/120", output)
+
+        test_game_state.get_entity_info_from_list.assert_called_once_with(1)
+
+    # Test Inspect Command Get Name
+    # Verify that get_name returns the command name
+    # Returns: None
+    def test_inspect_command_get_name(self):
+        test_game_state = MagicMock()
+        test_game_state.get_entity_info_from_list.return_value = SimpleNamespace(
+            id=1,
+            e_type="warrior",
+            position=(2, 3),
+            health=120,
+            max_health=120,
+            attack=15,
+            defence=10,
+            speed=5,
+            active_modifiers=(),
+        )
+
+        test_command = InspectCommand(test_game_state, 1)
+
+        self.assertEqual(test_command.get_name(), "Inspect")
+
+    # Test Inspect Command Is Not Undoable
+    # Verify that InspectCommand cannot be undone
+    # Returns: None
+    def test_inspect_command_not_undoable(self):
+        test_game_state = MagicMock()
+        test_game_state.get_entity_info_from_list.return_value = SimpleNamespace(
+            id=1,
+            e_type="warrior",
+            position=(2, 3),
+            health=120,
+            max_health=120,
+            attack=15,
+            defence=10,
+            speed=5,
+            active_modifiers=(),
+        )
+
+        test_command = InspectCommand(test_game_state, 1)
+
+        self.assertFalse(test_command.is_undoable())
+
+    # Test Inventory Command Initialization
+    # Verify that InventoryCommand stores the entity ID and command name
+    # Returns: None
+    def test_inventory_command_initialization(self):
+        test_game_state = MagicMock()
+
+        test_command = InventoryCommand(test_game_state, "1")
+
+        self.assertEqual(test_command.get_name(), "Inventory")
+
+        # Verify that initialization does not retrieve the entity
+        test_game_state.get_entity_info_from_list.assert_not_called()
+
+    # Test Inventory Command With Invalid Entity
+    # Verify that InventoryCommand raises an error if the entity does not exist
+    # Returns: None
+    def test_inventory_command_invalid_entity(self):
+        test_game_state = MagicMock()
+        test_game_state.get_entity_info_from_list.return_value = None
+
+        test_command = InventoryCommand(test_game_state, 999)
+
+        with self.assertRaisesRegex(ValueError, "Player entity does not exist!"):
+            test_command.execute()
+
+        test_game_state.get_entity_info_from_list.assert_called_once_with(999)
+
+    # Test Inventory Command With Dead Entity
+    # Verify that InventoryCommand raises an error if the entity is dead
+    # Returns: None
+    def test_inventory_command_dead_entity(self):
+        test_game_state = MagicMock()
+        test_entity = MagicMock()
+        test_entity.is_alive.return_value = False
+
+        test_game_state.get_entity_from_list.return_value = test_entity
+        test_game_state.get_entity_info_from_list.return_value = SimpleNamespace(
+            inventory=(None, None, None), backpack=()
+        )
+
+        test_command = InventoryCommand(test_game_state, 1)
+
+        with self.assertRaisesRegex(ValueError, "Player entity is dead!"):
+            test_command.execute()
+
+        test_game_state.get_entity_from_list.assert_called_once_with(1)
+        test_entity.is_alive.assert_called_once()
+
+    # Test Inventory Command Execute
+    # Verify that executing the command displays the entity inventory
+    # Returns: None
+    def test_inventory_command_execute(self):
+        test_game_state = MagicMock()
+        test_game_state.get_entity_info_from_list.return_value = SimpleNamespace(
+            health=120,
+            inventory=("IronSword", "LeatherTunic", "RingOfHaste"),
+            backpack=("HealthPotion", "IronShield"),
+        )
+
+        test_command = InventoryCommand(test_game_state, 1)
+
+        with patch.object(Entity, "is_alive_from_info", return_value=True):
+            with patch("sys.stdout", new_callable=StringIO) as mock_stdout:
+                test_command.execute()
+
+        output = mock_stdout.getvalue()
+
+        self.assertIn("Weapon: IronSword", output)
+        self.assertIn("Armor: LeatherTunic", output)
+        self.assertIn("Accessory: RingOfHaste", output)
+        self.assertIn("Backpack Slots:", output)
+        self.assertIn("1. HealthPotion", output)
+        self.assertIn("2. IronShield", output)
+
+        test_game_state.get_entity_info_from_list.assert_called_once_with(1)
+
+    # Test Inventory Command With Empty Slots
+    # Verify that empty equipment and backpack slots are displayed correctly
+    # Returns: None
+    def test_inventory_command_empty_slots(self):
+        test_game_state = MagicMock()
+        test_game_state.get_entity_info_from_list.return_value = SimpleNamespace(
+            health=120, inventory=(None, None, None), backpack=()
+        )
+
+        test_command = InventoryCommand(test_game_state, 1)
+
+        with patch.object(Entity, "is_alive_from_info", return_value=True):
+            with patch("sys.stdout", new_callable=StringIO) as mock_stdout:
+                test_command.execute()
+
+        output = mock_stdout.getvalue()
+
+        self.assertIn("Weapon: None", output)
+        self.assertIn("Armor: None", output)
+        self.assertIn("Accessory: None", output)
+        self.assertIn("Backpack Slots:", output)
+
+        # Verify all backpack slots are displayed as empty
+        for index in range(Entity.BACKPACK_SIZE):
+            self.assertIn(f"{index + 1}. Empty", output)
+
+    # Test Inventory Command Undo
+    # Verify that undo does not modify the game state
+    # Returns: None
+    def test_inventory_command_undo(self):
+        test_game_state = MagicMock()
+
+        test_command = InventoryCommand(test_game_state, 1)
+
+        test_command.undo()
+
+        test_game_state.assert_not_called()
+
+    # Test Inventory Command Execute And Undo
+    # Verify that executing and undoing inventory does not modify game state
+    # Returns: None
+    def test_inventory_command_execute_and_undo(self):
+        test_game_state = MagicMock()
+        test_game_state.get_entity_info_from_list.return_value = SimpleNamespace(
+            health=120, inventory=(None, None, None), backpack=()
+        )
+
+        test_command = InventoryCommand(test_game_state, 1)
+
+        with patch.object(Entity, "is_alive_from_info", return_value=True):
+            with patch("sys.stdout", new_callable=StringIO):
+                test_command.execute()
+                test_command.undo()
+
+        test_game_state.get_entity_info_from_list.assert_called_once_with(1)
+
+    # Test Inventory Command Redo
+    # Verify that redo displays the inventory again
+    # Returns: None
+    def test_inventory_command_redo(self):
+        test_game_state = MagicMock()
+        test_game_state.get_entity_info_from_list.return_value = SimpleNamespace(
+            health=120,
+            inventory=("IronSword", "LeatherTunic", "RingOfHaste"),
+            backpack=("HealthPotion",),
+        )
+
+        test_command = InventoryCommand(test_game_state, 1)
+
+        with patch.object(Entity, "is_alive_from_info", return_value=True):
+            with patch("sys.stdout", new_callable=StringIO) as mock_stdout:
+                test_command.redo()
+
+        output = mock_stdout.getvalue()
+
+        self.assertIn("Weapon: IronSword", output)
+        self.assertIn("Armor: LeatherTunic", output)
+        self.assertIn("Accessory: RingOfHaste", output)
+        self.assertIn("1. HealthPotion", output)
+
+        test_game_state.get_entity_info_from_list.assert_called_once_with(1)
+
+    # Test Inventory Command Get Name
+    # Verify that get_name returns the command name
+    # Returns: None
+    def test_inventory_command_get_name(self):
+        test_game_state = MagicMock()
+
+        test_command = InventoryCommand(test_game_state, 1)
+
+        self.assertEqual(test_command.get_name(), "Inventory")
+
+    # Test Inventory Command Is Not Undoable
+    # Verify that InventoryCommand cannot be undone
+    # Returns: None
+    def test_inventory_command_not_undoable(self):
+        test_game_state = MagicMock()
+
+        test_command = InventoryCommand(test_game_state, 1)
+
+        self.assertFalse(test_command.is_undoable())
+
+    # Test Tile Command Initialization
+    # Verify that TileCommand stores the coordinates and command name
+    # Returns: None
+    def test_tile_command_initialization(self):
+        test_game_state = MagicMock()
+
+        test_command = TileCommand(test_game_state, "2", "3")
+
+        self.assertEqual(test_command.get_name(), "Tile")
+
+        test_game_state.is_map_created.assert_not_called()
+
+    # Test Tile Command With Missing Map
+    # Verify that TileCommand raises an error if the map does not exist
+    # Returns: None
+    def test_tile_command_invalid_map(self):
+        test_game_state = MagicMock()
+        test_game_state.is_map_created.return_value = False
+
+        test_command = TileCommand(test_game_state, 2, 3)
+
+        with self.assertRaisesRegex(ValueError, "Map does not exist!"):
+            test_command.execute()
+
+        test_game_state.is_map_created.assert_called_once()
+
+    # Test Tile Command With Invalid Coordinates
+    # Verify that TileCommand raises an error if coordinates are not integers
+    # Returns: None
+    def test_tile_command_invalid_coordinates(self):
+        test_game_state = MagicMock()
+        test_game_state.is_map_created.return_value = True
+
+        test_command = TileCommand(test_game_state, "abc", "xyz")
+
+        with patch("command.are_valid_ints", return_value=False):
+            with self.assertRaisesRegex(ValueError, "x and y are not valid integers!"):
+                test_command.execute()
+
+        test_game_state.is_valid_grid_position.assert_not_called()
+
+    # Test Tile Command With Out Of Bounds Coordinates
+    # Verify that TileCommand raises an error if coordinates exceed grid bounds
+    # Returns: None
+    def test_tile_command_out_of_bounds(self):
+        test_game_state = MagicMock()
+        test_game_state.is_map_created.return_value = True
+        test_game_state.is_valid_grid_position.return_value = False
+
+        test_command = TileCommand(test_game_state, "99", "99")
+
+        with patch("command.are_valid_ints", return_value=True):
+            with self.assertRaisesRegex(
+                ValueError, "x and y exceed current grid bounds!"
+            ):
+                test_command.execute()
+
+        test_game_state.is_valid_grid_position.assert_called_once_with("99", "99")
+
+    # Test Tile Command With Missing Tile
+    # Verify that TileCommand raises an error if no tile exists at the position
+    # Returns: None
+    def test_tile_command_missing_tile(self):
+        test_game_state = MagicMock()
+        test_game_state.is_map_created.return_value = True
+        test_game_state.is_valid_grid_position.return_value = True
+        test_game_state.get_game_tile_info.return_value = None
+
+        test_command = TileCommand(test_game_state, "2", "3")
+
+        with patch("command.are_valid_ints", return_value=True):
+            with self.assertRaisesRegex(ValueError, "No tile exists at this position!"):
+                with patch("sys.stdout", new_callable=StringIO):
+                    test_command.execute()
+
+        test_game_state.get_game_tile_info.assert_called_once_with(2, 3)
+
+    # Test Tile Command Execute
+    # Verify that executing the command displays the tile information
+    # Returns: None
+    def test_tile_command_execute(self):
+        test_game_state = MagicMock()
+        test_game_state.is_map_created.return_value = True
+        test_game_state.is_valid_grid_position.return_value = True
+        test_game_state.get_game_tile_info.return_value = SimpleNamespace(
+            tile_type="floor", passable=True, occupants=(1,)
+        )
+
+        test_command = TileCommand(test_game_state, "2", "3")
+
+        with patch("command.are_valid_ints", return_value=True):
+            with patch("sys.stdout", new_callable=StringIO) as mock_stdout:
+                test_command.execute()
+
+        output = mock_stdout.getvalue()
+
+        self.assertIn("Coordinate: 2, 3", output)
+        self.assertIn("Type: Floor", output)
+        self.assertIn("Passable: True", output)
+        self.assertIn("Occupants: 1", output)
+
+        test_game_state.get_game_tile_info.assert_called_once_with(2, 3)
+
+    # Test Tile Command Shallow Water
+    # Verify that ShallowWater is capitalized correctly
+    # Returns: None
+    def test_tile_command_shallow_water(self):
+        test_game_state = MagicMock()
+        test_game_state.is_map_created.return_value = True
+        test_game_state.is_valid_grid_position.return_value = True
+        test_game_state.get_game_tile_info.return_value = SimpleNamespace(
+            tile_type="shallowwater", passable=True, occupants=()
+        )
+
+        test_command = TileCommand(test_game_state, 2, 3)
+
+        with patch("command.are_valid_ints", return_value=True):
+            with patch("sys.stdout", new_callable=StringIO) as mock_stdout:
+                test_command.execute()
+
+        output = mock_stdout.getvalue()
+
+        self.assertIn("Type: ShallowWater", output)
+
+    # Test Tile Command With No Occupants
+    # Verify that TileCommand displays None when a tile has no occupants
+    # Returns: None
+    def test_tile_command_no_occupants(self):
+        test_game_state = MagicMock()
+        test_game_state.is_map_created.return_value = True
+        test_game_state.is_valid_grid_position.return_value = True
+        test_game_state.get_game_tile_info.return_value = SimpleNamespace(
+            tile_type="floor", passable=True, occupants=()
+        )
+
+        test_command = TileCommand(test_game_state, 2, 3)
+
+        with patch("command.are_valid_ints", return_value=True):
+            with patch("sys.stdout", new_callable=StringIO) as mock_stdout:
+                test_command.execute()
+
+        output = mock_stdout.getvalue()
+
+        self.assertIn("Occupants: None", output)
+
+    # Test Tile Command Undo
+    # Verify that undo does not modify the game state
+    # Returns: None
+    def test_tile_command_undo(self):
+        test_game_state = MagicMock()
+
+        test_command = TileCommand(test_game_state, 2, 3)
+
+        test_command.undo()
+
+        test_game_state.assert_not_called()
+
+    # Test Tile Command Redo
+    # Verify that redo displays the tile information again
+    # Returns: None
+    def test_tile_command_redo(self):
+        test_game_state = MagicMock()
+        test_game_state.is_map_created.return_value = True
+        test_game_state.is_valid_grid_position.return_value = True
+        test_game_state.get_game_tile_info.return_value = SimpleNamespace(
+            tile_type="wall", passable=False, occupants=()
+        )
+
+        test_command = TileCommand(test_game_state, 2, 3)
+
+        with patch("command.are_valid_ints", return_value=True):
+            with patch("sys.stdout", new_callable=StringIO) as mock_stdout:
+                test_command.redo()
+
+        output = mock_stdout.getvalue()
+
+        self.assertIn("Coordinate: 2, 3", output)
+        self.assertIn("Type: Wall", output)
+        self.assertIn("Passable: False", output)
+
+        test_game_state.get_game_tile_info.assert_called_once_with(2, 3)
+
+    # Test Tile Command Get Name
+    # Verify that get_name returns the command name
+    # Returns: None
+    def test_tile_command_get_name(self):
+        test_game_state = MagicMock()
+
+        test_command = TileCommand(test_game_state, 2, 3)
+
+        self.assertEqual(test_command.get_name(), "Tile")
+
+    # Test Tile Command Is Not Undoable
+    # Verify that TileCommand cannot be undone
+    # Returns: None
+    def test_tile_command_not_undoable(self):
+        test_game_state = MagicMock()
+
+        test_command = TileCommand(test_game_state, 2, 3)
+
+        self.assertFalse(test_command.is_undoable())
+
+    # Test State Info Command Initialization
+    # Verify that StateInfoCommand stores the command name
+    # Returns: None
+    def test_state_info_command_initialization(self):
+        test_game_state = MagicMock()
+
+        test_command = StateInfoCommand(test_game_state)
+
+        self.assertEqual(test_command.get_name(), "State-Info")
+
+        test_game_state.game_state_is_active.assert_not_called()
+
+    # Test State Info Command With Inactive Game State
+    # Verify that StateInfoCommand raises an error if the game state is not active
+    # Returns: None
+    def test_state_info_command_inactive_game_state(self):
+        test_game_state = MagicMock()
+        test_game_state.game_state_is_active.return_value = False
+
+        test_command = StateInfoCommand(test_game_state)
+
+        with self.assertRaisesRegex(ValueError, "Game State is not initialized!"):
+            test_command.execute()
+
+        test_game_state.game_state_is_active.assert_called_once()
+
+        test_game_state.get_game_state_info.assert_not_called()
+
+    # Test State Info Command Execute
+    # Verify that executing the command displays the current game state information
+    # Returns: None
+    def test_state_info_command_execute(self):
+        test_game_state = MagicMock()
+        test_game_state.game_state_is_active.return_value = True
+        test_game_state.get_game_state_info.return_value = (5, 3, True)
+
+        test_command = StateInfoCommand(test_game_state)
+
+        with patch("sys.stdout", new_callable=StringIO) as mock_stdout:
+            test_command.execute()
+
+        output = mock_stdout.getvalue()
+
+        self.assertIn("ok: turn 5, entities: 3, saved: true", output)
+
+        test_game_state.game_state_is_active.assert_called_once()
+        test_game_state.get_game_state_info.assert_called_once()
+
+    # Test State Info Command With Unsaved Game State
+    # Verify that the saved status displays false when the game is unsaved
+    # Returns: None
+    def test_state_info_command_unsaved_game_state(self):
+        test_game_state = MagicMock()
+        test_game_state.game_state_is_active.return_value = True
+        test_game_state.get_game_state_info.return_value = (2, 4, False)
+
+        test_command = StateInfoCommand(test_game_state)
+
+        with patch("sys.stdout", new_callable=StringIO) as mock_stdout:
+            test_command.execute()
+
+        output = mock_stdout.getvalue()
+
+        self.assertIn("ok: turn 2, entities: 4, saved: false", output)
+
+    # Test State Info Command With Invalid Game State Information
+    # Verify that StateInfoCommand propagates errors retrieving game state information
+    # Returns: None
+    def test_state_info_command_invalid_game_state_info(self):
+        test_game_state = MagicMock()
+        test_game_state.game_state_is_active.return_value = True
+        test_game_state.get_game_state_info.side_effect = ValueError("Invalid state!")
+
+        test_command = StateInfoCommand(test_game_state)
+
+        with self.assertRaisesRegex(ValueError, "Invalid state!"):
+            test_command.execute()
+
+    # Test State Info Command Undo
+    # Verify that undo does not modify the game state
+    # Returns: None
+    def test_state_info_command_undo(self):
+        test_game_state = MagicMock()
+
+        test_command = StateInfoCommand(test_game_state)
+
+        test_command.undo()
+
+        test_game_state.assert_not_called()
+
+    # Test State Info Command Execute And Undo
+    # Verify that executing and undoing state-info does not modify game state
+    # Returns: None
+    def test_state_info_command_execute_and_undo(self):
+        test_game_state = MagicMock()
+        test_game_state.game_state_is_active.return_value = True
+        test_game_state.get_game_state_info.return_value = (5, 3, True)
+
+        test_command = StateInfoCommand(test_game_state)
+
+        with patch("sys.stdout", new_callable=StringIO):
+            test_command.execute()
+            test_command.undo()
+
+        test_game_state.game_state_is_active.assert_called_once()
+        test_game_state.get_game_state_info.assert_called_once()
+
+    # Test State Info Command Redo
+    # Verify that redo displays the current game state information again
+    # Returns: None
+    def test_state_info_command_redo(self):
+        test_game_state = MagicMock()
+        test_game_state.game_state_is_active.return_value = True
+        test_game_state.get_game_state_info.return_value = (5, 3, True)
+
+        test_command = StateInfoCommand(test_game_state)
+
+        with patch("sys.stdout", new_callable=StringIO) as mock_stdout:
+            test_command.redo()
+
+        output = mock_stdout.getvalue()
+
+        self.assertIn("ok: turn 5, entities: 3, saved: true", output)
+
+        test_game_state.game_state_is_active.assert_called_once()
+        test_game_state.get_game_state_info.assert_called_once()
+
+    # Test State Info Command Get Name
+    # Verify that get_name returns the command name
+    # Returns: None
+    def test_state_info_command_get_name(self):
+        test_game_state = MagicMock()
+
+        test_command = StateInfoCommand(test_game_state)
+
+        self.assertEqual(test_command.get_name(), "State-Info")
+
+    # Test State Info Command Is Not Undoable
+    # Verify that StateInfoCommand cannot be undone
+    # Returns: None
+    def test_state_info_command_not_undoable(self):
+        test_game_state = MagicMock()
+
+        test_command = StateInfoCommand(test_game_state)
+
+        self.assertFalse(test_command.is_undoable())
+
+    def test_history_command_initialization(self):
+        test_command_manager = MagicMock()
+
+        test_command = HistoryCommand(test_command_manager)
+
+        self.assertEqual(test_command.get_name(), "History")
+        test_command_manager.get_history_info.assert_not_called()
+
+    # Test History Command Execution
+    # Verify that HistoryCommand displays the undo and redo counts
+    # Returns: None
+    def test_history_command_execute(self):
+        test_command_manager = MagicMock()
+        test_command_manager.get_history_info.return_value = (3, 2)
+
+        test_command = HistoryCommand(test_command_manager)
+
+        with patch("sys.stdout", new_callable=StringIO) as mock_stdout:
+            test_command.execute()
+
+        output = mock_stdout.getvalue()
+
+        self.assertEqual(output, "ok: undo_stack:3, redo_stack:2\n")
+        test_command_manager.get_history_info.assert_called_once()
+
+    # Test History Command Empty History
+    # Verify that HistoryCommand displays zero when both histories are empty
+    # Returns: None
+    def test_history_command_empty_history(self):
+        test_command_manager = MagicMock()
+        test_command_manager.get_history_info.return_value = (0, 0)
+
+        test_command = HistoryCommand(test_command_manager)
+
+        with patch("sys.stdout", new_callable=StringIO) as mock_stdout:
+            test_command.execute()
+
+        output = mock_stdout.getvalue()
+
+        self.assertEqual(output, "ok: undo_stack:0, redo_stack:0\n")
+
+    # Test History Command Undo
+    # Verify that undo does not change the history
+    # Returns: None
+    def test_history_command_undo(self):
+        test_command_manager = MagicMock()
+        test_command = HistoryCommand(test_command_manager)
+
+        test_command.undo()
+
+        test_command_manager.get_history_info.assert_not_called()
+
+    # Test History Command Redo
+    # Verify that redo displays the history information again
+    # Returns: None
+    def test_history_command_redo(self):
+        test_command_manager = MagicMock()
+        test_command_manager.get_history_info.return_value = (2, 1)
+
+        test_command = HistoryCommand(test_command_manager)
+
+        with patch("sys.stdout", new_callable=StringIO) as mock_stdout:
+            test_command.redo()
+
+        output = mock_stdout.getvalue()
+
+        self.assertEqual(output, "ok: undo_stack:2, redo_stack:1\n")
+        test_command_manager.get_history_info.assert_called_once()
+
+    # Test History Command Name
+    # Verify that the command returns its correct name
+    # Returns: None
+    def test_history_command_get_name(self):
+        test_command = HistoryCommand(MagicMock())
+
+        self.assertEqual(test_command.get_name(), "History")
+
+    # Test History Command Is Not Undoable
+    # Verify that HistoryCommand cannot be added to undo history
+    # Returns: None
+    def test_history_command_is_not_undoable(self):
+        test_command = HistoryCommand(MagicMock())
+
+        self.assertFalse(test_command.is_undoable())
+
+    def test_undo_command_initialization(self):
+        test_command_manager = MagicMock()
+
+        test_command = UndoCommand(test_command_manager)
+
+        self.assertEqual(test_command.get_name(), "Undo")
+        test_command_manager.undo_last_command.assert_not_called()
+
+    # Test Undo Command Execute
+    # Verify that UndoCommand undoes the last command and displays its name
+    # Returns: None
+    def test_undo_command_execute(self):
+        test_command_manager = MagicMock()
+        test_command = MagicMock()
+        test_command.get_name.return_value = "Move"
+
+        test_command_manager.undo_last_command.return_value = (True, test_command)
+
+        undo_command = UndoCommand(test_command_manager)
+
+        with patch("sys.stdout", new_callable=StringIO) as mock_stdout:
+            undo_command.execute()
+
+        output = mock_stdout.getvalue()
+
+        self.assertEqual(output, "ok: undone Move!\n")
+        test_command_manager.undo_last_command.assert_called_once()
+        test_command.get_name.assert_called_once()
+
+    # Test Undo Command Empty History
+    # Verify that UndoCommand displays an error when there are no commands to undo
+    # Returns: None
+    def test_undo_command_empty_history(self):
+        test_command_manager = MagicMock()
+        test_command_manager.undo_last_command.return_value = (False, None)
+
+        undo_command = UndoCommand(test_command_manager)
+
+        with patch("sys.stdout", new_callable=StringIO) as mock_stdout:
+            undo_command.execute()
+
+        output = mock_stdout.getvalue()
+
+        self.assertEqual(output, "error: undo_failed - No commands to undo!\n")
+        test_command_manager.undo_last_command.assert_called_once()
+
+    # Test Undo Command Undo
+    # Verify that undoing an UndoCommand does not modify command history
+    # Returns: None
+    def test_undo_command_undo(self):
+        test_command_manager = MagicMock()
+
+        undo_command = UndoCommand(test_command_manager)
+
+        undo_command.undo()
+
+        test_command_manager.undo_last_command.assert_not_called()
+
+    # Test Undo Command Redo
+    # Verify that redo repeats the undo operation
+    # Returns: None
+    def test_undo_command_redo(self):
+        test_command_manager = MagicMock()
+        test_command = MagicMock()
+        test_command.get_name.return_value = "Move"
+
+        test_command_manager.undo_last_command.return_value = (True, test_command)
+
+        undo_command = UndoCommand(test_command_manager)
+
+        with patch("sys.stdout", new_callable=StringIO) as mock_stdout:
+            undo_command.redo()
+
+        output = mock_stdout.getvalue()
+
+        self.assertEqual(output, "ok: undone Move!\n")
+        test_command_manager.undo_last_command.assert_called_once()
+
+    # Test Undo Command Get Name
+    # Verify that get_name returns the command name
+    # Returns: None
+    def test_undo_command_get_name(self):
+        test_command_manager = MagicMock()
+
+        undo_command = UndoCommand(test_command_manager)
+
+        self.assertEqual(undo_command.get_name(), "Undo")
+
+    # Test Undo Command Is Not Undoable
+    # Verify that UndoCommand cannot be added to undo history
+    # Returns: None
+    def test_undo_command_not_undoable(self):
+        test_command_manager = MagicMock()
+
+        undo_command = UndoCommand(test_command_manager)
+
+        self.assertFalse(undo_command.is_undoable())
+
+    def test_redo_command_initialization(self):
+        test_command_manager = MagicMock()
+
+        test_command = RedoCommand(test_command_manager)
+
+        self.assertEqual(test_command.get_name(), "Redo")
+        test_command_manager.redo_last_command.assert_not_called()
+
+    # Test Redo Command Execute
+    # Verify that RedoCommand re-executes the last undone command and displays its name
+    # Returns: None
+    def test_redo_command_execute(self):
+        test_command_manager = MagicMock()
+        test_command = MagicMock()
+        test_command.get_name.return_value = "Move"
+
+        test_command_manager.redo_last_command.return_value = (True, test_command)
+
+        redo_command = RedoCommand(test_command_manager)
+
+        with patch("sys.stdout", new_callable=StringIO) as mock_stdout:
+            redo_command.execute()
+
+        output = mock_stdout.getvalue()
+
+        self.assertEqual(output, "ok: redone Move!\n")
+        test_command_manager.redo_last_command.assert_called_once()
+        test_command.get_name.assert_called_once()
+
+    # Test Redo Command Empty History
+    # Verify that RedoCommand displays an error when there are no commands to redo
+    # Returns: None
+    def test_redo_command_empty_history(self):
+        test_command_manager = MagicMock()
+        test_command_manager.redo_last_command.return_value = (False, None)
+
+        redo_command = RedoCommand(test_command_manager)
+
+        with patch("sys.stdout", new_callable=StringIO) as mock_stdout:
+            redo_command.execute()
+
+        output = mock_stdout.getvalue()
+
+        self.assertEqual(output, "error: redo_failed - No commands to redo!\n")
+        test_command_manager.redo_last_command.assert_called_once()
+
+    # Test Redo Command Undo
+    # Verify that undoing a RedoCommand does not modify command history
+    # Returns: None
+    def test_redo_command_undo(self):
+        test_command_manager = MagicMock()
+
+        redo_command = RedoCommand(test_command_manager)
+
+        redo_command.undo()
+
+        test_command_manager.redo_last_command.assert_not_called()
+
+    # Test Redo Command Redo
+    # Verify that redo repeats the redo operation
+    # Returns: None
+    def test_redo_command_redo(self):
+        test_command_manager = MagicMock()
+        test_command = MagicMock()
+        test_command.get_name.return_value = "Move"
+
+        test_command_manager.redo_last_command.return_value = (True, test_command)
+
+        redo_command = RedoCommand(test_command_manager)
+
+        with patch("sys.stdout", new_callable=StringIO) as mock_stdout:
+            redo_command.redo()
+
+        output = mock_stdout.getvalue()
+
+        self.assertEqual(output, "ok: redone Move!\n")
+        test_command_manager.redo_last_command.assert_called_once()
+
+    # Test Redo Command Get Name
+    # Verify that get_name returns the command name
+    # Returns: None
+    def test_redo_command_get_name(self):
+        test_command_manager = MagicMock()
+
+        redo_command = RedoCommand(test_command_manager)
+
+        self.assertEqual(redo_command.get_name(), "Redo")
+
+    # Test Redo Command Is Not Undoable
+    # Verify that RedoCommand cannot be added to undo history
+    # Returns: None
+    def test_redo_command_not_undoable(self):
+        test_command_manager = MagicMock()
+
+        redo_command = RedoCommand(test_command_manager)
+
+        self.assertFalse(redo_command.is_undoable())
 
 
 if __name__ == "__main__":

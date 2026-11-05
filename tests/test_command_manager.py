@@ -259,6 +259,13 @@ class TestCommandManager(unittest.TestCase):
         # The command should remain available in redo history
         test_command.redo.assert_called_once()
 
+    def test_command_manager_initialization(self):
+        test_command_manager = CommandManager()
+
+        history_info = test_command_manager.get_history_info()
+
+        self.assertEqual(history_info, (0, 0))
+
 
 if __name__ == "__main__":
     unittest.main()

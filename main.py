@@ -17,22 +17,28 @@ from command_line_interface import CLI
 def main():
     # Create command line interface
     main_cli = CLI()
-    while True:
+    try:
+        while True:
 
-        try:
-            command = input()
-        except EOFError:  # File redirection fix
-            break
+            try:
+                command = input()
+            except EOFError:  # File redirection fix
+                break
 
-        # command = input("Enter Command (or 'quit' to exit)> ")
+            # command = input("Enter Command (or 'quit' to exit)> ")
 
-        # Exit command sent
-        if command.lower() == "quit":
-            print("Thank you for playing!")
-            break
+            # Exit command sent
+            if command.lower() == "quit":
+                break
 
-        # Process command
-        main_cli.process_command(command)
+            # Process command
+            main_cli.process_command(command)
+    # Handle keybaord interrupt
+    except KeyboardInterrupt:
+        pass
+    # Finally with thank you message
+    finally:
+        print("Thank you for playing!")
 
 
 if __name__ == "__main__":

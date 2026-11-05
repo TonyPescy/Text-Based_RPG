@@ -33,6 +33,13 @@ from command import (
     InitCommand,
     SaveCommand,
     LoadCommand,
+    InspectCommand,
+    InventoryCommand,
+    TileCommand,
+    StateInfoCommand,
+    HistoryCommand,
+    UndoCommand,
+    RedoCommand,
 )
 
 # from spell import get_spell
@@ -84,6 +91,7 @@ class CLI:
             "state-info": self.process_state_info_command,
             "undo": self.process_undo_command,
             "redo": self.process_redo_command,
+            "history": self.process_history_command,
         }
 
         # Match handler to command
@@ -212,38 +220,11 @@ class CLI:
             except ValueError:
                 print("error: inventory - Entity id is not valid integer!")
                 return
-        # Get player entity
-        entity_info = self.game_state.get_entity_info_from_list(e_id)
-
-        if entity_info is None:
-            print("error: inventory_failed - Player entity does not exist!")
-            return
-        # Check to see if entity is dead
-        elif not Entity.is_alive_from_info(entity_info):
-            print("error: inventory_failed - Player entity is dead!")
-            return
-
-        # Get entity inventory
-
-        # Display inventory of entity - Invetory is list of equipment names
-        print(f"Weapon: {entity_info.inventory[0]}")
-        print(f"Armor: {entity_info.inventory[1]}")
-        print(f"Accessory: {entity_info.inventory[2]}")
-        print("Backpack Slots:")
-        # Iterate through all backpack slots
-        for index in range(Entity.BACKPACK_SIZE):
-            # Check if slot contains an item
-            if index < len(entity_info.backpack):
-                item = entity_info.backpack[index]
-                if item is None:
-                    item_name = "Empty"
-                else:
-                    item_name = item
-            else:
-                # Slot is empty
-                item_name = "Empty"
-            # Display slot number and item
-            print(f"{index + 1}. {item_name}")
+        try:
+            command = InventoryCommand(self.game_state, e_id)
+            self.command_manager.execute_command(command)
+        except ValueError as error:
+            print(f"error: inventory_failed - {error}")
 
     # Process Inspect Command Start
     # Inspects entity with given ID
@@ -282,25 +263,9 @@ class CLI:
 
         # update entity stats - in case changes occurred
         self.game_state.update_entity(entity_info.id)
-        # Display stats of entity   # UPDATE ASAP
-        # Display stats of entity
-        for stat, value in entity_info.__dict__.items():
-            # Special case for active modifiers
-            if stat == "active_modifiers":
-                count = 0
+        command = InspectCommand(self.game_state, entity_info.id)
 
-                # Count all modifiers
-                for modifier_type, contents in value:
-                    count += len(contents)
-
-                print(f"Active_modifiers: {count}")
-
-            # Display all other stats
-            else:
-                # Capitalize stat name and value if string
-                stat = stat.capitalize()
-                value = CLI.capitalize_if_string(value)
-                print(f"{stat}: {value}")
+        self.command_manager.execute_command(command)
 
     # Process Tile Command Start
     # Will describe the tile at the given grid position
@@ -315,41 +280,14 @@ class CLI:
         else:
             print("error: tile_failed - Invalid command!")
             return
-        # Ensure map exists
-        if not self.game_state.is_map_created():
-            print("error: tile_failed - Map does not exist!")
-            return
-        # x and y are not valid ints
-        elif not dl.are_valid_ints(x, y):
-            print("error: tile_failed - x and y are not valid integers!")
-            return
-        # x and y exceeds current grid bounds
-        elif not self.game_state.is_valid_grid_position(x, y):
-            print("error: tile_failed - x and y exceed current grid bounds!")
-            return
 
-        # display - handles special cases
-        print(f"Coordinate: {x}, {y}")
-        # Get tile
-        current_tile_info = self.game_state.get_game_tile_info(int(x), int(y))
+        try:
+            command = TileCommand(self.game_state, command_pieces[1], command_pieces[2])
 
-        if current_tile_info is None:
-            print("error: tile_failed - No tile exists at this position!")
-            return
-        # Special case with shallowwater for proper capitalization
-        elif current_tile_info.tile_type.lower() == "shallowwater":
-            print("Type: ShallowWater")
-        else:
-            print(f"Type: {current_tile_info.tile_type.capitalize()}")
+            self.command_manager.execute_command(command)
 
-        # Passable
-        print(f"Passable: {current_tile_info.passable}")
-
-        # occupants - special case for empty list (should logic be changed to just one occupant this can be cleaner)
-        if len(current_tile_info.occupants) == 0:
-            print("Occupants: None")
-        else:
-            print(f"Occupants: {current_tile_info.occupants[0]}")
+        except ValueError as error:
+            print(f"error: tile_failed - {error}")
 
     # Process Pickup Item Command
     # Handles picking up of items at position of entity's id
@@ -1027,21 +965,12 @@ class CLI:
     # Params: command_pieces - list - list of strings that make up the command
     # Returns: None
     def process_state_info_command(self, command_pieces):
-        # Check that game state exists and is active
-        if not self.game_state.game_state_is_active():
-            print("error: state-info_failed - Game State is not initialized!")
-            return
-        else:
-            # Success
-            try:
-                game_state_info = self.game_state.get_game_state_info()
+        try:
+            command = StateInfoCommand(self.game_state)
+            self.command_manager.execute_command(command)
 
-                print(
-                    f"ok: turn {game_state_info[0]}, entities: {game_state_info[1]}, saved: {str(game_state_info[2]).lower()}"
-                )
-            # Extensive error checking
-            except (AttributeError, TypeError, ValueError) as error:
-                print(f"error: state_info_failed {error}")
+        except (AttributeError, TypeError, ValueError) as error:
+            print(f"error: state_info_failed {error}!")
 
     # Spawn Entity For CLI
     # Contains logic for all entity spawning in the CLI
@@ -1119,14 +1048,8 @@ class CLI:
             print("error: undo_failed - Invalid command!")
             return
 
-        # Get command after undoing it
-        is_undone, command_undone = self.command_manager.undo_last_command()
-
-        if is_undone:
-            name = command_undone.get_name()
-            print(f"ok: undone {name}!")
-        else:
-            print("error: undo_failed - No commands to undo!")
+        undo_command = UndoCommand(self.command_manager)
+        self.command_manager.execute_command(undo_command)
 
     # Process Redo Command
     # Reverses the most recently undo if a command has not been since the last undo
@@ -1137,14 +1060,24 @@ class CLI:
             print("error: redo_failed - Invalid command!")
             return
 
-        # Get command after undoing it
-        is_redone, command_redone = self.command_manager.redo_last_command()
+        redo_command = RedoCommand(self.command_manager)
+        self.command_manager.execute_command(redo_command)
 
-        if is_redone:
-            name = command_redone.get_name()
-            print(f"ok: redone {name}!")
-        else:
-            print("error: redo_failed - No commands to redo!")
+    # Process History Command
+    # Displays the number of commands in the undo and redo histories
+    # Params: command_pieces - list - Parsed command
+    # Returns: None
+    def process_history_command(self, command_pieces):
+        if len(command_pieces) != 1:
+            print("error: history_failed Invalid command!")
+            return
+
+        try:
+            history_command = HistoryCommand(self.command_manager)
+            self.command_manager.execute_command(history_command)
+
+        except (AttributeError, TypeError, ValueError) as error:
+            print(f"error: history_failed {error}")
 
     # Capitalize If String Start
     # Will capitalize and return string if it is a string

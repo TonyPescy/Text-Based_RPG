@@ -24,11 +24,14 @@ class CommandManager:
     # Params: command - Command - Command to execute
     # Returns: None
     def execute_command(self, command):
-        # Execute before recording so failed commands aren't added
+        # Execute command
         command.execute()
-        self.__undo_history.append(command)
-        # Resets redo history - prevents undoing a move then redoing one that should not be possible
-        self.__redo_history.clear()
+
+        # Only add undoable commands to history
+        if command.is_undoable():
+            self.__undo_history.append(command)
+            # Resets redo history - prevents undoing a move then redoing one that should not be possible
+            self.__redo_history.clear()
 
     # Undo Last Command
     # Reverses the most recently executed command
@@ -67,3 +70,13 @@ class CommandManager:
     def clear_history(self):
         self.__undo_history.clear()
         self.__redo_history.clear()
+
+    # Get History Information
+    # Returns the number of commands in the undo and redo histories
+    # Params: None
+    # Returns: tuple - (undo_count, redo_count)
+    def get_history_info(self):
+        undo_count = len(self.__undo_history)
+        redo_count = len(self.__redo_history)
+
+        return undo_count, redo_count

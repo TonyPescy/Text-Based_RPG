@@ -17,6 +17,7 @@ import io
 from command_line_interface import CLI
 from entity import Entity
 from unittest.mock import MagicMock
+from io import StringIO
 
 
 class TestCLI(unittest.TestCase):
@@ -2097,7 +2098,7 @@ class TestCLI(unittest.TestCase):
 
         output = self.process_command_and_get_output(test_cli, "state-info")
 
-        self.assertIn("error: state-info_failed", output)
+        self.assertIn("error: state_info_failed", output)
         self.assertIn("Game State is not initialized", output)
 
     # Test handling an error while retrieving state information
@@ -2209,6 +2210,70 @@ class TestCLI(unittest.TestCase):
         # Verify the error message
         test_cli.command_manager.redo_last_command.assert_called_once()
         self.assertEqual(output.strip(), "error: redo_failed - No commands to redo!")
+
+    # Test History Command Success
+    # Verify that the CLI executes the HistoryCommand
+    # Returns: None
+    def test_process_history_command(self):
+        test_cli = CLI.__new__(CLI)
+        test_cli.command_manager = MagicMock()
+
+        with patch("command_line_interface.HistoryCommand") as mock_history_command:
+            test_command = mock_history_command.return_value
+
+            test_cli.process_history_command(["history"])
+
+            mock_history_command.assert_called_once_with(test_cli.command_manager)
+            test_cli.command_manager.execute_command.assert_called_once_with(
+                test_command
+            )
+
+    # Test History Command Invalid Arguments
+    # Verify that the CLI rejects additional arguments
+    # Returns: None
+    def test_process_history_command_invalid_arguments(self):
+        test_cli = CLI.__new__(CLI)
+        test_cli.command_manager = MagicMock()
+
+        with patch("sys.stdout", new_callable=StringIO) as mock_stdout:
+            test_cli.process_history_command(["history", "extra"])
+
+        output = mock_stdout.getvalue()
+
+        self.assertEqual(output, "error: history_failed Invalid command!\n")
+        test_cli.command_manager.execute_command.assert_not_called()
+
+    # Test History Command Error
+    # Verify that the CLI handles errors raised while executing HistoryCommand
+    # Returns: None
+    def test_process_history_command_error(self):
+        test_cli = CLI.__new__(CLI)
+        test_cli.command_manager = MagicMock()
+        test_cli.command_manager.execute_command.side_effect = ValueError("Test error")
+
+        with patch("sys.stdout", new_callable=StringIO) as mock_stdout:
+            test_cli.process_history_command(["history"])
+
+        output = mock_stdout.getvalue()
+
+        self.assertEqual(output, "error: history_failed Test error\n")
+
+    # Test History Command Attribute Error
+    # Verify that the CLI handles an AttributeError
+    # Returns: None
+    def test_process_history_command_attribute_error(self):
+        test_cli = CLI.__new__(CLI)
+        test_cli.command_manager = MagicMock()
+        test_cli.command_manager.execute_command.side_effect = AttributeError(
+            "Missing method"
+        )
+
+        with patch("sys.stdout", new_callable=StringIO) as mock_stdout:
+            test_cli.process_history_command(["history"])
+
+        output = mock_stdout.getvalue()
+
+        self.assertEqual(output, "error: history_failed Missing method\n")
 
 
 if __name__ == "__main__":
