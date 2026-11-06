@@ -35,8 +35,12 @@ from command import (
 # Creates a command object from its saved memento
 # Params: command_memento - Command.Memento - Saved command information
 #         game_state - GameState - Current game state
+#           game_state_manager
+#           command_manager
 # Returns: command - Command - Restored command object
-def create_command_from_memento(command_memento, game_state):
+def create_command_from_memento(
+    command_memento, game_state, game_state_manager, command_manager
+):
     # Map command type names to their respective classes
     command_types = {
         "MoveCommand": MoveCommand,
@@ -68,7 +72,7 @@ def create_command_from_memento(command_memento, game_state):
     command = command_class.__new__(command_class)
 
     # Restore the command's attributes
-    command.restore(command_memento, game_state)
+    command.restore(command_memento, game_state, game_state_manager, command_manager)
 
     return command
 
@@ -85,14 +89,20 @@ class CommandManager:
     # Params: command - Command - Command to execute
     # Returns: None
     def execute_command(self, command):
-        # Execute command
-        command.execute()
+        """print("DEBUG executing:", command.get_name())
+        print("DEBUG undoable:", command.is_undoable())
+        print("DEBUG history before:", self.get_history_info())"""
 
-        # Only add undoable commands to history
+        command.execute()
+        # print("DEBUG redo history cleared!")
+
+        # print("DEBUG history after execute:", self.get_history_info())
+
         if command.is_undoable():
             self.__undo_history.append(command)
-            # Resets redo history - prevents undoing a move then redoing one that should not be possible
             self.__redo_history.clear()
+
+        # print("DEBUG history after append:", self.get_history_info())
 
     # Undo Last Command
     # Reverses the most recently executed command
@@ -104,9 +114,19 @@ class CommandManager:
             return False, None
 
         command = self.__undo_history.pop()
-        # Add commmand to redo history
-        self.__redo_history.append(command)
+
+        # print("DEBUG before undo:", self.get_history_info())
+
+        # Undo command
         command.undo()
+
+        # print("DEBUG after undo:", self.get_history_info())
+
+        # Add command to redo history AFTER undoing
+        self.__redo_history.append(command)
+
+        # print("DEBUG after append:", self.get_history_info())
+
         return True, command
 
     # Redo Last Command
@@ -118,10 +138,15 @@ class CommandManager:
         if len(self.__redo_history) == 0:
             return False, None
 
+        # Get last undone command
         command = self.__redo_history.pop()
-        # Add command to undo history
-        self.__undo_history.append(command)
+
+        # Redo command
         command.redo()
+
+        # Add command to undo history AFTER redoing
+        self.__undo_history.append(command)
+
         return True, command
 
     # Clear History
@@ -174,7 +199,7 @@ class CommandManager:
     # Params: memento - Memento - saved command history
     #         game_state - GameState - current game state
     # Returns: None
-    def restore(self, memento, game_state):
+    def restore(self, memento, game_state, game_state_manager, command_manager):
         if not isinstance(memento, CommandManager.Memento):
             raise TypeError("Invalid Command Manager memento")
 
@@ -184,13 +209,17 @@ class CommandManager:
         # Restore undo history
         for command_memento in memento.undo_history:
             undo_history.append(
-                create_command_from_memento(command_memento, game_state)
+                create_command_from_memento(
+                    command_memento, game_state, game_state_manager, command_manager
+                )
             )
 
         # Restore redo history
         for command_memento in memento.redo_history:
             redo_history.append(
-                create_command_from_memento(command_memento, game_state)
+                create_command_from_memento(
+                    command_memento, game_state, game_state_manager, command_manager
+                )
             )
 
         self.__undo_history = undo_history

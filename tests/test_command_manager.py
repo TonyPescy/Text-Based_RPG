@@ -13,6 +13,7 @@ Purpose: Tests the Command manager methods and classes.
 # Imports
 import unittest
 from unittest.mock import MagicMock, patch
+from game_state_manager import GameStateManager
 from command_manager import CommandManager, create_command_from_memento
 from command import (
     Command,
@@ -312,14 +313,14 @@ class TestCommandManager(unittest.TestCase):
                     command_type=command_type,
                     data={},
                 )
-
+                game_state_manager = GameStateManager()
+                command_manager = CommandManager()
                 # Mock restore so the test focuses on factory reconstruction
                 with patch.object(
                     command_class, "restore", autospec=True
                 ) as mock_restore:
                     command = create_command_from_memento(
-                        command_memento,
-                        game_state,
+                        command_memento, game_state, game_state_manager, command_manager
                     )
 
                     # Verify correct command object was created
@@ -330,6 +331,8 @@ class TestCommandManager(unittest.TestCase):
                         command,
                         command_memento,
                         game_state,
+                        game_state_manager,
+                        command_manager,
                     )
 
     # Test Create Command From Invalid Memento
@@ -341,9 +344,12 @@ class TestCommandManager(unittest.TestCase):
             command_type="InvalidCommand",
             data={},
         )
-
+        game_state_manager = GameStateManager()
+        command_manager = CommandManager()
         with self.assertRaises(ValueError):
-            create_command_from_memento(command_memento, object())
+            create_command_from_memento(
+                command_memento, object(), game_state_manager, command_manager
+            )
 
     # Test Command Manager Restore
     # Verifies that undo and redo histories are reconstructed
@@ -376,8 +382,12 @@ class TestCommandManager(unittest.TestCase):
             "command_manager.create_command_from_memento",
             side_effect=[undo_command, redo_command],
         ) as mock_factory:
+            game_state_manager = GameStateManager()
+            command_manager = CommandManager()
 
-            manager.restore(manager_memento, game_state)
+            manager.restore(
+                manager_memento, game_state, game_state_manager, command_manager
+            )
 
             # Verify both commands were reconstructed
             self.assertEqual(mock_factory.call_count, 2)

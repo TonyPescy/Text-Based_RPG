@@ -34,6 +34,7 @@ import equipment
 import entity as ent
 from game_state import GameState
 from command_manager import CommandManager
+from game_state_manager import GameStateManager
 
 
 # Class for testing GameState
@@ -498,7 +499,7 @@ class TestGameState(unittest.TestCase):
         attack_before = self.game_state.get_entity_info_from_list(1).attack
 
         self.game_state.equip_item_based_on_info(1, "ironsword", "Weapon")
-
+        self.game_state.update_entity(1)
         attack_after = self.game_state.get_entity_info_from_list(1).attack
         self.assertGreater(attack_after, attack_before)
 
@@ -663,9 +664,10 @@ class TestGameState(unittest.TestCase):
         self.create_test_grid(5, 6)
         entity = self.create_spawned_entity("warrior", 1, 2)
         command_manager = CommandManager()
+        game_state_manager = GameStateManager()
         original_memento = self.game_state.create_memento(command_manager)
 
-        self.game_state.restore(original_memento, command_manager)
+        self.game_state.restore(original_memento, command_manager, game_state_manager)
 
         restored_memento = self.game_state.create_memento(command_manager)
 
@@ -724,7 +726,8 @@ class TestGameState(unittest.TestCase):
         self.assertEqual(restored_memento.turn_number, original_memento.turn_number)
         self.assertIsNot(self.game_state.get_entity_from_list(1), entity)
         # testing
-        self.game_state.restore(original_memento, command_manager)
+        game_state_manager = GameStateManager()
+        self.game_state.restore(original_memento, command_manager, game_state_manager)
 
         print("Getter result:", self.game_state.get_game_state_info())
         self.assertFalse(self.game_state.get_game_state_info()[2])
@@ -750,8 +753,8 @@ class TestGameState(unittest.TestCase):
             is_saved=True,
             command_manager_memento=command_manager_memento1,
         )
-
-        self.game_state.restore(memento, command_manager)
+        game_state_manager = GameStateManager()
+        self.game_state.restore(memento, command_manager, game_state_manager)
 
         restored_memento = self.game_state.create_memento(command_manager)
 
@@ -766,9 +769,10 @@ class TestGameState(unittest.TestCase):
         self.game_state.spawn_entity(1, 1, "mage")
         self.game_state.spawn_entity(2, 2, "goblin")
         command_manager = CommandManager()
+        game_state_manager = GameStateManager()
         memento = self.game_state.create_memento(command_manager)
 
-        self.game_state.restore(memento, command_manager)
+        self.game_state.restore(memento, command_manager, game_state_manager)
 
         restored_memento = self.game_state.create_memento(command_manager)
 
@@ -807,9 +811,10 @@ class TestGameState(unittest.TestCase):
         self.create_spawned_entity("warrior")
         command_manager = CommandManager()
         original_backpack = self.get_backpack_names(1)
+        game_state_manager = GameStateManager()
         memento = self.game_state.create_memento(command_manager)
 
-        self.game_state.restore(memento, command_manager)
+        self.game_state.restore(memento, command_manager, game_state_manager)
 
         self.assertEqual(self.get_backpack_names(1), original_backpack)
 
@@ -830,10 +835,10 @@ class TestGameState(unittest.TestCase):
         self.create_test_grid()
         self.create_spawned_entity("warrior")
         command_manager = CommandManager()
-
+        game_state_manager = GameStateManager()
         memento = self.game_state.create_memento(command_manager)
 
-        self.game_state.restore(memento, command_manager)
+        self.game_state.restore(memento, command_manager, game_state_manager)
 
         restored_memento = self.game_state.create_memento(command_manager)
 

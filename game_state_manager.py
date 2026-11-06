@@ -96,7 +96,7 @@ class GameStateManager:
         memento = self.data_to_memento(save_data)
 
         # Restore the game from the reconstructed Memento
-        game_state.restore(memento, command_manager)
+        game_state.restore(memento, command_manager, self)
 
     # Validate Save Data
     # Validate the saved from the file
@@ -309,12 +309,29 @@ class GameStateManager:
                 tile_column = []
 
                 for tile_data in column_data:
+                    # Reconstruct tile items as actual equipment objects.
+                    tile_items = []
+
+                    for item_name in tile_data["items"]:
+                        if item_name is None:
+                            tile_items.append(None)
+                            continue
+
+                        item = equipment.create_equipment(item_name)
+
+                        if item is None:
+                            raise ValueError(
+                                f"Could not reconstruct tile item {item_name!r}."
+                            )
+
+                        tile_items.append(item)
+
                     tile_memento = Tile.Memento(
                         t_type=tile_data["tile_type"],
                         passable=tile_data["passable"],
                         occupants=tuple(tile_data["occupants"]),
                         modifiers=copy.deepcopy(tile_data["modifiers"]),
-                        item_list=tuple(tile_data["items"]),
+                        item_list=tuple(tile_items),
                     )
 
                     tile_column.append(tile_memento)
@@ -555,7 +572,7 @@ class GameStateManager:
             data=self.command_data_to_data(command_data["data"]),
         )
 
-    # Command Data to Data
+    """# Command Data to Data
     # Converts JSON-compatible command data back into Python objects
     # Params: data - dict/list/object
     # Returns: reconstructed Python object
@@ -598,7 +615,7 @@ class GameStateManager:
         else:
             raise TypeError(
                 f"Unsupported data type for JSON conversion: {type(data).__name__}"
-            )
+            )"""
 
     # Command Manager Memento Conversion Tests
 

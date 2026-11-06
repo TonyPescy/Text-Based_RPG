@@ -370,12 +370,13 @@ class GameState:
     # Returns: None
     def equip_item_based_on_info(self, entity_id, item_name, slot):
         entity = self.get_entity_from_list(entity_id)
-        # get Item from item name
-        item = equipment.create_equipment(item_name.lower())
+        # Get Item from item name
+        if item_name is None:
+            item = None
+        else:
+            item = equipment.create_equipment(item_name.lower())
+
         entity.equip_item(item, slot)
-        # Update entity stats
-        self.update_entity(entity_id)
-        self.mark_as_unsaved()
 
     # Use Consumable
     # Uses provided consumable based on entity info
@@ -518,7 +519,7 @@ class GameState:
     # Restores memento of the game state
     # Params: memento - Memento - Contains all info for the game state to be restored
     # Returns: None
-    def restore(self, memento, command_manager):
+    def restore(self, memento, command_manager, game_state_manager):
         # Ensure the provided Memento is valid
         if not isinstance(memento, GameState.Memento):
             raise TypeError("Invalid GameState Memento")
@@ -579,12 +580,17 @@ class GameState:
         self.__map_created = memento.map_created
         self.__turn_number = memento.turn_number
 
+        # get game state manager
+        # gs_manager =
+
         # Restore the Command Manager's history
         # Restore the Command Manager's history if one exists.
         if memento.command_manager_memento is not None:
             command_manager.restore(
                 memento.command_manager_memento,
                 self,
+                game_state_manager,
+                command_manager,
             )
         else:
             command_manager.clear_history()

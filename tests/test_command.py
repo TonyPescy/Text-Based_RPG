@@ -467,7 +467,7 @@ class TestCommand(unittest.TestCase):
         test_command.execute()
         test_command.undo()
 
-        test_game_state.undo_cast.assert_called_once_with(1, 2, "Fireball", 100, 70)
+        test_game_state.undo_cast.assert_called_once_with(1, 2, 100, 70)
 
     # Test Cast Spell Command Undo Before Execute
     def test_cast_spell_command_undo_before_execute(self):
@@ -561,7 +561,7 @@ class TestCommand(unittest.TestCase):
         test_command.undo()
 
         test_game_state.cast_spell.assert_called_once_with(1, 2, "Fireball")
-        test_game_state.undo_cast.assert_called_once_with(1, 2, "Fireball", 80, 50)
+        test_game_state.undo_cast.assert_called_once_with(1, 2, 80, 50)
 
     # Test Cast Spell Command Undo Removes Dead Status
     def test_cast_spell_command_undo_removes_dead_status(self):
@@ -585,7 +585,7 @@ class TestCommand(unittest.TestCase):
         test_command.undo()
 
         target.remove_temp_buffs.assert_called_once_with(["Dead"])
-        test_game_state.undo_cast.assert_called_once_with(1, 2, "Fireball", 100, 0)
+        test_game_state.undo_cast.assert_called_once_with(1, 2, 100, 0)
 
     # Test Cast Spell Command Undo Without Dead Status
     def test_cast_spell_command_undo_without_dead_status(self):
@@ -609,7 +609,7 @@ class TestCommand(unittest.TestCase):
         test_command.undo()
 
         target.remove_temp_buffs.assert_not_called()
-        test_game_state.undo_cast.assert_called_once_with(1, 2, "Fireball", 100, 50)
+        test_game_state.undo_cast.assert_called_once_with(1, 2, 100, 50)
 
     # Test Cast Spell Command Undo Removes Spell Effect
     def test_cast_spell_command_undo_removes_spell_effect(self):
@@ -639,7 +639,7 @@ class TestCommand(unittest.TestCase):
         test_command.undo()
 
         target.remove_temp_buffs.assert_called_once_with(["Frostbolt"])
-        test_game_state.undo_cast.assert_called_once_with(1, 2, "Frostbolt", 100, 50)
+        test_game_state.undo_cast.assert_called_once_with(1, 2, 100, 50)
 
     # Success
     def test_set_tile_command_execute(self):
@@ -986,7 +986,7 @@ class TestCommand(unittest.TestCase):
         command.undo()
 
         # Check item was removed from backpack
-        game_state.remove_item_from_backpack.assert_called_once_with(
+        game_state.remove_item_from_backpack_based_on_info.assert_called_once_with(
             1, "SmallHealthPotion"
         )
 
@@ -1009,7 +1009,7 @@ class TestCommand(unittest.TestCase):
         game_state.add_item_to_tile.assert_not_called()
 
         # Check item was not removed from backpack
-        game_state.remove_item_from_backpack.assert_not_called()
+        game_state.remove_item_from_backpack_based_on_info.assert_not_called()
 
     # Success
     def test_pickup_command_redo(self):
@@ -1179,7 +1179,7 @@ class TestCommand(unittest.TestCase):
         command.undo()
 
         # Check item was removed from backpack
-        game_state.remove_item_from_backpack.assert_called_once_with(
+        game_state.remove_item_from_backpack_based_on_info.assert_called_once_with(
             1, "SmallHealthPotion"
         )
 
@@ -1196,7 +1196,7 @@ class TestCommand(unittest.TestCase):
             command.undo()
 
         # Check item was not removed from backpack
-        game_state.remove_item_from_backpack.assert_not_called()
+        game_state.remove_item_from_backpack_based_on_info.assert_not_called()
 
     # Success
     def test_give_item_command_redo(self):
@@ -1311,7 +1311,7 @@ class TestCommand(unittest.TestCase):
         game_state.add_item_to_tile.assert_not_called()
 
         # Check item was not removed from backpack
-        game_state.remove_item_from_backpack_based_on_info.assert_not_called()
+        game_state.remove_item_from_backpack_based_on_info_based_on_info.assert_not_called()
 
     # Success
     def test_drop_item_command_execute_case_insensitive_item_name(self):
@@ -1428,18 +1428,13 @@ class TestCommand(unittest.TestCase):
 
         # Reset mock call history
         game_state.add_item_to_tile.reset_mock()
-        game_state.remove_item_from_backpack_based_on_info.reset_mock()
+        game_state.remove_item_from_backpack_based_on_info_based_on_info.reset_mock()
 
         # Redo command
         command.redo()
 
         # Check item was added to tile again
         game_state.add_item_to_tile.assert_called_once_with(1, 2, "SmallHealthPotion")
-
-        # Check item was removed from backpack again
-        game_state.remove_item_from_backpack_based_on_info.assert_called_once_with(
-            1, "SmallHealthPotion"
-        )
 
     # Failure
     def test_drop_item_command_redo_before_undo(self):
@@ -1760,7 +1755,11 @@ class TestCommand(unittest.TestCase):
 
         # Create Use Item Command
         test_command = UseItemCommand(
-            test_game_state, 1, "Small Health Potion", self.command_manager
+            test_game_state,
+            1,
+            "Small Health Potion",
+            self.command_manager,
+            self.game_state_manager,
         )
 
         # Execute Command
@@ -1777,7 +1776,11 @@ class TestCommand(unittest.TestCase):
 
         # Create Use Item Command
         test_command = UseItemCommand(
-            test_game_state, "1", "Small Health Potion", self.command_manager
+            test_game_state,
+            "1",
+            "Small Health Potion",
+            self.command_manager,
+            self.game_state_manager,
         )
 
         # Verify entity ID conversion
@@ -1794,20 +1797,26 @@ class TestCommand(unittest.TestCase):
 
         # Create Use Item Command
         test_command = UseItemCommand(
-            test_game_state, 1, "Small Health Potion", self.command_manager
+            test_game_state,
+            1,
+            "Small Health Potion",
+            self.command_manager,
+            self.game_state_manager,
         )
 
         # Execute Command
         test_command.execute()
 
         # Reset restore method call history
-        test_game_state.restore_memento.reset_mock()
+        test_game_state.restore.reset_mock()
 
         # Undo Command
         test_command.undo()
 
         # Verify state was restored
-        test_game_state.restore_memento.assert_called_once_with(old_state)
+        test_game_state.restore.assert_called_once_with(
+            old_state, self.command_manager, self.game_state_manager
+        )
 
     # Failure
     def test_use_item_command_undo_before_execute(self):
@@ -1816,7 +1825,11 @@ class TestCommand(unittest.TestCase):
 
         # Create Use Item Command
         test_command = UseItemCommand(
-            test_game_state, 1, "Small Health Potion", self.command_manager
+            test_game_state,
+            1,
+            "Small Health Potion",
+            self.command_manager,
+            self.game_state_manager,
         )
 
         # Verify error is raised
@@ -1824,7 +1837,7 @@ class TestCommand(unittest.TestCase):
             test_command.undo()
 
         # Verify state was not restored
-        test_game_state.restore_memento.assert_not_called()
+        test_game_state.restore.assert_not_called()
 
     # Success
     def test_use_item_command_redo_after_undo(self):
@@ -1837,7 +1850,11 @@ class TestCommand(unittest.TestCase):
 
         # Create Use Item Command
         test_command = UseItemCommand(
-            test_game_state, 1, "Small Health Potion", self.command_manager
+            test_game_state,
+            1,
+            "Small Health Potion",
+            self.command_manager,
+            self.game_state_manager,
         )
 
         # Execute Command
@@ -1867,7 +1884,11 @@ class TestCommand(unittest.TestCase):
 
         # Create Use Item Command
         test_command = UseItemCommand(
-            test_game_state, 1, "Small Health Potion", self.command_manager
+            test_game_state,
+            1,
+            "Small Health Potion",
+            self.command_manager,
+            self.game_state_manager,
         )
 
         # Execute Command
@@ -1887,7 +1908,11 @@ class TestCommand(unittest.TestCase):
 
         # Create Use Item Command
         test_command = UseItemCommand(
-            test_game_state, 1, "Small Health Potion", self.command_manager
+            test_game_state,
+            1,
+            "Small Health Potion",
+            self.command_manager,
+            self.game_state_manager,
         )
 
         # Verify command name
@@ -1907,7 +1932,9 @@ class TestCommand(unittest.TestCase):
         test_game_state.process_tick_for_all_entities.return_value = []
 
         # Create Tick Command
-        test_command = TickCommand(test_game_state, self.command_manager)
+        test_command = TickCommand(
+            test_game_state, self.command_manager, self.game_state_manager
+        )
 
         # Execute Command
         test_command.execute()
@@ -1933,7 +1960,9 @@ class TestCommand(unittest.TestCase):
         test_game_state.entities_exists.return_value = False
 
         # Create Tick Command
-        test_command = TickCommand(test_game_state, self.command_manager)
+        test_command = TickCommand(
+            test_game_state, self.command_manager, self.game_state_manager
+        )
 
         # Execute Command
         test_command.execute()
@@ -1959,7 +1988,9 @@ class TestCommand(unittest.TestCase):
         test_game_state.process_tick_for_all_entities.return_value = [1, 2, 3]
 
         # Create Tick Command
-        test_command = TickCommand(test_game_state, self.command_manager)
+        test_command = TickCommand(
+            test_game_state, self.command_manager, self.game_state_manager
+        )
 
         # Execute Command
         test_command.execute()
@@ -1986,7 +2017,9 @@ class TestCommand(unittest.TestCase):
         test_game_state.process_tick_for_all_entities.return_value = []
 
         # Create Tick Command
-        test_command = TickCommand(test_game_state, self.command_manager)
+        test_command = TickCommand(
+            test_game_state, self.command_manager, self.game_state_manager
+        )
 
         # Execute Command
         test_command.execute()
@@ -2010,19 +2043,23 @@ class TestCommand(unittest.TestCase):
         test_game_state.entities_exists.return_value = False
 
         # Create Tick Command
-        test_command = TickCommand(test_game_state, self.command_manager)
+        test_command = TickCommand(
+            test_game_state, self.command_manager, self.game_state_manager
+        )
 
         # Execute Command
         test_command.execute()
 
         # Reset restore method call history
-        test_game_state.restore_memento.reset_mock()
+        test_game_state.restore.reset_mock()
 
         # Undo Command
         test_command.undo()
 
         # Verify game state was restored
-        test_game_state.restore_memento.assert_called_once_with(old_state)
+        test_game_state.restore.assert_called_once_with(
+            old_state, self.command_manager, self.game_state_manager
+        )
 
     # Failure
     def test_tick_command_undo_before_execute(self):
@@ -2030,14 +2067,16 @@ class TestCommand(unittest.TestCase):
         test_game_state = MagicMock()
 
         # Create Tick Command
-        test_command = TickCommand(test_game_state, self.command_manager)
+        test_command = TickCommand(
+            test_game_state, self.command_manager, self.game_state_manager
+        )
 
         # Verify error is raised
         with self.assertRaisesRegex(ValueError, "Tick has not been executed!"):
             test_command.undo()
 
         # Verify state was not restored
-        test_game_state.restore_memento.assert_not_called()
+        test_game_state.restore.assert_not_called()
 
     # Success
     def test_tick_command_redo_after_undo(self):
@@ -2051,7 +2090,9 @@ class TestCommand(unittest.TestCase):
         test_game_state.entities_exists.return_value = False
 
         # Create Tick Command
-        test_command = TickCommand(test_game_state, self.command_manager)
+        test_command = TickCommand(
+            test_game_state, self.command_manager, self.game_state_manager
+        )
 
         # Execute Command
         test_command.execute()
@@ -2084,7 +2125,9 @@ class TestCommand(unittest.TestCase):
         test_game_state.entities_exists.return_value = False
 
         # Create Tick Command
-        test_command = TickCommand(test_game_state, self.command_manager)
+        test_command = TickCommand(
+            test_game_state, self.command_manager, self.game_state_manager
+        )
 
         # Execute Command
         test_command.execute()
@@ -2105,7 +2148,9 @@ class TestCommand(unittest.TestCase):
         test_game_state = MagicMock()
 
         # Create Tick Command
-        test_command = TickCommand(test_game_state, self.command_manager)
+        test_command = TickCommand(
+            test_game_state, self.command_manager, self.game_state_manager
+        )
 
         # Verify command name
         self.assertEqual(test_command.get_name(), "Tick")
@@ -2118,12 +2163,15 @@ class TestCommand(unittest.TestCase):
         # Create mock game state
         self.game_state = MagicMock()
         self.command_manager = MagicMock()
+        self.game_state_manager = MagicMock()
 
         # Mock map does not exist
         self.game_state.is_map_created.return_value = False
 
         # Create command
-        self.command = InitCommand(self.game_state, 25, 25, self.command_manager)
+        self.command = InitCommand(
+            self.game_state, 25, 25, self.command_manager, self.game_state_manager
+        )
 
     # Execute Tests
 
@@ -2161,7 +2209,9 @@ class TestCommand(unittest.TestCase):
     # Test creating a map with string dimensions
     def test_execute_converts_dimensions_to_integers(self):
         # Create command with string dimensions
-        command = InitCommand(self.game_state, "10", "15", self.command_manager)
+        command = InitCommand(
+            self.game_state, "10", "15", self.command_manager, self.game_state_manager
+        )
 
         # Execute command
         command.execute()
@@ -2181,8 +2231,10 @@ class TestCommand(unittest.TestCase):
         self.command.undo()
 
         # Test previous state was restored
-        self.game_state.restore_memento.assert_called_once_with(
-            self.game_state.create_memento.return_value
+        self.game_state.restore.assert_called_once_with(
+            self.game_state.create_memento.return_value,
+            self.command_manager,
+            self.game_state_manager,
         )
 
     # Failure
@@ -2193,7 +2245,7 @@ class TestCommand(unittest.TestCase):
             self.command.undo()
 
         # Test game state was not restored
-        self.game_state.restore_memento.assert_not_called()
+        self.game_state.restore.assert_not_called()
 
     # Success
     # Test undoing map initialization only restores state once
@@ -2209,7 +2261,7 @@ class TestCommand(unittest.TestCase):
             self.command.undo()
 
         # Test state was restored only once
-        self.game_state.restore_memento.assert_called_once()
+        self.game_state.restore.assert_called_once()
 
     # Redo Tests
 
@@ -2508,7 +2560,9 @@ class TestCommand(unittest.TestCase):
         test_command.undo()
 
         # Verify previous game state was restored
-        test_game_state.restore_memento.assert_called_once_with(test_memento)
+        test_game_state.restore.assert_called_once_with(
+            test_memento, test_command_manager, test_game_state_manager
+        )
 
     # Tests LoadCommand undo raises an error before execution
     def test_load_command_undo_before_execute(self):
@@ -2532,7 +2586,7 @@ class TestCommand(unittest.TestCase):
             test_command.undo()
 
         # Verify game state was not restored
-        test_game_state.restore_memento.assert_not_called()
+        test_game_state.restore.assert_not_called()
 
     # Tests LoadCommand undo cannot be performed twice
     def test_load_command_undo_twice(self):
@@ -2566,7 +2620,9 @@ class TestCommand(unittest.TestCase):
             test_command.undo()
 
         # Verify previous game state was restored only once
-        test_game_state.restore_memento.assert_called_once_with(test_memento)
+        test_game_state.restore.assert_called_once_with(
+            test_memento, test_command_manager, test_game_state_manager
+        )
 
     # Tests LoadCommand redo loads the saved game again after undo
     def test_load_command_redo(self):
@@ -2603,7 +2659,7 @@ class TestCommand(unittest.TestCase):
 
         # Verify saved game was loaded again
         test_game_state_manager.load_game.assert_called_once_with(
-            test_game_state, "test_save.json"
+            test_game_state, "test_save.json", test_command_manager
         )
 
     # Tests LoadCommand redo raises an error while already executed
@@ -2668,7 +2724,7 @@ class TestCommand(unittest.TestCase):
             test_command.undo()
 
         # Verify game state was not restored
-        test_game_state.restore_memento.assert_not_called()
+        test_game_state.restore.assert_not_called()
 
     # Tests LoadCommand get_name returns the command name
     def test_load_command_get_name(self):
@@ -3409,7 +3465,7 @@ class TestCommand(unittest.TestCase):
 
         output = mock_stdout.getvalue()
 
-        self.assertEqual(output, "ok: undo_stack:3, redo_stack:2\n")
+        self.assertEqual(output, "ok: undo_stack: 3, redo_stack: 2\n")
         test_command_manager.get_history_info.assert_called_once()
 
     # Test History Command Empty History
@@ -3426,7 +3482,7 @@ class TestCommand(unittest.TestCase):
 
         output = mock_stdout.getvalue()
 
-        self.assertEqual(output, "ok: undo_stack:0, redo_stack:0\n")
+        self.assertEqual(output, "ok: undo_stack: 0, redo_stack: 0\n")
 
     # Test History Command Undo
     # Verify that undo does not change the history
@@ -3453,7 +3509,7 @@ class TestCommand(unittest.TestCase):
 
         output = mock_stdout.getvalue()
 
-        self.assertEqual(output, "ok: undo_stack:2, redo_stack:1\n")
+        self.assertEqual(output, "ok: undo_stack: 2, redo_stack: 1\n")
         test_command_manager.get_history_info.assert_called_once()
 
     # Test History Command Name
@@ -3935,7 +3991,9 @@ class TestCommand(unittest.TestCase):
         old_state = {"turn": 1, "health": 100}
         game_state.create_memento.return_value = old_state
 
-        command = UseItemCommand(game_state, 1, "Potion", self.command_manager)
+        command = UseItemCommand(
+            game_state, 1, "Potion", self.command_manager, self.game_state_manager
+        )
         command.execute()
 
         memento = command.create_memento()
@@ -3962,7 +4020,7 @@ class TestCommand(unittest.TestCase):
         game_state.create_memento.return_value = old_state
         game_state.entities_exists.return_value = False
 
-        command = TickCommand(game_state, self.command_manager)
+        command = TickCommand(game_state, self.command_manager, self.game_state_manager)
         command.execute()
 
         memento = command.create_memento()
@@ -3987,7 +4045,9 @@ class TestCommand(unittest.TestCase):
         game_state.create_memento.return_value = old_state
         game_state.is_map_created.return_value = False
 
-        command = InitCommand(game_state, 10, 12, self.command_manager)
+        command = InitCommand(
+            game_state, 10, 12, self.command_manager, self.game_state_manager
+        )
         command.execute()
 
         memento = command.create_memento()
@@ -4020,7 +4080,9 @@ class TestCommand(unittest.TestCase):
         memento = command.create_memento()
 
         new_command = SaveCommand.__new__(SaveCommand)
-        new_command.restore(memento, game_state, game_state_manager)
+        new_command.restore(
+            memento, game_state, game_state_manager, self.game_state_manager
+        )
 
         restored = new_command.create_memento()
 

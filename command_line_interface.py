@@ -134,7 +134,13 @@ class CLI:
             return
         # Valid inputs
         # Create Command
-        command = InitCommand(self.game_state, width, height, self.command_manager)
+        command = InitCommand(
+            self.game_state,
+            width,
+            height,
+            self.command_manager,
+            self.game_state_manager,
+        )
         # Execute Command
         self.command_manager.execute_command(command)
         # Success Message
@@ -173,7 +179,7 @@ class CLI:
             command = SetTileCommand(self.game_state, x, y, tile_type)
 
             # Execute command
-            command.execute()
+            self.command_manager.execute_command(command)
             # success output -  with special case for shallowwater
             if tile_type.lower() == "shallowwater":
                 print(f"ok: tile_set {x}, {y} type: ShallowWater!")
@@ -363,7 +369,7 @@ class CLI:
             )
 
             # Execute command
-            command.execute()
+            self.command_manager.execute_command(command)
 
             # Success message
             print(f"ok: picked_up {tile_item} into backpack!")
@@ -422,7 +428,7 @@ class CLI:
             )
 
             # Execute command
-            command.execute()
+            self.command_manager.execute_command(command)
 
             # Success message
             print(f"ok: added {item_name} to {entity_info.id}'s backpack!")
@@ -488,7 +494,7 @@ class CLI:
             )
 
             # Execute command
-            command.execute()
+            self.command_manager.execute_command(command)
 
             # Success message
             print(f"ok: dropped {item} onto tile!")
@@ -566,7 +572,7 @@ class CLI:
             )
 
             # Execute Command
-            command.execute()
+            self.command_manager.execute_command(command)
 
         # Success message and stat update
         print("Valid items:", ", ".join(equipment.get_equipment_names()))
@@ -627,11 +633,15 @@ class CLI:
             # Use consumable
             # Create Use Item Command
             command = UseItemCommand(
-                self.game_state, entity_info.id, item.name, self.command_manager
+                self.game_state,
+                entity_info.id,
+                item.name,
+                self.command_manager,
+                self.game_state_manager,
             )
 
             # Execute Command
-            command.execute()
+            self.command_manager.execute_command(command)
 
             print(f"ok: used {item.name}!")
 
@@ -863,7 +873,7 @@ class CLI:
                 spell_info.name,
             )
             # Execute the command
-            command.execute()
+            self.command_manager.execute_command(command)
             # Get spell effect
             effect = command.get_spell_result()
             # Print success message
@@ -900,10 +910,12 @@ class CLI:
                 self.game_state.remove_entity_from_game(entity_id)
 
         # Create Tick Command
-        command = TickCommand(self.game_state, self.command_manager)
+        command = TickCommand(
+            self.game_state, self.command_manager, self.game_state_manager
+        )
 
         # Execute Command
-        command.execute()
+        self.command_manager.execute_command(command)
 
     # Process Save Command
     # Saves the game state to given file
@@ -935,7 +947,7 @@ class CLI:
                     self.command_manager,
                 )
                 # Execute Command
-                command.execute()
+                self.command_manager.execute_command(command)
                 # Success Message
                 print(f"ok: game saved to {filename}")
             # Extensive error catching
@@ -960,7 +972,7 @@ class CLI:
                 self.game_state, self.game_state_manager, filename, self.command_manager
             )
             # Execute Command
-            command.execute()
+            self.command_manager.execute_command(command)
             # Success Message
             print(f"ok: game loaded from {filename}!")
         # Extensive error catching
