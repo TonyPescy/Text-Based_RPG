@@ -344,6 +344,8 @@ Exit the game by using the keyboard interrupt or by entering "quit" as a command
 - Houses the game state variable through which interaction between files and objects are handled.
 - It also contains the main function that will prompt for the commands in the terminal, the player can exit at any time by entering 'quit'.
 - Allows for files to be piped/redirected in for inputs and will account for end of file errors.
+- Finally is used so that goodbye message is always sent.
+
 
 ### Game State
 - Manages time passing in game through ticks.
@@ -368,6 +370,7 @@ Exit the game by using the keyboard interrupt or by entering "quit" as a command
 ### Command Manager
 - Houses all universal functions that are useful when running commands.
 - Manages command history allowing for undo and redo to function accurately to their proper history.
+- Redos are cleared when undoable commands are executed to prevent issues with redoing something after it has already been used to manipulate something else.
 
 ### Other
 - Values for entities, tiles, spells, equipment, grids, and game state are marked as private (__varname). To access this information x.getinfo() will return a immutable copy to prevent any of that private data from being public and able to be modified. When these do need to be changed, such as an entity losing health, it is handled within its own class.
