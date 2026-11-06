@@ -134,7 +134,7 @@ class CLI:
             return
         # Valid inputs
         # Create Command
-        command = InitCommand(self.game_state, width, height)
+        command = InitCommand(self.game_state, width, height, self.command_manager)
         # Execute Command
         self.command_manager.execute_command(command)
         # Success Message
@@ -626,7 +626,9 @@ class CLI:
         else:  # Success case
             # Use consumable
             # Create Use Item Command
-            command = UseItemCommand(self.game_state, entity_info.id, item.name)
+            command = UseItemCommand(
+                self.game_state, entity_info.id, item.name, self.command_manager
+            )
 
             # Execute Command
             command.execute()
@@ -898,7 +900,7 @@ class CLI:
                 self.game_state.remove_entity_from_game(entity_id)
 
         # Create Tick Command
-        command = TickCommand(self.game_state)
+        command = TickCommand(self.game_state, self.command_manager)
 
         # Execute Command
         command.execute()
@@ -927,7 +929,10 @@ class CLI:
             try:
                 # Create Command
                 command = SaveCommand(
-                    self.game_state, self.game_state_manager, filename
+                    self.game_state,
+                    self.game_state_manager,
+                    filename,
+                    self.command_manager,
                 )
                 # Execute Command
                 command.execute()
@@ -951,7 +956,9 @@ class CLI:
         # Attempt to load game
         try:
             # Create Command
-            command = LoadCommand(self.game_state, self.game_state_manager, filename)
+            command = LoadCommand(
+                self.game_state, self.game_state_manager, filename, self.command_manager
+            )
             # Execute Command
             command.execute()
             # Success Message

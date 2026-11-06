@@ -12,8 +12,11 @@ Purpose: Houses all the logic needed for the commands.
 
 # Imports
 from abc import ABC, abstractmethod
+from dataclasses import dataclass
 from domain_library import SpellEffects, are_valid_ints
 from entity import Entity
+from copy import deepcopy
+from types import SimpleNamespace
 
 
 # Command
@@ -57,6 +60,28 @@ class Command(ABC):
     # Returns: bool - True if command can be undone
     def is_undoable(self):
         return True
+
+    # Create Memento
+    # Creates a memento of the command
+    # Params: None
+    # Returns: Command Memento
+    def create_memento(self):
+        raise NotImplementedError
+
+    # Restore
+    # Restores the command based on its memento
+    # Params: memento - Command Memento
+    #         game_state - GameState
+    # Returns: None
+    def restore(self, memento, game_state):
+        raise NotImplementedError
+
+    # Memento DataClass
+    # Stores the information needed to restore a command
+    @dataclass(frozen=True)
+    class Memento:
+        command_type: str
+        data: dict
 
 
 # Move Command extends from Command
@@ -107,6 +132,42 @@ class MoveCommand(Command):
     def get_name(self):
         return self.__name
 
+    # Create Memento
+    # Creates a memento of the command
+    # Params: None
+    # Returns: Command Memento
+    def create_memento(self):
+        return Command.Memento(
+            command_type="MoveCommand",
+            data={
+                "entity_id": self.__entity_id,
+                "x": self.__x,
+                "y": self.__y,
+                "old_x": self.__old_x,
+                "old_y": self.__old_y,
+            },
+        )
+
+    # Restore
+    # Restores the command based on its memento
+    # Params: memento - Command Memento
+    #         game_state - GameState
+    # Returns: None
+    def restore(self, memento, game_state):
+        if not isinstance(memento, Command.Memento):
+            raise TypeError("Invalid Move Command memento")
+
+        if memento.command_type != "MoveCommand":
+            raise TypeError("Incorrect Move Command memento")
+
+        self.__game_state = game_state
+        self.__entity_id = memento.data["entity_id"]
+        self.__x = memento.data["x"]
+        self.__y = memento.data["y"]
+        self.__old_x = memento.data["old_x"]
+        self.__old_y = memento.data["old_y"]
+        self.__name = "Move"
+
 
 # Spawn Command extends from Command
 class SpawnCommand(Command):
@@ -155,6 +216,37 @@ class SpawnCommand(Command):
     def get_name(self):
         return self.__name
 
+    # Create Memento
+    # Creates a memento of the command
+    # Params: None
+    # Returns: Command Memento
+    def create_memento(self):
+        return Command.Memento(
+            command_type="SpawnCommand",
+            data={
+                "entity_type": self.__entity_type,
+                "x": self.__x,
+                "y": self.__y,
+                "entity_id": self.__entity_id,
+            },
+        )
+
+    # Restore
+    # Restores the command based on its memento
+    # Params: memento - Command Memento
+    #         game_state - GameState
+    # Returns: None
+    def restore(self, memento, game_state):
+        if memento.command_type != "SpawnCommand":
+            raise ValueError("Invalid SpawnCommand memento!")
+
+        self.__game_state = game_state
+        self.__entity_type = memento.data["entity_type"]
+        self.__x = memento.data["x"]
+        self.__y = memento.data["y"]
+        self.__entity_id = memento.data["entity_id"]
+        self.__name = "Spawn"
+
 
 # Spawn Command extends from Command
 class SpawnLootCommand(Command):
@@ -194,6 +286,35 @@ class SpawnLootCommand(Command):
     # Returns: name - String - command name
     def get_name(self):
         return self.__name
+
+    # Create Memento
+    # Creates a memento of the command
+    # Params: None
+    # Returns: Command Memento
+    def create_memento(self):
+        return Command.Memento(
+            command_type="SpawnLootCommand",
+            data={
+                "item_name": self.__item_name,
+                "x": self.__x,
+                "y": self.__y,
+            },
+        )
+
+    # Restore
+    # Restores the command based on its memento
+    # Params: memento - Command Memento
+    #         game_state - GameState
+    # Returns: None
+    def restore(self, memento, game_state):
+        if memento.command_type != "SpawnLootCommand":
+            raise ValueError("Invalid SpawnLootCommand memento!")
+
+        self.__game_state = game_state
+        self.__item_name = memento.data["item_name"]
+        self.__x = memento.data["x"]
+        self.__y = memento.data["y"]
+        self.__name = "Spawn Loot"
 
 
 # Attack Command extends from Command
@@ -263,6 +384,35 @@ class AttackCommand(Command):
     # Returns: damage - int - command name
     def get_damage(self):
         return self.__damage
+
+    # Create Memento
+    # Creates a memento of the command
+    # Params: None
+    # Returns: Command Memento
+    def create_memento(self):
+        return Command.Memento(
+            command_type="AttackCommand",
+            data={
+                "attacker_id": self.__attacker_id,
+                "target_id": self.__target_id,
+                "damage": self.__damage,
+            },
+        )
+
+    # Restore
+    # Restores the command based on its memento
+    # Params: memento - Command Memento
+    #         game_state - GameState
+    # Returns: None
+    def restore(self, memento, game_state):
+        if memento.command_type != "AttackCommand":
+            raise ValueError("Invalid AttackCommand memento!")
+
+        self.__game_state = game_state
+        self.__attacker_id = memento.data["attacker_id"]
+        self.__target_id = memento.data["target_id"]
+        self.__damage = memento.data["damage"]
+        self.__name = "Attack"
 
 
 # Cast Spell Command extends from Command
@@ -375,6 +525,41 @@ class CastSpellCommand(Command):
     def get_spell_result(self):
         return self.__spell_result
 
+    # Create Memento
+    # Creates a memento of the command
+    # Params: None
+    # Returns: Command Memento
+    def create_memento(self):
+        return Command.Memento(
+            command_type="CastSpellCommand",
+            data={
+                "caster_id": self.__caster_id,
+                "target_id": self.__target_id,
+                "spell_name": self.__spell_name,
+                "spell_result": deepcopy(self.__spell_result),
+                "old_health": self.__old_health,
+                "old_mana": self.__old_mana,
+            },
+        )
+
+    # Restore
+    # Restores the command based on its memento
+    # Params: memento - Command Memento
+    #         game_state - GameState
+    # Returns: None
+    def restore(self, memento, game_state):
+        if memento.command_type != "CastSpellCommand":
+            raise ValueError("Invalid CastSpellCommand memento!")
+
+        self.__game_state = game_state
+        self.__caster_id = memento.data["caster_id"]
+        self.__target_id = memento.data["target_id"]
+        self.__spell_name = memento.data["spell_name"]
+        self.__spell_result = deepcopy(memento.data["spell_result"])
+        self.__old_health = memento.data["old_health"]
+        self.__old_mana = memento.data["old_mana"]
+        self.__name = "Cast"
+
 
 # Set Tile Command extends from Command
 class SetTileCommand(Command):
@@ -451,6 +636,47 @@ class SetTileCommand(Command):
     # Returns: name - String - command name
     def get_name(self):
         return self.__name
+
+    # Create Memento
+    # Creates a memento of the command
+    # Params: None
+    # Returns: Command Memento
+    def create_memento(self):
+        old_tile_type = None
+
+        if self.__old_tile is not None:
+            old_tile_type = self.__old_tile.tile_type
+
+        return Command.Memento(
+            command_type="SetTileCommand",
+            data={
+                "x": self.__x,
+                "y": self.__y,
+                "tile_type": self.__tile_type,
+                "old_tile_type": old_tile_type,
+                "executed": self.__executed,
+            },
+        )
+
+    # Restore
+    # Restores the command based on its memento
+    # Params: memento - Command Memento
+    #         game_state - GameState
+    # Returns: None
+    def restore(self, memento, game_state):
+        if memento.command_type != "SetTileCommand":
+            raise ValueError("Invalid SetTileCommand memento!")
+
+        self.__game_state = game_state
+        self.__x = memento.data["x"]
+        self.__y = memento.data["y"]
+        self.__tile_type = memento.data["tile_type"]
+        self.__name = "Set"
+        self.__executed = memento.data["executed"]
+        self.__old_tile = None
+
+        if memento.data["old_tile_type"] is not None:
+            self.__old_tile = SimpleNamespace(tile_type=memento.data["old_tile_type"])
 
 
 # Pickup Command extends from Command
@@ -558,6 +784,55 @@ class PickupCommand(Command):
     def get_name(self):
         return self.__name
 
+    # Create Memento
+    # Creates a memento of the command
+    # Params: None
+    # Returns: Command Memento
+    def create_memento(self):
+        removed_item_name = None
+
+        if self.__removed_item is not None:
+            removed_item_name = self.__removed_item.name
+
+        return Command.Memento(
+            command_type="PickupCommand",
+            data={
+                "entity_id": self.__entity_id,
+                "item_name": self.__item_name,
+                "old_position": deepcopy(self.__old_position),
+                "removed_item_name": removed_item_name,
+                "executed": self.__executed,
+            },
+        )
+
+    # Restore
+    # Restores the command based on its memento
+    # Params: memento - Command Memento
+    #         game_state - GameState
+    # Returns: None
+    def restore(self, memento, game_state):
+        if memento.command_type != "PickupCommand":
+            raise ValueError("Invalid PickupCommand memento!")
+
+        self.__game_state = game_state
+        self.__entity_id = memento.data["entity_id"]
+        self.__item_name = memento.data["item_name"]
+        self.__old_position = deepcopy(memento.data["old_position"])
+        self.__name = "Pickup"
+        self.__executed = memento.data["executed"]
+        self.__removed_item = None
+
+        if self.__executed:
+            entity_info = game_state.get_entity_info_from_list(self.__entity_id)
+
+            for item in entity_info.backpack:
+                if item.name.lower() == memento.data["removed_item_name"].lower():
+                    self.__removed_item = item
+                    break
+
+            if self.__removed_item is None:
+                raise ValueError("Picked-up item could not be restored!")
+
 
 # Give Item Command extends from Command
 class GiveItemCommand(Command):
@@ -614,6 +889,35 @@ class GiveItemCommand(Command):
     # Returns: name - String - command name
     def get_name(self):
         return self.__name
+
+    # Create Memento
+    # Creates a memento of the command
+    # Params: None
+    # Returns: Command Memento
+    def create_memento(self):
+        return Command.Memento(
+            command_type="GiveItemCommand",
+            data={
+                "entity_id": self.__entity_id,
+                "item_name": self.__item_name,
+                "executed": self.__executed,
+            },
+        )
+
+    # Restore
+    # Restores the command based on its memento
+    # Params: memento - Command Memento
+    #         game_state - GameState
+    # Returns: None
+    def restore(self, memento, game_state):
+        if memento.command_type != "GiveItemCommand":
+            raise ValueError("Invalid GiveItemCommand memento!")
+
+        self.__game_state = game_state
+        self.__entity_id = memento.data["entity_id"]
+        self.__item_name = memento.data["item_name"]
+        self.__name = "Give"
+        self.__executed = memento.data["executed"]
 
 
 # Drop Item Command extends from Command
@@ -717,6 +1021,44 @@ class DropItemCommand(Command):
     def get_name(self):
         return self.__name
 
+    # Create Memento
+    # Creates a memento of the command
+    # Params: None
+    # Returns: Command Memento
+    def create_memento(self):
+        dropped_item_name = None
+
+        if self.__dropped_item is not None:
+            dropped_item_name = self.__dropped_item.name
+
+        return Command.Memento(
+            command_type="DropItemCommand",
+            data={
+                "entity_id": self.__entity_id,
+                "item_name": self.__item_name,
+                "old_position": deepcopy(self.__old_position),
+                "dropped_item_name": dropped_item_name,
+                "executed": self.__executed,
+            },
+        )
+
+    # Restore
+    # Restores the command based on its memento
+    # Params: memento - Command Memento
+    #         game_state - GameState
+    # Returns: None
+    def restore(self, memento, game_state):
+        if memento.command_type != "DropItemCommand":
+            raise ValueError("Invalid DropItemCommand memento!")
+
+        self.__game_state = game_state
+        self.__entity_id = memento.data["entity_id"]
+        self.__item_name = memento.data["item_name"]
+        self.__old_position = deepcopy(memento.data["old_position"])
+        self.__dropped_item = None
+        self.__name = "Drop"
+        self.__executed = memento.data["executed"]
+
 
 # Swap Item Command extends from Command
 class SwapItemCommand(Command):
@@ -807,6 +1149,55 @@ class SwapItemCommand(Command):
     def get_name(self):
         return self.__name
 
+    # Create Memento
+    # Creates a memento of the command
+    # Params: None
+    # Returns: Command Memento
+    def create_memento(self):
+        old_item_name = None
+
+        if self.__old_item is not None:
+            old_item_name = self.__old_item.name
+
+        return Command.Memento(
+            command_type="SwapItemCommand",
+            data={
+                "entity_id": self.__entity_id,
+                "item_slot": self.__item_slot,
+                "item_name": self.__item_name,
+                "old_item_name": old_item_name,
+                "executed": self.__executed,
+            },
+        )
+
+    # Restore
+    # Restores the command based on its memento
+    # Params: memento - Command Memento
+    #         game_state - GameState
+    # Returns: None
+    def restore(self, memento, game_state):
+        if memento.command_type != "SwapItemCommand":
+            raise ValueError("Invalid SwapItemCommand memento!")
+
+        self.__game_state = game_state
+        self.__entity_id = memento.data["entity_id"]
+        self.__item_slot = memento.data["item_slot"]
+        self.__item_name = memento.data["item_name"]
+        self.__name = "Swap"
+        self.__executed = memento.data["executed"]
+        self.__old_item = None
+
+        if self.__executed:
+            entity_info = game_state.get_entity_info_from_list(self.__entity_id)
+
+            for item in entity_info.backpack:
+                if item.name.lower() == memento.data["old_item_name"].lower():
+                    self.__old_item = item
+                    break
+
+            if self.__old_item is None:
+                raise ValueError("Previously equipped item could not be restored!")
+
 
 # Use Item Command extends from Command
 class UseItemCommand(Command):
@@ -815,13 +1206,14 @@ class UseItemCommand(Command):
     #           entity_id - int - ID of entity using the item
     #           item_name - string - Name of consumable to use
     # Returns: None
-    def __init__(self, game_state, entity_id, item_name):
+    def __init__(self, game_state, entity_id, item_name, command_manager):
         self.__game_state = game_state
         self.__entity_id = int(entity_id)
         self.__item_name = item_name
         self.__name = "Use"
         self.__old_state = None
         self.__executed = False
+        self.__command_manager = command_manager
 
     # Execute
     # Uses the specified consumable
@@ -830,7 +1222,7 @@ class UseItemCommand(Command):
     def execute(self):
         # Save original state before using the consumable
         if not self.__executed:
-            self.__old_state = self.__game_state.create_memento()
+            self.__old_state = self.__game_state.create_memento(self.__command_manager)
 
         # Use consumable
         self.__game_state.use_consumable(self.__entity_id, self.__item_name)
@@ -870,17 +1262,49 @@ class UseItemCommand(Command):
     def get_name(self):
         return self.__name
 
+    # Create Memento
+    # Creates a memento of the command
+    # Params: None
+    # Returns: Command Memento
+    def create_memento(self):
+        return Command.Memento(
+            command_type="UseItemCommand",
+            data={
+                "entity_id": self.__entity_id,
+                "item_name": self.__item_name,
+                "old_state": deepcopy(self.__old_state),
+                "executed": self.__executed,
+            },
+        )
+
+    # Restore
+    # Restores the command based on its memento
+    # Params: memento - Command Memento
+    #         game_state - GameState
+    # Returns: None
+    def restore(self, memento, game_state):
+        if memento.command_type != "UseItemCommand":
+            raise ValueError("Invalid UseItemCommand memento!")
+
+        self.__game_state = game_state
+        self.__entity_id = memento.data["entity_id"]
+        self.__item_name = memento.data["item_name"]
+        self.__old_state = deepcopy(memento.data["old_state"])
+        self.__name = "Use"
+        self.__executed = memento.data["executed"]
+
 
 # Tick Command extends from Command
 class TickCommand(Command):
     # Initialize Tick Command
     # Params:   game_state - GameState - Current game state
     # Returns: None
-    def __init__(self, game_state):
+    def __init__(self, game_state, command_manager):
         self.__game_state = game_state
         self.__name = "Tick"
         self.__old_state = None
         self.__executed = False
+        self.__command_manager = command_manager
 
     # Execute
     # Advances the turn and updates all entity turn timers
@@ -889,7 +1313,7 @@ class TickCommand(Command):
     def execute(self):
         # Save original state before ticking
         if not self.__executed:
-            self.__old_state = self.__game_state.create_memento()
+            self.__old_state = self.__game_state.create_memento(self.__command_manager)
 
         # Update entity turn timers
         if self.__game_state.entities_exists():
@@ -943,16 +1367,44 @@ class TickCommand(Command):
     def get_name(self):
         return self.__name
 
+    # Create Memento
+    # Creates a memento of the command
+    # Params: None
+    # Returns: Command Memento
+    def create_memento(self):
+        return Command.Memento(
+            command_type="TickCommand",
+            data={
+                "old_state": deepcopy(self.__old_state),
+                "executed": self.__executed,
+            },
+        )
+
+    # Restore
+    # Restores the command based on its memento
+    # Params: memento - Command Memento
+    #         game_state - GameState
+    # Returns: None
+    def restore(self, memento, game_state):
+        if memento.command_type != "TickCommand":
+            raise ValueError("Invalid TickCommand memento!")
+
+        self.__game_state = game_state
+        self.__old_state = deepcopy(memento.data["old_state"])
+        self.__name = "Tick"
+        self.__executed = memento.data["executed"]
+
 
 # Init Map Command extends Command
 class InitCommand(Command):
-    def __init__(self, game_state, width, height):
+    def __init__(self, game_state, width, height, command_manager):
         self.__game_state = game_state
         self.__width = int(width)
         self.__height = int(height)
         self.__name = "Init Map"
         self.__old_state = None
         self.__executed = False
+        self.__command_manager = command_manager
 
     # Execute
     # Creates a new map
@@ -961,7 +1413,7 @@ class InitCommand(Command):
     def execute(self):
         # Save current state before initializing map
         if not self.__executed:
-            self.__old_state = self.__game_state.create_memento()
+            self.__old_state = self.__game_state.create_memento(self.__command_manager)
 
         # Reset map if one already exists
         if self.__game_state.is_map_created():
@@ -1006,15 +1458,47 @@ class InitCommand(Command):
     def get_name(self):
         return self.__name
 
+    # Create Memento
+    # Creates a memento of the command
+    # Params: None
+    # Returns: Command Memento
+    def create_memento(self):
+        return Command.Memento(
+            command_type="InitCommand",
+            data={
+                "width": self.__width,
+                "height": self.__height,
+                "old_state": deepcopy(self.__old_state),
+                "executed": self.__executed,
+            },
+        )
+
+    # Restore
+    # Restores the command based on its memento
+    # Params: memento - Command Memento
+    #         game_state - GameState
+    # Returns: None
+    def restore(self, memento, game_state):
+        if memento.command_type != "InitCommand":
+            raise ValueError("Invalid InitCommand memento!")
+
+        self.__game_state = game_state
+        self.__width = memento.data["width"]
+        self.__height = memento.data["height"]
+        self.__old_state = deepcopy(memento.data["old_state"])
+        self.__name = "Init Map"
+        self.__executed = memento.data["executed"]
+
 
 # Save Command extends Commad
 class SaveCommand(Command):
-    def __init__(self, game_state, game_state_manager, filename):
+    def __init__(self, game_state, game_state_manager, filename, command_manager):
         self.__game_state = game_state
         self.__game_state_manager = game_state_manager
         self.__filename = filename
         self.__name = "Save"
         self.__executed = False
+        self.__command_manager = command_manager
 
     # Execute
     # Saves the current game state to a file
@@ -1022,7 +1506,9 @@ class SaveCommand(Command):
     # Returns: None
     def execute(self):
         # Save game state
-        self.__game_state_manager.save_game(self.__game_state, self.__filename)
+        self.__game_state_manager.save_game(
+            self.__game_state, self.__filename, self.__command_manager
+        )
 
         # Mark command as executed
         self.__executed = True
@@ -1061,16 +1547,48 @@ class SaveCommand(Command):
     def get_name(self):
         return self.__name
 
+    # Create Memento
+    # Creates a memento of the command
+    # Params: None
+    # Returns: Command Memento
+    def create_memento(self):
+        return Command.Memento(
+            command_type="SaveCommand",
+            data={
+                "filename": self.__filename,
+                "executed": self.__executed,
+            },
+        )
+
+    # Restore
+    # Restores the command based on its memento
+    # Params: memento - Command Memento
+    #         game_state - GameState
+    # Returns: None
+    def restore(self, memento, game_state, game_state_manager=None):
+        if memento.command_type != "SaveCommand":
+            raise ValueError("Invalid SaveCommand memento!")
+
+        if game_state_manager is None:
+            raise ValueError("GameStateManager is required to restore SaveCommand!")
+
+        self.__game_state = game_state
+        self.__game_state_manager = game_state_manager
+        self.__filename = memento.data["filename"]
+        self.__name = "Save"
+        self.__executed = memento.data["executed"]
+
 
 # Load Command extends Command
 class LoadCommand(Command):
-    def __init__(self, game_state, game_state_manager, filename):
+    def __init__(self, game_state, game_state_manager, filename, command_manager):
         self.__game_state = game_state
         self.__game_state_manager = game_state_manager
         self.__filename = filename
         self.__name = "Load"
         self.__memento = None
         self.__executed = False
+        self.__command_manager = command_manager
 
     # Execute Command
     # Loads the saved game state
@@ -1078,10 +1596,12 @@ class LoadCommand(Command):
     # Returns: None
     def execute(self):
         # Save current game state before loading
-        self.__memento = self.__game_state.create_memento()
+        self.__memento = self.__game_state.create_memento(self.__command_manager)
 
         # Load saved game state
-        self.__game_state_manager.load_game(self.__game_state, self.__filename)
+        self.__game_state_manager.load_game(
+            self.__game_state, self.__filename, self.__command_manager
+        )
 
         # Mark command as executed
         self.__executed = True
@@ -1110,8 +1630,11 @@ class LoadCommand(Command):
         if self.__executed:
             raise ValueError("Game has already been loaded!")
 
-        # Execute Command
-        self.execute()
+        # Load saved game state again
+        self.__game_state_manager.load_game(self.__game_state, self.__filename)
+
+        # Mark command as executed
+        self.__executed = True
 
     # Get Name
     # Gets the command name
@@ -1119,6 +1642,45 @@ class LoadCommand(Command):
     # Returns: string - command name
     def get_name(self):
         return self.__name
+
+    # Create Memento
+    # Creates a memento of the command
+    # Params: None
+    # Returns: Command Memento
+    def create_memento(self):
+        return Command.Memento(
+            command_type="LoadCommand",
+            data={
+                "filename": self.__filename,
+                "memento": deepcopy(self.__memento),
+                "executed": self.__executed,
+            },
+        )
+
+    # Restore
+    # Restores the command based on its memento
+    # Params: memento - Command Memento
+    #         game_state - GameState
+    # Returns: None
+    def restore(
+        self, memento, game_state, game_state_manager=None, command_manager=None
+    ):
+        if memento.command_type != "LoadCommand":
+            raise ValueError("Invalid LoadCommand memento!")
+
+        if game_state_manager is None:
+            raise ValueError("GameStateManager is required to restore LoadCommand!")
+
+        if command_manager is None:
+            raise ValueError("CommandManager is required to restore LoadCommand!")
+
+        self.__game_state = game_state
+        self.__game_state_manager = game_state_manager
+        self.__filename = memento.data["filename"]
+        self.__memento = deepcopy(memento.data["memento"])
+        self.__name = "Load"
+        self.__executed = memento.data["executed"]
+        self.__command_manager = command_manager
 
 
 # Inspect Command extends from Command
@@ -1419,7 +1981,7 @@ class HistoryCommand(Command):
     def execute(self):
         history_info = self.__command_manager.get_history_info()
 
-        print(f"ok: undo_stack:{history_info[0]}, redo_stack:{history_info[1]}")
+        print(f"ok: undo_stack: {history_info[0]}, redo_stack: {history_info[1]}")
 
     # Undo
     # History is not an undoable command

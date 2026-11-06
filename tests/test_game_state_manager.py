@@ -31,6 +31,7 @@ from game_state import GameState
 import json
 import unittest
 from unittest.mock import patch
+from command_manager import CommandManager
 
 
 # Game state manager tests
@@ -45,6 +46,7 @@ class TestGameStateManager(unittest.TestCase):
         self.manager = GameStateManager()
         self.temp_directory = tempfile.TemporaryDirectory()
         self.file_path = os.path.join(self.temp_directory.name, "test_save.json")
+        self.command_manager = CommandManager()
 
     # Tear Down Test
     # Removes the temporary directory after each test.
@@ -64,6 +66,10 @@ class TestGameStateManager(unittest.TestCase):
                 "entity_ids_issued": 1,
                 "map_created": False,
             },
+            "command_manager": {
+                "undo_history": [],
+                "redo_history": [],
+            },
             "grid": None,
             "entities": [],
         }
@@ -80,6 +86,10 @@ class TestGameStateManager(unittest.TestCase):
             map_created=False,
             turn_number=1,
             is_saved=True,
+            command_manager_memento=CommandManager.Memento(
+                undo_history=(),
+                redo_history=(),
+            ),
         )
 
     # Initialization Tests
@@ -124,6 +134,8 @@ class TestGameStateManager(unittest.TestCase):
         self.assertEqual(save_data["game_state"]["turn_number"], 1)
         self.assertEqual(save_data["game_state"]["entity_ids_issued"], 1)
         self.assertFalse(save_data["game_state"]["map_created"])
+        self.assertEqual(save_data["command_manager"]["undo_history"], [])
+        self.assertEqual(save_data["command_manager"]["redo_history"], [])
         self.assertIsNone(save_data["grid"])
         self.assertEqual(save_data["entities"], [])
 
@@ -236,7 +248,7 @@ class TestGameStateManager(unittest.TestCase):
     def test_save_game(self):
         game_state = GameState()
 
-        self.manager.save_game(game_state, self.file_path)
+        self.manager.save_game(game_state, self.file_path, self.command_manager)
 
         self.assertTrue(os.path.exists(self.file_path))
 
@@ -258,13 +270,17 @@ class TestGameStateManager(unittest.TestCase):
         with open(self.file_path, "w", encoding="utf-8") as save_file:
             json.dump(save_data, save_file)
 
-        self.manager.load_game(game_state, self.file_path)
+        self.manager.load_game(game_state, self.file_path, self.command_manager)
 
-        restored_memento = game_state.create_memento()
+        restored_memento = game_state.create_memento(self.command_manager)
 
         self.assertEqual(restored_memento.turn_number, 1)
         self.assertEqual(restored_memento.entity_ids_issued, 1)
         self.assertFalse(restored_memento.map_created)
+        self.assertIsInstance(
+            restored_memento.command_manager_memento,
+            CommandManager.Memento,
+        )
 
     # Test that a new GameStateManager can be created
     def test_init_game_state_manager(self):

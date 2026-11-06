@@ -33,6 +33,7 @@ import domain_library as dl
 import equipment
 import entity as ent
 from game_state import GameState
+from command_manager import CommandManager
 
 
 # Class for testing GameState
@@ -621,7 +622,9 @@ class TestGameState(unittest.TestCase):
         self.create_test_grid(5, 6)
         self.create_spawned_entity("warrior", 1, 2)
 
-        memento = self.game_state.create_memento()
+        command_manager = CommandManager()
+
+        memento = self.game_state.create_memento(command_manager)
 
         self.assertIsInstance(memento, GameState.Memento)
         self.assertIsNotNone(memento.grid_memento)
@@ -646,7 +649,8 @@ class TestGameState(unittest.TestCase):
 
     # Checks that creating a Memento works when no grid or entities exist.
     def test_create_memento_empty_game_state(self):
-        memento = self.game_state.create_memento()
+        command_manager = CommandManager()
+        memento = self.game_state.create_memento(command_manager)
 
         self.assertIsNone(memento.grid_memento)
         self.assertEqual(memento.entity_mementos, ())
@@ -658,11 +662,12 @@ class TestGameState(unittest.TestCase):
     def test_restore_memento(self):
         self.create_test_grid(5, 6)
         entity = self.create_spawned_entity("warrior", 1, 2)
-        original_memento = self.game_state.create_memento()
+        command_manager = CommandManager()
+        original_memento = self.game_state.create_memento(command_manager)
 
-        self.game_state.restore(original_memento)
+        self.game_state.restore(original_memento, command_manager)
 
-        restored_memento = self.game_state.create_memento()
+        restored_memento = self.game_state.create_memento(command_manager)
 
         self.assertEqual(
             restored_memento.grid_memento.width, original_memento.grid_memento.width
@@ -695,7 +700,8 @@ class TestGameState(unittest.TestCase):
             self.assertEqual(restored_base.defence, original_base.defence)
             self.assertEqual(restored_base.speed, original_base.speed)
             self.assertEqual(
-                restored_base.inventory[0].name, original_base.inventory[0].name
+                restored_base.inventory.data[0].name,
+                original_base.inventory.data[0].name,
             )
             self.assertEqual(
                 restored_base.active_modifiers, original_base.active_modifiers
@@ -718,7 +724,7 @@ class TestGameState(unittest.TestCase):
         self.assertEqual(restored_memento.turn_number, original_memento.turn_number)
         self.assertIsNot(self.game_state.get_entity_from_list(1), entity)
         # testing
-        self.game_state.restore(original_memento)
+        self.game_state.restore(original_memento, command_manager)
 
         print("Getter result:", self.game_state.get_game_state_info())
         self.assertFalse(self.game_state.get_game_state_info()[2])
@@ -733,7 +739,8 @@ class TestGameState(unittest.TestCase):
     # Checks that restoring a Memento with no grid clears the current grid.
     def test_restore_memento_without_grid(self):
         self.create_test_grid()
-
+        command_manager_memento1 = CommandManager().create_memento()
+        command_manager = CommandManager()
         memento = GameState.Memento(
             grid_memento=None,
             entity_mementos=(),
@@ -741,11 +748,12 @@ class TestGameState(unittest.TestCase):
             map_created=False,
             turn_number=1,
             is_saved=True,
+            command_manager_memento=command_manager_memento1,
         )
 
-        self.game_state.restore(memento)
+        self.game_state.restore(memento, command_manager)
 
-        restored_memento = self.game_state.create_memento()
+        restored_memento = self.game_state.create_memento(command_manager)
 
         self.assertIsNone(restored_memento.grid_memento)
         self.assertEqual(restored_memento.entity_mementos, ())
@@ -757,12 +765,12 @@ class TestGameState(unittest.TestCase):
         self.create_spawned_entity("warrior", 0, 0)
         self.game_state.spawn_entity(1, 1, "mage")
         self.game_state.spawn_entity(2, 2, "goblin")
+        command_manager = CommandManager()
+        memento = self.game_state.create_memento(command_manager)
 
-        memento = self.game_state.create_memento()
+        self.game_state.restore(memento, command_manager)
 
-        self.game_state.restore(memento)
-
-        restored_memento = self.game_state.create_memento()
+        restored_memento = self.game_state.create_memento(command_manager)
 
         self.assertEqual(len(restored_memento.entity_mementos), 3)
 
@@ -797,11 +805,11 @@ class TestGameState(unittest.TestCase):
     def test_restore_memento_preserves_entity_items(self):
         self.create_test_grid()
         self.create_spawned_entity("warrior")
-
+        command_manager = CommandManager()
         original_backpack = self.get_backpack_names(1)
-        memento = self.game_state.create_memento()
+        memento = self.game_state.create_memento(command_manager)
 
-        self.game_state.restore(memento)
+        self.game_state.restore(memento, command_manager)
 
         self.assertEqual(self.get_backpack_names(1), original_backpack)
 
@@ -809,24 +817,25 @@ class TestGameState(unittest.TestCase):
     def test_memento_preserves_original_state(self):
         self.create_test_grid()
         self.create_spawned_entity("warrior", 1, 1)
-
-        memento = self.game_state.create_memento()
+        command_manager = CommandManager()
+        memento = self.game_state.create_memento(command_manager)
 
         self.game_state.spawn_entity(2, 2, "mage")
 
         self.assertEqual(len(memento.entity_mementos), 1)
-        self.assertEqual(memento.entity_mementos[0].position, [1, 1])
+        self.assertEqual(memento.entity_mementos[0].position.data, [1, 1])
 
     # Checks that restoring a Memento marks the game state as saved.
     def test_restore_memento_marks_game_as_saved(self):
         self.create_test_grid()
         self.create_spawned_entity("warrior")
+        command_manager = CommandManager()
 
-        memento = self.game_state.create_memento()
+        memento = self.game_state.create_memento(command_manager)
 
-        self.game_state.restore(memento)
+        self.game_state.restore(memento, command_manager)
 
-        restored_memento = self.game_state.create_memento()
+        restored_memento = self.game_state.create_memento(command_manager)
 
         self.assertTrue(restored_memento.is_saved)
 

@@ -2009,7 +2009,9 @@ class TestCLI(unittest.TestCase):
                 test_cli, "save test_save.json"
             )
 
-        mock_save.assert_called_once_with(test_cli.game_state, "test_save.json")
+        mock_save.assert_called_once_with(
+            test_cli.game_state, "test_save.json", test_cli.command_manager
+        )
         self.assertIn("ok: game saved to test_save.json", output)
 
     # Test saving when the game state is not initialized
@@ -2054,7 +2056,9 @@ class TestCLI(unittest.TestCase):
                 test_cli, "load test_save.json"
             )
 
-        mock_load.assert_called_once_with(test_cli.game_state, "test_save.json")
+        mock_load.assert_called_once_with(
+            test_cli.game_state, "test_save.json", test_cli.command_manager
+        )
         self.assertIn("ok: game loaded from test_save.json", output)
 
     # Test loading with an invalid number of arguments

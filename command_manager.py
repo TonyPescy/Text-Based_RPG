@@ -10,8 +10,69 @@ Filename: command_manager.py
 Purpose: Runs commands and helps manage command history.
 """
 
-
 # Command Manager
+from dataclasses import dataclass
+from command import (
+    MoveCommand,
+    SpawnCommand,
+    SpawnLootCommand,
+    AttackCommand,
+    CastSpellCommand,
+    SetTileCommand,
+    PickupCommand,
+    GiveItemCommand,
+    DropItemCommand,
+    SwapItemCommand,
+    UseItemCommand,
+    TickCommand,
+    InitCommand,
+    SaveCommand,
+    LoadCommand,
+)
+
+
+# Create Command From Memento
+# Creates a command object from its saved memento
+# Params: command_memento - Command.Memento - Saved command information
+#         game_state - GameState - Current game state
+# Returns: command - Command - Restored command object
+def create_command_from_memento(command_memento, game_state):
+    # Map command type names to their respective classes
+    command_types = {
+        "MoveCommand": MoveCommand,
+        "SpawnCommand": SpawnCommand,
+        "SpawnLootCommand": SpawnLootCommand,
+        "AttackCommand": AttackCommand,
+        "CastSpellCommand": CastSpellCommand,
+        "SetTileCommand": SetTileCommand,
+        "PickupCommand": PickupCommand,
+        "GiveItemCommand": GiveItemCommand,
+        "DropItemCommand": DropItemCommand,
+        "SwapItemCommand": SwapItemCommand,
+        "UseItemCommand": UseItemCommand,
+        "TickCommand": TickCommand,
+        "InitCommand": InitCommand,
+        "SaveCommand": SaveCommand,
+        "LoadCommand": LoadCommand,
+    }
+
+    # Get the command type
+    command_type = command_memento.command_type
+
+    # Verify that the command type is supported
+    if command_type not in command_types:
+        raise ValueError("Invalid command type!")
+
+    # Create an uninitialized command object
+    command_class = command_types[command_type]
+    command = command_class.__new__(command_class)
+
+    # Restore the command's attributes
+    command.restore(command_memento, game_state)
+
+    return command
+
+
 class CommandManager:
 
     # Initialize Command Manager
@@ -80,3 +141,57 @@ class CommandManager:
         redo_count = len(self.__redo_history)
 
         return undo_count, redo_count
+
+    # Memento DataClass
+    # Stores the undo and redo histories
+    @dataclass(frozen=True)
+    class Memento:
+        undo_history: tuple
+        redo_history: tuple
+
+    # Create Memento
+    # Creates a memento of the command manager's history
+    # Params: None
+    # Returns: Memento
+    def create_memento(self):
+        undo_mementos = []
+        redo_mementos = []
+
+        # Create mementos for undo history
+        for command in self.__undo_history:
+            undo_mementos.append(command.create_memento())
+
+        # Create mementos for redo history
+        for command in self.__redo_history:
+            redo_mementos.append(command.create_memento())
+
+        return CommandManager.Memento(
+            undo_history=tuple(undo_mementos), redo_history=tuple(redo_mementos)
+        )
+
+    # Restore
+    # Restores the command manager's history based on its memento
+    # Params: memento - Memento - saved command history
+    #         game_state - GameState - current game state
+    # Returns: None
+    def restore(self, memento, game_state):
+        if not isinstance(memento, CommandManager.Memento):
+            raise TypeError("Invalid Command Manager memento")
+
+        undo_history = []
+        redo_history = []
+
+        # Restore undo history
+        for command_memento in memento.undo_history:
+            undo_history.append(
+                create_command_from_memento(command_memento, game_state)
+            )
+
+        # Restore redo history
+        for command_memento in memento.redo_history:
+            redo_history.append(
+                create_command_from_memento(command_memento, game_state)
+            )
+
+        self.__undo_history = undo_history
+        self.__redo_history = redo_history

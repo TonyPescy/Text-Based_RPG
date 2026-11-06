@@ -43,6 +43,7 @@ class GameState:
         map_created: bool
         turn_number: int
         is_saved: bool
+        command_manager_memento: object
 
     # Is Map Created
     # True/False if map is created
@@ -484,7 +485,7 @@ class GameState:
     # Creates memento of the game state
     # Params: None
     # Returns: Memento of the game state
-    def create_memento(self):
+    def create_memento(self, command_manager):
         # Save the Grid's state if a Grid exists
         grid_memento = None
 
@@ -497,6 +498,9 @@ class GameState:
         for entity in self.__entity_list:
             entity_mementos.append(entity.create_memento())
 
+        # Save the Command Manager's history
+        command_manager_memento = command_manager.create_memento()
+
         # Mark as saved
         self.__is_saved = True
 
@@ -507,13 +511,14 @@ class GameState:
             map_created=self.__map_created,
             turn_number=self.__turn_number,
             is_saved=self.__is_saved,
+            command_manager_memento=command_manager_memento,
         )
 
     # Restore Memento
     # Restores memento of the game state
     # Params: memento - Memento - Contains all info for the game state to be restored
     # Returns: None
-    def restore(self, memento):
+    def restore(self, memento, command_manager):
         # Ensure the provided Memento is valid
         if not isinstance(memento, GameState.Memento):
             raise TypeError("Invalid GameState Memento")
@@ -530,7 +535,7 @@ class GameState:
                 base_memento = entity_memento
 
             # Get the Entity's saved position
-            position = base_memento.position
+            position = base_memento.position.data
 
             x = position[0]
             y = position[1]
@@ -573,6 +578,16 @@ class GameState:
         self.__entity_ids_issued = memento.entity_ids_issued
         self.__map_created = memento.map_created
         self.__turn_number = memento.turn_number
+
+        # Restore the Command Manager's history
+        # Restore the Command Manager's history if one exists.
+        if memento.command_manager_memento is not None:
+            command_manager.restore(
+                memento.command_manager_memento,
+                self,
+            )
+        else:
+            command_manager.clear_history()
 
         # Resets save status after restoration
         self.__is_saved = False

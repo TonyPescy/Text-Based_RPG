@@ -545,6 +545,94 @@ class Entity:
     class BackpackMemento:
         items: tuple
 
+    # Memento DataClass for inventory
+    @dataclass(frozen=True)
+    class InventoryMemento:
+        data: object
+
+    # Memento DataClass for position
+    @dataclass(frozen=True)
+    class PositionMemento:
+        data: object
+
+    # Memento DataClass for active modifiers
+    @dataclass(frozen=True)
+    class ActiveModifiersMemento:
+        data: object
+
+    # Memento DataClass for temporary buffs
+    @dataclass(frozen=True)
+    class TempBuffsMemento:
+        data: object
+
+    # Create Inventory Memento
+    # Creates a memento of the entity's inventory
+    # Params: None
+    # Returns: InventoryMemento
+    def create_inventory_memento(self):
+        return Entity.InventoryMemento(data=deepcopy(self.__inventory))
+
+    # Restore Inventory
+    # Restores the entity's inventory based on its memento
+    # Params: memento - InventoryMemento - saved inventory data
+    # Returns: None
+    def restore_inventory(self, memento):
+        if not isinstance(memento, Entity.InventoryMemento):
+            raise TypeError("Invalid Inventory memento")
+
+        self.__inventory = deepcopy(memento.data)
+
+    # Create Position Memento
+    # Creates a memento of the entity's position
+    # Params: None
+    # Returns: PositionMemento
+    def create_position_memento(self):
+        return Entity.PositionMemento(data=deepcopy(self.__position))
+
+    # Restore Position
+    # Restores the entity's position based on its memento
+    # Params: memento - PositionMemento - saved position data
+    # Returns: None
+    def restore_position(self, memento):
+        if not isinstance(memento, Entity.PositionMemento):
+            raise TypeError("Invalid Position memento")
+
+        self.__position = deepcopy(memento.data)
+
+    # Create Active Modifiers Memento
+    # Creates a memento of the entity's active modifiers
+    # Params: None
+    # Returns: ActiveModifiersMemento
+    def create_active_modifiers_memento(self):
+        return Entity.ActiveModifiersMemento(data=deepcopy(self.__active_modifiers))
+
+    # Restore Active Modifiers
+    # Restores the entity's active modifiers based on its memento
+    # Params: memento - ActiveModifiersMemento - saved modifier data
+    # Returns: None
+    def restore_active_modifiers(self, memento):
+        if not isinstance(memento, Entity.ActiveModifiersMemento):
+            raise TypeError("Invalid Active Modifiers memento")
+
+        self.__active_modifiers = deepcopy(memento.data)
+
+    # Create Temp Buffs Memento
+    # Creates a memento of the entity's temporary buffs
+    # Params: None
+    # Returns: TempBuffsMemento
+    def create_temp_buffs_memento(self):
+        return Entity.TempBuffsMemento(data=deepcopy(self.__temp_buffs))
+
+    # Restore Temp Buffs
+    # Restores the entity's temporary buffs based on its memento
+    # Params: memento - TempBuffsMemento - saved temporary buff data
+    # Returns: None
+    def restore_temp_buffs(self, memento):
+        if not isinstance(memento, Entity.TempBuffsMemento):
+            raise TypeError("Invalid Temp Buffs memento")
+
+        self.__temp_buffs = deepcopy(memento.data)
+
     # Create Backpack Memento
     # Creates a memento of the entity's backpack
     # Params: None
@@ -587,17 +675,17 @@ class Entity:
         return Entity.Memento(
             entity_id=self.__id,
             e_type=self.__e_type,
-            position=deepcopy(self.__position),
+            position=self.create_position_memento(),
             health=self.__health,
             max_health=self.__max_health,
             attack=self.__attack,
             defence=self.__defence,
             speed=self.__speed,
-            inventory=deepcopy(self.__inventory),
-            active_modifiers=deepcopy(self.__active_modifiers),
+            inventory=self.create_inventory_memento(),
+            active_modifiers=self.create_active_modifiers_memento(),
             backpack=self.create_backpack_memento(),
-            attack_type=self.__attack_type,
-            temp_buffs=deepcopy(self.__temp_buffs),
+            attack_type=deepcopy(self.__attack_type),
+            temp_buffs=self.create_temp_buffs_memento(),
         )
 
     # Restore
@@ -609,17 +697,17 @@ class Entity:
             raise TypeError("Invalid Entity memento")
         self.__id = memento.entity_id
         self.__e_type = memento.e_type
-        self.__position = list(memento.position)
+        self.restore_position(memento.position)
         self.__health = memento.health
         self.__max_health = memento.max_health
         self.__attack = memento.attack
         self.__defence = memento.defence
         self.__speed = memento.speed
-        self.__inventory = deepcopy(memento.inventory)
-        self.__active_modifiers = deepcopy(memento.active_modifiers)
+        self.restore_inventory(memento.inventory)
+        self.restore_active_modifiers(memento.active_modifiers)
         self.restore_backpack(memento.backpack)
         self.__attack_type = memento.attack_type
-        self.__temp_buffs = deepcopy(memento.temp_buffs)
+        self.restore_temp_buffs(memento.temp_buffs)
 
         if self.__backpack is None:
             raise ValueError(f"Backpack was not restored for entity {self.__id}")

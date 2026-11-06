@@ -13,7 +13,7 @@ Purpose: Tests the Command methods and classes.
 # Imports
 import unittest
 from types import SimpleNamespace
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, Mock, patch
 from types import SimpleNamespace
 from entity import Entity
 from io import StringIO
@@ -1759,13 +1759,15 @@ class TestCommand(unittest.TestCase):
         test_game_state.create_memento.return_value = old_state
 
         # Create Use Item Command
-        test_command = UseItemCommand(test_game_state, 1, "Small Health Potion")
+        test_command = UseItemCommand(
+            test_game_state, 1, "Small Health Potion", self.command_manager
+        )
 
         # Execute Command
         test_command.execute()
 
         # Verify results
-        test_game_state.create_memento.assert_called_once_with()
+        test_game_state.create_memento.assert_called_once_with(self.command_manager)
         test_game_state.use_consumable.assert_called_once_with(1, "Small Health Potion")
 
     # Success
@@ -1774,7 +1776,9 @@ class TestCommand(unittest.TestCase):
         test_game_state = MagicMock()
 
         # Create Use Item Command
-        test_command = UseItemCommand(test_game_state, "1", "Small Health Potion")
+        test_command = UseItemCommand(
+            test_game_state, "1", "Small Health Potion", self.command_manager
+        )
 
         # Verify entity ID conversion
         self.assertEqual(test_command._UseItemCommand__entity_id, 1)
@@ -1789,7 +1793,9 @@ class TestCommand(unittest.TestCase):
         test_game_state.create_memento.return_value = old_state
 
         # Create Use Item Command
-        test_command = UseItemCommand(test_game_state, 1, "Small Health Potion")
+        test_command = UseItemCommand(
+            test_game_state, 1, "Small Health Potion", self.command_manager
+        )
 
         # Execute Command
         test_command.execute()
@@ -1809,7 +1815,9 @@ class TestCommand(unittest.TestCase):
         test_game_state = MagicMock()
 
         # Create Use Item Command
-        test_command = UseItemCommand(test_game_state, 1, "Small Health Potion")
+        test_command = UseItemCommand(
+            test_game_state, 1, "Small Health Potion", self.command_manager
+        )
 
         # Verify error is raised
         with self.assertRaisesRegex(ValueError, "Item has not been used!"):
@@ -1828,7 +1836,9 @@ class TestCommand(unittest.TestCase):
         test_game_state.create_memento.return_value = old_state
 
         # Create Use Item Command
-        test_command = UseItemCommand(test_game_state, 1, "Small Health Potion")
+        test_command = UseItemCommand(
+            test_game_state, 1, "Small Health Potion", self.command_manager
+        )
 
         # Execute Command
         test_command.execute()
@@ -1844,7 +1854,7 @@ class TestCommand(unittest.TestCase):
         test_command.redo()
 
         # Verify command was executed again
-        test_game_state.create_memento.assert_called_once_with()
+        test_game_state.create_memento.assert_called_once_with(self.command_manager)
         test_game_state.use_consumable.assert_called_once_with(1, "Small Health Potion")
 
     # Failure
@@ -1856,7 +1866,9 @@ class TestCommand(unittest.TestCase):
         test_game_state.create_memento.return_value = MagicMock()
 
         # Create Use Item Command
-        test_command = UseItemCommand(test_game_state, 1, "Small Health Potion")
+        test_command = UseItemCommand(
+            test_game_state, 1, "Small Health Potion", self.command_manager
+        )
 
         # Execute Command
         test_command.execute()
@@ -1874,7 +1886,9 @@ class TestCommand(unittest.TestCase):
         test_game_state = MagicMock()
 
         # Create Use Item Command
-        test_command = UseItemCommand(test_game_state, 1, "Small Health Potion")
+        test_command = UseItemCommand(
+            test_game_state, 1, "Small Health Potion", self.command_manager
+        )
 
         # Verify command name
         self.assertEqual(test_command.get_name(), "Use")
@@ -1893,13 +1907,13 @@ class TestCommand(unittest.TestCase):
         test_game_state.process_tick_for_all_entities.return_value = []
 
         # Create Tick Command
-        test_command = TickCommand(test_game_state)
+        test_command = TickCommand(test_game_state, self.command_manager)
 
         # Execute Command
         test_command.execute()
 
         # Verify entity updates
-        test_game_state.create_memento.assert_called_once_with()
+        test_game_state.create_memento.assert_called_once_with(self.command_manager)
         test_game_state.entities_exists.assert_called_once_with()
         test_game_state.process_tick_for_all_entities.assert_called_once_with()
 
@@ -1919,7 +1933,7 @@ class TestCommand(unittest.TestCase):
         test_game_state.entities_exists.return_value = False
 
         # Create Tick Command
-        test_command = TickCommand(test_game_state)
+        test_command = TickCommand(test_game_state, self.command_manager)
 
         # Execute Command
         test_command.execute()
@@ -1945,7 +1959,7 @@ class TestCommand(unittest.TestCase):
         test_game_state.process_tick_for_all_entities.return_value = [1, 2, 3]
 
         # Create Tick Command
-        test_command = TickCommand(test_game_state)
+        test_command = TickCommand(test_game_state, self.command_manager)
 
         # Execute Command
         test_command.execute()
@@ -1972,7 +1986,7 @@ class TestCommand(unittest.TestCase):
         test_game_state.process_tick_for_all_entities.return_value = []
 
         # Create Tick Command
-        test_command = TickCommand(test_game_state)
+        test_command = TickCommand(test_game_state, self.command_manager)
 
         # Execute Command
         test_command.execute()
@@ -1996,7 +2010,7 @@ class TestCommand(unittest.TestCase):
         test_game_state.entities_exists.return_value = False
 
         # Create Tick Command
-        test_command = TickCommand(test_game_state)
+        test_command = TickCommand(test_game_state, self.command_manager)
 
         # Execute Command
         test_command.execute()
@@ -2016,7 +2030,7 @@ class TestCommand(unittest.TestCase):
         test_game_state = MagicMock()
 
         # Create Tick Command
-        test_command = TickCommand(test_game_state)
+        test_command = TickCommand(test_game_state, self.command_manager)
 
         # Verify error is raised
         with self.assertRaisesRegex(ValueError, "Tick has not been executed!"):
@@ -2037,7 +2051,7 @@ class TestCommand(unittest.TestCase):
         test_game_state.entities_exists.return_value = False
 
         # Create Tick Command
-        test_command = TickCommand(test_game_state)
+        test_command = TickCommand(test_game_state, self.command_manager)
 
         # Execute Command
         test_command.execute()
@@ -2054,7 +2068,7 @@ class TestCommand(unittest.TestCase):
         test_command.redo()
 
         # Verify tick was executed again
-        test_game_state.create_memento.assert_called_once_with()
+        test_game_state.create_memento.assert_called_once_with(self.command_manager)
         test_game_state.advance_turn.assert_called_once_with()
         test_game_state.mark_as_unsaved.assert_called_once_with()
 
@@ -2070,7 +2084,7 @@ class TestCommand(unittest.TestCase):
         test_game_state.entities_exists.return_value = False
 
         # Create Tick Command
-        test_command = TickCommand(test_game_state)
+        test_command = TickCommand(test_game_state, self.command_manager)
 
         # Execute Command
         test_command.execute()
@@ -2091,7 +2105,7 @@ class TestCommand(unittest.TestCase):
         test_game_state = MagicMock()
 
         # Create Tick Command
-        test_command = TickCommand(test_game_state)
+        test_command = TickCommand(test_game_state, self.command_manager)
 
         # Verify command name
         self.assertEqual(test_command.get_name(), "Tick")
@@ -2103,12 +2117,13 @@ class TestCommand(unittest.TestCase):
     def setUp(self):
         # Create mock game state
         self.game_state = MagicMock()
+        self.command_manager = MagicMock()
 
         # Mock map does not exist
         self.game_state.is_map_created.return_value = False
 
         # Create command
-        self.command = InitCommand(self.game_state, 25, 25)
+        self.command = InitCommand(self.game_state, 25, 25, self.command_manager)
 
     # Execute Tests
 
@@ -2146,7 +2161,7 @@ class TestCommand(unittest.TestCase):
     # Test creating a map with string dimensions
     def test_execute_converts_dimensions_to_integers(self):
         # Create command with string dimensions
-        command = InitCommand(self.game_state, "10", "15")
+        command = InitCommand(self.game_state, "10", "15", self.command_manager)
 
         # Execute command
         command.execute()
@@ -2245,10 +2260,11 @@ class TestCommand(unittest.TestCase):
 
         # Create mock GameStateManager
         test_game_state_manager = MagicMock()
+        test_command_manager = MagicMock()
 
         # Create Save Command
         test_command = SaveCommand(
-            test_game_state, test_game_state_manager, "test_save"
+            test_game_state, test_game_state_manager, "test_save", test_command_manager
         )
 
         # Execute Command
@@ -2256,7 +2272,7 @@ class TestCommand(unittest.TestCase):
 
         # Verify game state was saved
         test_game_state_manager.save_game.assert_called_once_with(
-            test_game_state, "test_save"
+            test_game_state, "test_save", test_command_manager
         )
 
     # Tests SaveCommand undo deletes the created save file
@@ -2266,10 +2282,11 @@ class TestCommand(unittest.TestCase):
 
         # Create mock GameStateManager
         test_game_state_manager = MagicMock()
+        test_command_manager = MagicMock()
 
         # Create Save Command
         test_command = SaveCommand(
-            test_game_state, test_game_state_manager, "test_save"
+            test_game_state, test_game_state_manager, "test_save", test_command_manager
         )
 
         # Execute Command
@@ -2288,10 +2305,11 @@ class TestCommand(unittest.TestCase):
 
         # Create mock GameStateManager
         test_game_state_manager = MagicMock()
+        test_command_manager = MagicMock()
 
         # Create Save Command
         test_command = SaveCommand(
-            test_game_state, test_game_state_manager, "test_save"
+            test_game_state, test_game_state_manager, "test_save", test_command_manager
         )
 
         # Verify error is raised
@@ -2308,10 +2326,11 @@ class TestCommand(unittest.TestCase):
 
         # Create mock GameStateManager
         test_game_state_manager = MagicMock()
+        test_command_manager = MagicMock()
 
         # Create Save Command
         test_command = SaveCommand(
-            test_game_state, test_game_state_manager, "test_save"
+            test_game_state, test_game_state_manager, "test_save", test_command_manager
         )
 
         # Execute Command
@@ -2334,10 +2353,11 @@ class TestCommand(unittest.TestCase):
 
         # Create mock GameStateManager
         test_game_state_manager = MagicMock()
+        test_command_manager = MagicMock()
 
         # Create Save Command
         test_command = SaveCommand(
-            test_game_state, test_game_state_manager, "test_save"
+            test_game_state, test_game_state_manager, "test_save", test_command_manager
         )
 
         # Execute Command
@@ -2354,7 +2374,7 @@ class TestCommand(unittest.TestCase):
 
         # Verify game was saved again
         test_game_state_manager.save_game.assert_called_once_with(
-            test_game_state, "test_save"
+            test_game_state, "test_save", test_command_manager
         )
 
     # Tests SaveCommand redo raises an error while already executed
@@ -2364,10 +2384,11 @@ class TestCommand(unittest.TestCase):
 
         # Create mock GameStateManager
         test_game_state_manager = MagicMock()
+        test_command_manager = MagicMock()
 
         # Create Save Command
         test_command = SaveCommand(
-            test_game_state, test_game_state_manager, "test_save"
+            test_game_state, test_game_state_manager, "test_save", test_command_manager
         )
 
         # Execute Command
@@ -2379,7 +2400,7 @@ class TestCommand(unittest.TestCase):
 
         # Verify game was only saved once
         test_game_state_manager.save_game.assert_called_once_with(
-            test_game_state, "test_save"
+            test_game_state, "test_save", test_command_manager
         )
 
     # Tests SaveCommand execution failure prevents undo
@@ -2389,13 +2410,14 @@ class TestCommand(unittest.TestCase):
 
         # Create mock GameStateManager
         test_game_state_manager = MagicMock()
+        test_command_manager = MagicMock()
 
         # Simulate save failure
         test_game_state_manager.save_game.side_effect = OSError("Unable to save game!")
 
         # Create Save Command
         test_command = SaveCommand(
-            test_game_state, test_game_state_manager, "test_save"
+            test_game_state, test_game_state_manager, "test_save", test_command_manager
         )
 
         # Verify execution raises an error
@@ -2416,10 +2438,11 @@ class TestCommand(unittest.TestCase):
 
         # Create mock GameStateManager
         test_game_state_manager = MagicMock()
+        test_command_manager = MagicMock()
 
         # Create Save Command
         test_command = SaveCommand(
-            test_game_state, test_game_state_manager, "test_save"
+            test_game_state, test_game_state_manager, "test_save", test_command_manager
         )
 
         # Verify command name
@@ -2432,6 +2455,7 @@ class TestCommand(unittest.TestCase):
 
         # Create mock GameStateManager
         test_game_state_manager = MagicMock()
+        test_command_manager = MagicMock()
 
         # Create mock Memento
         test_memento = MagicMock()
@@ -2439,7 +2463,10 @@ class TestCommand(unittest.TestCase):
 
         # Create Load Command
         test_command = LoadCommand(
-            test_game_state, test_game_state_manager, "test_save"
+            test_game_state,
+            test_game_state_manager,
+            "test_save.json",
+            test_command_manager,
         )
 
         # Execute Command
@@ -2450,7 +2477,7 @@ class TestCommand(unittest.TestCase):
 
         # Verify saved game was loaded
         test_game_state_manager.load_game.assert_called_once_with(
-            test_game_state, "test_save"
+            test_game_state, "test_save.json", test_command_manager
         )
 
     # Tests LoadCommand undo restores the previous game state
@@ -2460,6 +2487,7 @@ class TestCommand(unittest.TestCase):
 
         # Create mock GameStateManager
         test_game_state_manager = MagicMock()
+        test_command_manager = MagicMock()
 
         # Create mock Memento
         test_memento = MagicMock()
@@ -2467,7 +2495,10 @@ class TestCommand(unittest.TestCase):
 
         # Create Load Command
         test_command = LoadCommand(
-            test_game_state, test_game_state_manager, "test_save"
+            test_game_state,
+            test_game_state_manager,
+            "test_save.json",
+            test_command_manager,
         )
 
         # Execute Command
@@ -2486,10 +2517,14 @@ class TestCommand(unittest.TestCase):
 
         # Create mock GameStateManager
         test_game_state_manager = MagicMock()
+        test_command_manager = MagicMock()
 
         # Create Load Command
         test_command = LoadCommand(
-            test_game_state, test_game_state_manager, "test_save"
+            test_game_state,
+            test_game_state_manager,
+            "test_save.json",
+            test_command_manager,
         )
 
         # Verify error is raised
@@ -2506,6 +2541,7 @@ class TestCommand(unittest.TestCase):
 
         # Create mock GameStateManager
         test_game_state_manager = MagicMock()
+        test_command_manager = MagicMock()
 
         # Create mock Memento
         test_memento = MagicMock()
@@ -2513,7 +2549,10 @@ class TestCommand(unittest.TestCase):
 
         # Create Load Command
         test_command = LoadCommand(
-            test_game_state, test_game_state_manager, "test_save"
+            test_game_state,
+            test_game_state_manager,
+            "test_save.json",
+            test_command_manager,
         )
 
         # Execute Command
@@ -2536,6 +2575,7 @@ class TestCommand(unittest.TestCase):
 
         # Create mock GameStateManager
         test_game_state_manager = MagicMock()
+        test_command_manager = MagicMock()
 
         # Create mock Memento
         test_memento = MagicMock()
@@ -2543,7 +2583,10 @@ class TestCommand(unittest.TestCase):
 
         # Create Load Command
         test_command = LoadCommand(
-            test_game_state, test_game_state_manager, "test_save"
+            test_game_state,
+            test_game_state_manager,
+            "test_save.json",
+            test_command_manager,
         )
 
         # Execute Command
@@ -2560,7 +2603,7 @@ class TestCommand(unittest.TestCase):
 
         # Verify saved game was loaded again
         test_game_state_manager.load_game.assert_called_once_with(
-            test_game_state, "test_save"
+            test_game_state, "test_save.json"
         )
 
     # Tests LoadCommand redo raises an error while already executed
@@ -2570,6 +2613,7 @@ class TestCommand(unittest.TestCase):
 
         # Create mock GameStateManager
         test_game_state_manager = MagicMock()
+        test_command_manager = MagicMock()
 
         # Create mock Memento
         test_memento = MagicMock()
@@ -2577,7 +2621,10 @@ class TestCommand(unittest.TestCase):
 
         # Create Load Command
         test_command = LoadCommand(
-            test_game_state, test_game_state_manager, "test_save"
+            test_game_state,
+            test_game_state_manager,
+            "test_save.json",
+            test_command_manager,
         )
 
         # Execute Command
@@ -2589,7 +2636,7 @@ class TestCommand(unittest.TestCase):
 
         # Verify game was only loaded once
         test_game_state_manager.load_game.assert_called_once_with(
-            test_game_state, "test_save"
+            test_game_state, "test_save.json", test_command_manager
         )
 
     # Tests LoadCommand execution failure prevents undo
@@ -2599,13 +2646,17 @@ class TestCommand(unittest.TestCase):
 
         # Create mock GameStateManager
         test_game_state_manager = MagicMock()
+        test_command_manager = MagicMock()
 
         # Simulate load failure
         test_game_state_manager.load_game.side_effect = OSError("Unable to load game!")
 
         # Create Load Command
         test_command = LoadCommand(
-            test_game_state, test_game_state_manager, "test_save"
+            test_game_state,
+            test_game_state_manager,
+            "test_save.json",
+            test_command_manager,
         )
 
         # Verify execution raises an error
@@ -2626,10 +2677,14 @@ class TestCommand(unittest.TestCase):
 
         # Create mock GameStateManager
         test_game_state_manager = MagicMock()
+        test_command_manager = MagicMock()
 
         # Create Load Command
         test_command = LoadCommand(
-            test_game_state, test_game_state_manager, "test_save"
+            test_game_state,
+            test_game_state_manager,
+            "test_save.json",
+            test_command_manager,
         )
 
         # Verify command name
@@ -3612,6 +3667,395 @@ class TestCommand(unittest.TestCase):
         redo_command = RedoCommand(test_command_manager)
 
         self.assertFalse(redo_command.is_undoable())
+
+    def test_move_command_memento(self):
+        game_state = Mock()
+        game_state.get_entity_info_from_list.return_value = SimpleNamespace(
+            position=(1, 2)
+        )
+
+        command = MoveCommand(game_state, 1, 4, 5)
+
+        memento = command.create_memento()
+
+        new_command = MoveCommand.__new__(MoveCommand)
+        new_command.restore(memento, game_state)
+
+        restored = new_command.create_memento()
+
+        self.assertEqual(memento.command_type, restored.command_type)
+        self.assertEqual(memento.data, restored.data)
+        self.assertEqual(restored.data["entity_id"], 1)
+        self.assertEqual(restored.data["x"], 4)
+        self.assertEqual(restored.data["y"], 5)
+        self.assertEqual(restored.data["old_x"], 1)
+        self.assertEqual(restored.data["old_y"], 2)
+
+    # Test Spawn Command Memento
+    # Verify that SpawnCommand saves and restores its entity information
+    # Params: None
+    # Returns: None
+    def test_spawn_command_memento(self):
+        game_state = Mock()
+        game_state.spawn_entity.return_value = 10
+
+        command = SpawnCommand(game_state, "Warrior", 2, 3)
+        command.execute()
+
+        memento = command.create_memento()
+
+        new_command = SpawnCommand.__new__(SpawnCommand)
+        new_command.restore(memento, game_state)
+
+        restored = new_command.create_memento()
+
+        self.assertEqual(memento.data, restored.data)
+        self.assertEqual(restored.data["entity_type"], "Warrior")
+        self.assertEqual(restored.data["x"], 2)
+        self.assertEqual(restored.data["y"], 3)
+        self.assertEqual(restored.data["entity_id"], 10)
+
+    # Test Spawn Loot Command Memento
+    # Verify that SpawnLootCommand saves and restores its information
+    # Params: None
+    # Returns: None
+    def test_spawn_loot_command_memento(self):
+        game_state = Mock()
+
+        command = SpawnLootCommand(game_state, "Potion", 3, 4)
+        memento = command.create_memento()
+
+        new_command = SpawnLootCommand.__new__(SpawnLootCommand)
+        new_command.restore(memento, game_state)
+
+        restored = new_command.create_memento()
+
+        self.assertEqual(memento.data, restored.data)
+        self.assertEqual(restored.data["item_name"], "Potion")
+        self.assertEqual(restored.data["x"], 3)
+        self.assertEqual(restored.data["y"], 4)
+
+    # Test Attack Command Memento
+    # Verify that AttackCommand saves and restores its damage information
+    # Params: None
+    # Returns: None
+    def test_attack_command_memento(self):
+        game_state = Mock()
+        game_state.attack_entity.return_value = 15
+
+        command = AttackCommand(game_state, 1, 2)
+        command.execute()
+
+        memento = command.create_memento()
+
+        new_command = AttackCommand.__new__(AttackCommand)
+        new_command.restore(memento, game_state)
+
+        restored = new_command.create_memento()
+
+        self.assertEqual(memento.data, restored.data)
+        self.assertEqual(restored.data["attacker_id"], 1)
+        self.assertEqual(restored.data["target_id"], 2)
+        self.assertEqual(restored.data["damage"], 15)
+
+    # Test Cast Spell Command Memento
+    # Verify that CastSpellCommand saves and restores spell information
+    # Params: None
+    # Returns: None
+    def test_cast_spell_command_memento(self):
+        game_state = Mock()
+
+        caster = Mock()
+        caster.get_info.return_value = SimpleNamespace(mana=80)
+
+        target = Mock()
+        target.get_info.return_value = SimpleNamespace(health=50)
+
+        game_state.get_entity_from_list.side_effect = [caster, target]
+        game_state.cast_spell.return_value = {"damage": 20}
+
+        command = CastSpellCommand(game_state, 1, 2, "Fire")
+        command.execute()
+
+        memento = command.create_memento()
+
+        new_command = CastSpellCommand.__new__(CastSpellCommand)
+        new_command.restore(memento, game_state)
+
+        restored = new_command.create_memento()
+
+        self.assertEqual(memento.data, restored.data)
+        self.assertEqual(restored.data["caster_id"], 1)
+        self.assertEqual(restored.data["target_id"], 2)
+        self.assertEqual(restored.data["spell_name"], "Fire")
+        self.assertEqual(restored.data["old_health"], 50)
+        self.assertEqual(restored.data["old_mana"], 80)
+
+    # Test Set Tile Command Memento
+    # Verify that SetTileCommand saves and restores its original tile type
+    # Params: None
+    # Returns: None
+    def test_set_tile_command_memento(self):
+        game_state = Mock()
+
+        command = SetTileCommand(game_state, 2, 3, "wall")
+
+        command._SetTileCommand__old_tile = SimpleNamespace(tile_type="floor")
+        command._SetTileCommand__executed = True
+
+        memento = command.create_memento()
+
+        new_command = SetTileCommand.__new__(SetTileCommand)
+        new_command.restore(memento, game_state)
+
+        restored = new_command.create_memento()
+
+        self.assertEqual(memento.data, restored.data)
+        self.assertEqual(restored.data["old_tile_type"], "floor")
+        self.assertEqual(restored.data["tile_type"], "wall")
+        self.assertTrue(restored.data["executed"])
+
+    # Test Pickup Command Memento
+    # Verify that PickupCommand saves and restores its item information
+    # Params: None
+    # Returns: None
+    def test_pickup_command_memento(self):
+        game_state = Mock()
+
+        item = SimpleNamespace(name="Potion")
+        entity_info = SimpleNamespace(backpack=[item])
+        game_state.get_entity_info_from_list.return_value = entity_info
+
+        command = PickupCommand(game_state, 1, "Potion")
+
+        command._PickupCommand__old_position = (2, 3)
+        command._PickupCommand__removed_item = item
+        command._PickupCommand__executed = True
+
+        memento = command.create_memento()
+
+        new_command = PickupCommand.__new__(PickupCommand)
+        new_command.restore(memento, game_state)
+
+        restored = new_command.create_memento()
+
+        self.assertEqual(memento.data, restored.data)
+        self.assertEqual(restored.data["entity_id"], 1)
+        self.assertEqual(restored.data["item_name"], "Potion")
+        self.assertEqual(restored.data["old_position"], (2, 3))
+        self.assertEqual(restored.data["removed_item_name"], "Potion")
+        self.assertTrue(restored.data["executed"])
+
+    # Test Give Item Command Memento
+    # Verify that GiveItemCommand saves and restores its information
+    # Params: None
+    # Returns: None
+    def test_give_item_command_memento(self):
+        game_state = Mock()
+
+        command = GiveItemCommand(game_state, 1, "Potion")
+        command._GiveItemCommand__executed = True
+
+        memento = command.create_memento()
+
+        new_command = GiveItemCommand.__new__(GiveItemCommand)
+        new_command.restore(memento, game_state)
+
+        restored = new_command.create_memento()
+
+        self.assertEqual(memento.data, restored.data)
+        self.assertEqual(restored.data["entity_id"], 1)
+        self.assertEqual(restored.data["item_name"], "Potion")
+        self.assertTrue(restored.data["executed"])
+
+    # Test Drop Item Command Memento
+    # Verify that DropItemCommand saves and restores its information
+    # Params: None
+    # Returns: None
+    def test_drop_item_command_memento(self):
+        game_state = Mock()
+
+        command = DropItemCommand(game_state, 1, "Potion")
+        command._DropItemCommand__old_position = (3, 4)
+        command._DropItemCommand__executed = True
+
+        memento = command.create_memento()
+
+        new_command = DropItemCommand.__new__(DropItemCommand)
+        new_command.restore(memento, game_state)
+
+        restored = new_command.create_memento()
+
+        self.assertEqual(memento.data, restored.data)
+        self.assertEqual(restored.data["entity_id"], 1)
+        self.assertEqual(restored.data["item_name"], "Potion")
+        self.assertEqual(restored.data["old_position"], (3, 4))
+        self.assertTrue(restored.data["executed"])
+
+    # Test Swap Item Command Memento
+    # Verify that SwapItemCommand saves and restores its old equipped item
+    # Params: None
+    # Returns: None
+    def test_swap_item_command_memento(self):
+        game_state = Mock()
+
+        old_item = SimpleNamespace(name="IronSword")
+        new_item = SimpleNamespace(name="SteelSword")
+
+        game_state.get_entity_info_from_list.return_value = SimpleNamespace(
+            backpack=[old_item]
+        )
+
+        command = SwapItemCommand(game_state, 1, "Weapon", "SteelSword")
+
+        command._SwapItemCommand__old_item = old_item
+        command._SwapItemCommand__executed = True
+
+        memento = command.create_memento()
+
+        new_command = SwapItemCommand.__new__(SwapItemCommand)
+        new_command.restore(memento, game_state)
+
+        restored = new_command.create_memento()
+
+        self.assertEqual(memento.data, restored.data)
+        self.assertEqual(restored.data["entity_id"], 1)
+        self.assertEqual(restored.data["item_slot"], "Weapon")
+        self.assertEqual(restored.data["item_name"], "SteelSword")
+        self.assertEqual(restored.data["old_item_name"], "IronSword")
+        self.assertTrue(restored.data["executed"])
+
+    # Test Use Item Command Memento
+    # Verify that UseItemCommand saves and restores its previous game state
+    # Params: None
+    # Returns: None
+    def test_use_item_command_memento(self):
+        game_state = Mock()
+
+        old_state = {"turn": 1, "health": 100}
+        game_state.create_memento.return_value = old_state
+
+        command = UseItemCommand(game_state, 1, "Potion", self.command_manager)
+        command.execute()
+
+        memento = command.create_memento()
+
+        new_command = UseItemCommand.__new__(UseItemCommand)
+        new_command.restore(memento, game_state)
+
+        restored = new_command.create_memento()
+
+        self.assertEqual(memento.data, restored.data)
+        self.assertEqual(restored.data["entity_id"], 1)
+        self.assertEqual(restored.data["item_name"], "Potion")
+        self.assertEqual(restored.data["old_state"], old_state)
+        self.assertTrue(restored.data["executed"])
+
+    # Test Tick Command Memento
+    # Verify that TickCommand saves and restores its previous game state
+    # Params: None
+    # Returns: None
+    def test_tick_command_memento(self):
+        game_state = Mock()
+
+        old_state = {"turn": 1}
+        game_state.create_memento.return_value = old_state
+        game_state.entities_exists.return_value = False
+
+        command = TickCommand(game_state, self.command_manager)
+        command.execute()
+
+        memento = command.create_memento()
+
+        new_command = TickCommand.__new__(TickCommand)
+        new_command.restore(memento, game_state)
+
+        restored = new_command.create_memento()
+
+        self.assertEqual(memento.data, restored.data)
+        self.assertEqual(restored.data["old_state"], old_state)
+        self.assertTrue(restored.data["executed"])
+
+    # Test Init Command Memento
+    # Verify that InitCommand saves and restores its previous game state
+    # Params: None
+    # Returns: None
+    def test_init_command_memento(self):
+        game_state = Mock()
+
+        old_state = {"map_created": False}
+        game_state.create_memento.return_value = old_state
+        game_state.is_map_created.return_value = False
+
+        command = InitCommand(game_state, 10, 12, self.command_manager)
+        command.execute()
+
+        memento = command.create_memento()
+
+        new_command = InitCommand.__new__(InitCommand)
+        new_command.restore(memento, game_state)
+
+        restored = new_command.create_memento()
+
+        self.assertEqual(memento.data, restored.data)
+        self.assertEqual(restored.data["width"], 10)
+        self.assertEqual(restored.data["height"], 12)
+        self.assertEqual(restored.data["old_state"], old_state)
+        self.assertTrue(restored.data["executed"])
+
+    # Test Save Command Memento
+    # Verify that SaveCommand saves and restores its filename
+    # Params: None
+    # Returns: None
+    def test_save_command_memento(self):
+        game_state = Mock()
+        game_state_manager = Mock()
+        command_manager = MagicMock()
+
+        command = SaveCommand(
+            game_state, game_state_manager, "save1.json", command_manager
+        )
+        command.execute()
+
+        memento = command.create_memento()
+
+        new_command = SaveCommand.__new__(SaveCommand)
+        new_command.restore(memento, game_state, game_state_manager)
+
+        restored = new_command.create_memento()
+
+        self.assertEqual(memento.data, restored.data)
+        self.assertEqual(restored.data["filename"], "save1.json")
+        self.assertTrue(restored.data["executed"])
+
+    # Test Load Command Memento
+    # Verify that LoadCommand saves and restores its previous game state
+    # Params: None
+    # Returns: None
+    def test_load_command_memento(self):
+        game_state = Mock()
+        game_state_manager = Mock()
+        command_manager = MagicMock()
+
+        old_state = {"turn": 5}
+        game_state.create_memento.return_value = old_state
+
+        command = LoadCommand(
+            game_state, game_state_manager, "save1.json", command_manager
+        )
+        command.execute()
+
+        memento = command.create_memento()
+
+        new_command = LoadCommand.__new__(LoadCommand)
+        new_command.restore(memento, game_state, game_state_manager, command_manager)
+
+        restored = new_command.create_memento()
+
+        self.assertEqual(memento.data, restored.data)
+        self.assertEqual(restored.data["filename"], "save1.json")
+        self.assertEqual(restored.data["memento"], old_state)
+        self.assertTrue(restored.data["executed"])
 
 
 if __name__ == "__main__":

@@ -20,6 +20,9 @@ from grid import Tile, Grid
 from entity import Entity, Mage
 from domain_library import AttackTypes
 import equipment
+from enum import Enum
+from command import Command
+from command_manager import CommandManager
 
 
 # Game State Manager Class
@@ -46,10 +49,11 @@ class GameStateManager:
     # Save the current game state to a file
     # Params:   game state - Game State - Current game state to save
     #           filename - string - file name to save to
+    #           command_manager
     # Returns:  None
-    def save_game(self, game_state, filename):
+    def save_game(self, game_state, filename, command_manager):
         # Create a snapshot of the current game
-        memento = game_state.create_memento()
+        memento = game_state.create_memento(command_manager)
 
         for entity_memento in memento.entity_mementos:
             if hasattr(entity_memento, "entity_memento"):
@@ -76,8 +80,9 @@ class GameStateManager:
     # Load the current game state from a file and restore
     # Params:   game state - Game State - Current game state to load into
     #           filename - string - file name to load from
+    #           command_manager
     # Returns:  None
-    def load_game(self, game_state, filename):
+    def load_game(self, game_state, filename, command_manager):
         # Get file path to given file name
         file_path = self.create_filepath(filename)
 
@@ -91,7 +96,7 @@ class GameStateManager:
         memento = self.data_to_memento(save_data)
 
         # Restore the game from the reconstructed Memento
-        game_state.restore(memento)
+        game_state.restore(memento, command_manager)
 
     # Validate Save Data
     # Validate the saved from the file
@@ -159,6 +164,7 @@ class GameStateManager:
     # Returns: None
     def memento_to_data(self, memento):
         # Convert a GameState Memento into JSON-compatible data.
+        # print(memento)
 
         grid_memento = memento.grid_memento
 
@@ -213,21 +219,21 @@ class GameStateManager:
             entity_data = {
                 "id": base_memento.entity_id,
                 "type": base_memento.e_type,
-                "position": list(base_memento.position),
+                "position": list(base_memento.position.data),
                 "health": base_memento.health,
                 "max_health": base_memento.max_health,
                 "attack": base_memento.attack,
                 "defence": base_memento.defence,
                 "speed": base_memento.speed,
                 "inventory": {},
-                "active_modifiers": copy.deepcopy(base_memento.active_modifiers),
+                "active_modifiers": copy.deepcopy(base_memento.active_modifiers.data),
                 "backpack": [],
                 "attack_type": (
                     base_memento.attack_type.value
                     if isinstance(base_memento.attack_type, AttackTypes)
                     else base_memento.attack_type
                 ),
-                "temp_buffs": copy.deepcopy(base_memento.temp_buffs),
+                "temp_buffs": copy.deepcopy(base_memento.temp_buffs.data),
             }
 
             # Counts
@@ -235,7 +241,7 @@ class GameStateManager:
             # back_count = 0
 
             # Convert equipped items to names.
-            for item in base_memento.inventory:
+            for item in base_memento.inventory.data:
                 # Set slot based on count
                 match inv_count:
                     case 0:
@@ -277,6 +283,9 @@ class GameStateManager:
                 "entity_ids_issued": memento.entity_ids_issued,
                 "map_created": memento.map_created,
             },
+            "command_manager": self.command_manager_memento_to_data(
+                memento.command_manager_memento
+            ),
             "grid": grid_data,
             "entities": entities_data,
         }
@@ -290,7 +299,7 @@ class GameStateManager:
     def data_to_memento(self, save_data):
         game_data = save_data["game_state"]
         grid_data = save_data["grid"]
-
+        command_manager_data = save_data.get("command_manager")
         grid_memento = None
 
         if grid_data is not None:
@@ -370,24 +379,25 @@ class GameStateManager:
 
                 backpack_items.append(item)
 
-            # Create backpack memento.
-            backpack_memento = Entity.BackpackMemento(items=tuple(backpack_items))
-
             # Reconstruct the base Entity Memento.
             entity_memento = Entity.Memento(
                 entity_id=entity_data["id"],
                 e_type=entity_data["type"],
-                position=tuple(entity_data["position"]),
+                position=Entity.PositionMemento(data=tuple(entity_data["position"])),
                 health=entity_data["health"],
                 max_health=entity_data["max_health"],
                 attack=entity_data["attack"],
                 defence=entity_data["defence"],
                 speed=entity_data["speed"],
-                inventory=tuple(inventory_items),
-                active_modifiers=copy.deepcopy(entity_data["active_modifiers"]),
-                backpack=backpack_memento,
+                inventory=Entity.InventoryMemento(data=tuple(inventory_items)),
+                active_modifiers=Entity.ActiveModifiersMemento(
+                    data=copy.deepcopy(entity_data["active_modifiers"])
+                ),
+                backpack=Entity.BackpackMemento(items=tuple(backpack_items)),
                 attack_type=AttackTypes(entity_data["attack_type"]),
-                temp_buffs=copy.deepcopy(entity_data["temp_buffs"]),
+                temp_buffs=Entity.TempBuffsMemento(
+                    data=copy.deepcopy(entity_data["temp_buffs"])
+                ),
             )
 
             # Mage's Memento contains its base Entity Memento.
@@ -401,6 +411,11 @@ class GameStateManager:
 
             entity_mementos.append(entity_memento)
 
+        # Command manager memento
+        command_manager_memento = self.data_to_command_manager_memento(
+            command_manager_data
+        )
+
         return GameState.Memento(
             grid_memento=grid_memento,
             entity_mementos=tuple(entity_mementos),
@@ -408,6 +423,7 @@ class GameStateManager:
             map_created=game_data["map_created"],
             turn_number=game_data["turn_number"],
             is_saved=True,
+            command_manager_memento=command_manager_memento,
         )
 
     # Delete Save
@@ -419,3 +435,437 @@ class GameStateManager:
         filepath = self.create_filepath(filename)
         # Delete save file
         os.remove(filepath)
+
+    # Command Manager Memento to Data
+    # Converts a CommandManager Memento into JSON-compatible data
+    # Params: memento - CommandManager.Memento
+    # Returns: dict
+    def command_manager_memento_to_data(self, memento):
+        if memento is None:
+            return None
+
+        undo_history = []
+        redo_history = []
+
+        # Convert undo history
+        for command_memento in memento.undo_history:
+            undo_history.append(self.command_memento_to_data(command_memento))
+
+        # Convert redo history
+        for command_memento in memento.redo_history:
+            redo_history.append(self.command_memento_to_data(command_memento))
+
+        return {
+            "undo_history": undo_history,
+            "redo_history": redo_history,
+        }
+
+    # Command Memento to Data
+    # Converts a Command Memento into JSON-compatible data
+    # Params: memento - Command.Memento
+    # Returns: dict
+    def command_memento_to_data(self, memento):
+        return {
+            "command_type": memento.command_type,
+            "data": self.command_data_to_data(memento.data),
+        }
+
+    # Command Data to Data
+    # Recursively converts command data into JSON-compatible data
+    # Params: data - object to convert
+    # Returns: JSON-compatible object
+    def command_data_to_data(self, data):
+
+        # Convert nested GameState Mementos
+        if isinstance(data, GameState.Memento):
+            return self.memento_to_data(data)
+
+        # Convert nested CommandManager Mementos
+        elif hasattr(data, "undo_history") and hasattr(data, "redo_history"):
+            return self.command_manager_memento_to_data(data)
+
+        # Convert nested Command Mementos
+        elif hasattr(data, "command_type") and hasattr(data, "data"):
+            return self.command_memento_to_data(data)
+
+        # Convert dictionaries
+        elif isinstance(data, dict):
+            converted_data = {}
+
+            for key, value in data.items():
+                converted_data[key] = self.command_data_to_data(value)
+
+            return converted_data
+
+        # Convert tuples and lists
+        elif isinstance(data, (tuple, list)):
+            converted_data = []
+
+            for value in data:
+                converted_data.append(self.command_data_to_data(value))
+
+            return converted_data
+
+        # Convert enums
+        elif isinstance(data, Enum):
+            return data.value
+
+        # JSON-compatible primitive values
+        elif data is None or isinstance(data, (str, int, float, bool)):
+            return data
+
+        else:
+            raise TypeError(
+                f"Cannot convert {type(data).__name__} into JSON-compatible data!"
+            )
+
+    # Data to Command Manager Memento
+    # Converts JSON-compatible data into a CommandManager Memento
+    # Params: command_manager_data - dict
+    # Returns: CommandManager.Memento
+    def data_to_command_manager_memento(self, command_manager_data):
+
+        if command_manager_data is None:
+            return None
+
+        undo_history = []
+        redo_history = []
+
+        # Reconstruct undo history
+        for command_data in command_manager_data["undo_history"]:
+            undo_history.append(self.data_to_command_memento(command_data))
+
+        # Reconstruct redo history
+        for command_data in command_manager_data["redo_history"]:
+            redo_history.append(self.data_to_command_memento(command_data))
+
+        return CommandManager.Memento(
+            undo_history=tuple(undo_history),
+            redo_history=tuple(redo_history),
+        )
+
+    # Data to Command Memento
+    # Converts JSON-compatible data into a Command Memento
+    # Params: command_data - dict
+    # Returns: Command.Memento
+    def data_to_command_memento(self, command_data):
+
+        return Command.Memento(
+            command_type=command_data["command_type"],
+            data=self.command_data_to_data(command_data["data"]),
+        )
+
+    # Command Data to Data
+    # Converts JSON-compatible command data back into Python objects
+    # Params: data - dict/list/object
+    # Returns: reconstructed Python object
+    def command_data_to_data(self, data):
+
+        # Convert a GameState memento into a dictionary
+        if isinstance(data, GameState.Memento):
+            return self.memento_to_data(data)
+
+        # Convert a CommandManager memento into a dictionary
+        elif isinstance(data, CommandManager.Memento):
+            return self.command_manager_memento_to_data(data)
+
+        # Convert an individual Command memento into a dictionary
+        elif isinstance(data, Command.Memento):
+            return self.command_memento_to_data(data)
+
+        # Recursively convert dictionaries
+        elif isinstance(data, dict):
+            converted_data = {}
+
+            for key, value in data.items():
+                converted_data[key] = self.command_data_to_data(value)
+
+            return converted_data
+
+        # Recursively convert lists and tuples
+        elif isinstance(data, (list, tuple)):
+            converted_data = []
+
+            for value in data:
+                converted_data.append(self.command_data_to_data(value))
+
+            return converted_data
+
+        # Values JSON already supports
+        elif data is None or isinstance(data, (str, int, float, bool)):
+            return data
+
+        else:
+            raise TypeError(
+                f"Unsupported data type for JSON conversion: {type(data).__name__}"
+            )
+
+    # Command Manager Memento Conversion Tests
+
+    # Create Command Memento
+    # Creates a basic Command Memento for testing.
+    # Params: None
+    # Returns: Command.Memento
+    def create_command_memento(self):
+        return Command.Memento(
+            command_type="TestCommand",
+            data={
+                "entity_id": 1,
+                "x": 5,
+                "y": 10,
+            },
+        )
+
+    # Convert Empty Command Manager Memento To Data
+    # Checks that an empty CommandManager Memento converts correctly.
+    # Params: None
+    # Returns: None
+    def test_command_manager_memento_to_data_empty(self):
+        memento = CommandManager.Memento(
+            undo_history=(),
+            redo_history=(),
+        )
+
+        data = self.manager.command_manager_memento_to_data(memento)
+
+        self.assertEqual(data["undo_history"], [])
+        self.assertEqual(data["redo_history"], [])
+
+    # Convert None Command Manager Memento To Data
+    # Checks that None returns None.
+    # Params: None
+    # Returns: None
+    def test_command_manager_memento_to_data_none(self):
+        data = self.manager.command_manager_memento_to_data(None)
+
+        self.assertIsNone(data)
+
+    # Convert Command Manager Memento To Data
+    # Checks that command histories are converted into lists of dictionaries.
+    # Params: None
+    # Returns: None
+    def test_command_manager_memento_to_data(self):
+        command_memento = self.create_command_memento()
+
+        memento = CommandManager.Memento(
+            undo_history=(command_memento,),
+            redo_history=(command_memento,),
+        )
+
+        data = self.manager.command_manager_memento_to_data(memento)
+
+        self.assertEqual(len(data["undo_history"]), 1)
+        self.assertEqual(len(data["redo_history"]), 1)
+
+        self.assertEqual(
+            data["undo_history"][0]["command_type"],
+            "TestCommand",
+        )
+
+        self.assertEqual(
+            data["undo_history"][0]["data"]["entity_id"],
+            1,
+        )
+
+    # Convert Command Memento To Data
+    # Checks that a Command Memento converts into a dictionary.
+    # Params: None
+    # Returns: None
+    def test_command_memento_to_data(self):
+        memento = self.create_command_memento()
+
+        data = self.manager.command_memento_to_data(memento)
+
+        self.assertEqual(data["command_type"], "TestCommand")
+        self.assertEqual(data["data"]["entity_id"], 1)
+        self.assertEqual(data["data"]["x"], 5)
+        self.assertEqual(data["data"]["y"], 10)
+
+    # Convert Nested Command Data To Data
+    # Checks that nested dictionaries, lists, and tuples are converted recursively.
+    # Params: None
+    # Returns: None
+    def test_command_data_to_data_nested_collections(self):
+        data = {
+            "entity_id": 1,
+            "position": (5, 10),
+            "items": ["sword", "shield"],
+            "nested": {
+                "health": 100,
+                "modifiers": ("attack", "defence"),
+            },
+        }
+
+        converted_data = self.manager.command_data_to_data(data)
+
+        self.assertEqual(converted_data["entity_id"], 1)
+        self.assertEqual(converted_data["position"], [5, 10])
+        self.assertEqual(converted_data["items"], ["sword", "shield"])
+        self.assertEqual(
+            converted_data["nested"]["modifiers"],
+            ["attack", "defence"],
+        )
+
+    # Convert Nested Command Memento To Data
+    # Checks that nested Command Mementos are converted recursively.
+    # Params: None
+    # Returns: None
+    def test_command_data_to_data_nested_command_memento(self):
+        command_memento = self.create_command_memento()
+
+        data = {
+            "old_command": command_memento,
+        }
+
+        converted_data = self.manager.command_data_to_data(data)
+
+        self.assertEqual(
+            converted_data["old_command"]["command_type"],
+            "TestCommand",
+        )
+
+        self.assertEqual(
+            converted_data["old_command"]["data"]["entity_id"],
+            1,
+        )
+
+    # Convert Nested Command Manager Memento To Data
+    # Checks that nested CommandManager Mementos are converted recursively.
+    # Params: None
+    # Returns: None
+    def test_command_data_to_data_nested_command_manager_memento(self):
+        command_memento = self.create_command_memento()
+
+        command_manager_memento = CommandManager.Memento(
+            undo_history=(command_memento,),
+            redo_history=(),
+        )
+
+        converted_data = self.manager.command_data_to_data(
+            {"manager": command_manager_memento}
+        )
+
+        self.assertEqual(
+            converted_data["manager"]["undo_history"][0]["command_type"],
+            "TestCommand",
+        )
+
+        self.assertEqual(
+            converted_data["manager"]["redo_history"],
+            [],
+        )
+
+    # Convert Unsupported Command Data
+    # Checks that unsupported objects raise a TypeError.
+    # Params: None
+    # Returns: None
+    def test_command_data_to_data_unsupported_type(self):
+        with self.assertRaises(TypeError):
+            self.manager.command_data_to_data(object())
+
+    # Convert Command Manager Memento To JSON
+    # Checks that a CommandManager Memento can be serialized as JSON.
+    # Params: None
+    # Returns: None
+    def test_command_manager_memento_to_data_json_serializable(self):
+        command_memento = self.create_command_memento()
+
+        memento = CommandManager.Memento(
+            undo_history=(command_memento,),
+            redo_history=(),
+        )
+
+        data = self.manager.command_manager_memento_to_data(memento)
+
+        serialized_data = json.dumps(data)
+
+        self.assertIsInstance(serialized_data, str)
+
+    # Convert Data To Command Manager Memento
+    # Checks that dictionary data converts back into a CommandManager Memento.
+    # Params: None
+    # Returns: None
+    def test_data_to_command_manager_memento(self):
+        command_data = {
+            "command_type": "TestCommand",
+            "data": {
+                "entity_id": 1,
+                "x": 5,
+                "y": 10,
+            },
+        }
+
+        manager_data = {
+            "undo_history": [command_data],
+            "redo_history": [],
+        }
+
+        memento = self.manager.data_to_command_manager_memento(manager_data)
+
+        self.assertIsInstance(memento, CommandManager.Memento)
+        self.assertEqual(len(memento.undo_history), 1)
+        self.assertEqual(len(memento.redo_history), 0)
+        self.assertEqual(memento.undo_history[0].command_type, "TestCommand")
+        self.assertEqual(memento.undo_history[0].data["entity_id"], 1)
+
+    # Convert None Data To Command Manager Memento
+    # Checks that None returns None.
+    # Params: None
+    # Returns: None
+    def test_data_to_command_manager_memento_none(self):
+        memento = self.manager.data_to_command_manager_memento(None)
+
+        self.assertIsNone(memento)
+
+    # Convert Data To Command Memento
+    # Checks that dictionary data converts back into a Command Memento.
+    # Params: None
+    # Returns: None
+    def test_data_to_command_memento(self):
+        command_data = {
+            "command_type": "TestCommand",
+            "data": {
+                "entity_id": 1,
+                "x": 5,
+                "y": 10,
+            },
+        }
+
+        memento = self.manager.data_to_command_memento(command_data)
+
+        self.assertIsInstance(memento, Command.Memento)
+        self.assertEqual(memento.command_type, "TestCommand")
+        self.assertEqual(memento.data["entity_id"], 1)
+        self.assertEqual(memento.data["x"], 5)
+        self.assertEqual(memento.data["y"], 10)
+
+    # Round Trip Command Manager Memento
+    # Checks that a CommandManager Memento converts to data and back correctly.
+    # Params: None
+    # Returns: None
+    def test_command_manager_memento_conversion_round_trip(self):
+        original_command = self.create_command_memento()
+
+        original_memento = CommandManager.Memento(
+            undo_history=(original_command,),
+            redo_history=(original_command,),
+        )
+
+        data = self.manager.command_manager_memento_to_data(original_memento)
+
+        restored_memento = self.manager.data_to_command_manager_memento(data)
+
+        self.assertEqual(
+            restored_memento.undo_history[0].command_type,
+            original_memento.undo_history[0].command_type,
+        )
+
+        self.assertEqual(
+            restored_memento.undo_history[0].data,
+            original_memento.undo_history[0].data,
+        )
+
+        self.assertEqual(
+            restored_memento.redo_history[0].command_type,
+            original_memento.redo_history[0].command_type,
+        )

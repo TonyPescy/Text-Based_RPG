@@ -1,0 +1,64 @@
+init map 20 20 
+state-info 
+history
+spawn warrior 5 5 
+spawn goblin 6 5 
+spawn mage 5 8 
+spawn skeleton 8 8
+inspect 1 
+inspect 2 
+inspect 3 
+inspect 4
+inventory 1 
+inventory 2 
+tile 5 5 
+tile 6 5
+set tile 10 10 shallowwater 
+tile 10 10 
+set tile 10 10 floor 
+tile 10 10
+spawn loot IronSword 5 5 
+pickup 1 IronSword 
+inventory 1 
+swap 1 Weapon IronSword 
+inspect 1
+give 2 CursedDagger 
+inventory 2 
+swap 2 Weapon CursedDagger 
+inspect 2
+drop 2 CursedDagger 
+tile 6 5
+move 1 6 6 
+move 2 7 6 
+tile 6 6 
+tile 7 6
+attack 1 2 
+inspect 1 
+inspect 2 
+undo 
+inspect 2 
+redo 
+inspect 2
+move 3 6 9
+move 4 9 9 
+inspect 3 
+inspect 4
+tick 
+state-info 
+history
+undo 
+state-info
+redo 
+state-info
+save tester1 
+load tester1 
+state-info 
+history 
+inspect 1 
+inspect 2
+inventory 1 
+inventory 2
+move 1 6 7 
+undo 
+redo 
+save tester1

@@ -1,0 +1,3090 @@
+{
+    "game_state": {
+        "turn_number": 2,
+        "entity_ids_issued": 5,
+        "map_created": true
+    },
+    "command_manager": {
+        "undo_history": [
+            {
+                "command_type": "InitCommand",
+                "data": {
+                    "width": 20,
+                    "height": 20,
+                    "old_state": {
+                        "game_state": {
+                            "turn_number": 1,
+                            "entity_ids_issued": 1,
+                            "map_created": false
+                        },
+                        "command_manager": {
+                            "undo_history": [],
+                            "redo_history": []
+                        },
+                        "grid": null,
+                        "entities": []
+                    },
+                    "executed": true
+                }
+            },
+            {
+                "command_type": "SpawnCommand",
+                "data": {
+                    "entity_type": "warrior",
+                    "x": 5,
+                    "y": 5,
+                    "entity_id": 1
+                }
+            },
+            {
+                "command_type": "SpawnCommand",
+                "data": {
+                    "entity_type": "goblin",
+                    "x": 6,
+                    "y": 5,
+                    "entity_id": 2
+                }
+            },
+            {
+                "command_type": "SpawnCommand",
+                "data": {
+                    "entity_type": "mage",
+                    "x": 5,
+                    "y": 8,
+                    "entity_id": 3
+                }
+            },
+            {
+                "command_type": "SpawnCommand",
+                "data": {
+                    "entity_type": "skeleton",
+                    "x": 8,
+                    "y": 8,
+                    "entity_id": 4
+                }
+            },
+            {
+                "command_type": "SpawnLootCommand",
+                "data": {
+                    "item_name": "ironsword",
+                    "x": 5,
+                    "y": 5
+                }
+            },
+            {
+                "command_type": "MoveCommand",
+                "data": {
+                    "entity_id": 1,
+                    "x": 6,
+                    "y": 6,
+                    "old_x": 5,
+                    "old_y": 5
+                }
+            },
+            {
+                "command_type": "MoveCommand",
+                "data": {
+                    "entity_id": 2,
+                    "x": 7,
+                    "y": 6,
+                    "old_x": 6,
+                    "old_y": 5
+                }
+            },
+            {
+                "command_type": "AttackCommand",
+                "data": {
+                    "attacker_id": 1,
+                    "target_id": 2,
+                    "damage": 24
+                }
+            },
+            {
+                "command_type": "MoveCommand",
+                "data": {
+                    "entity_id": 3,
+                    "x": 6,
+                    "y": 9,
+                    "old_x": 5,
+                    "old_y": 8
+                }
+            },
+            {
+                "command_type": "MoveCommand",
+                "data": {
+                    "entity_id": 4,
+                    "x": 9,
+                    "y": 9,
+                    "old_x": 8,
+                    "old_y": 8
+                }
+            }
+        ],
+        "redo_history": []
+    },
+    "grid": {
+        "width": 20,
+        "height": 20,
+        "tiles": [
+            [
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                }
+            ],
+            [
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                }
+            ],
+            [
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                }
+            ],
+            [
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                }
+            ],
+            [
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                }
+            ],
+            [
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                }
+            ],
+            [
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": [
+                        "CursedDagger"
+                    ]
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [
+                        1
+                    ],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [
+                        3
+                    ],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                }
+            ],
+            [
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [
+                        2
+                    ],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                }
+            ],
+            [
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                }
+            ],
+            [
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [
+                        4
+                    ],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                }
+            ],
+            [
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                }
+            ],
+            [
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                }
+            ],
+            [
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                }
+            ],
+            [
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                }
+            ],
+            [
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                }
+            ],
+            [
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                }
+            ],
+            [
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                }
+            ],
+            [
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                }
+            ],
+            [
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                }
+            ],
+            [
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                },
+                {
+                    "tile_type": "Floor",
+                    "passable": true,
+                    "occupants": [],
+                    "modifiers": {},
+                    "items": []
+                }
+            ]
+        ]
+    },
+    "entities": [
+        {
+            "id": 1,
+            "type": "warrior",
+            "position": [
+                6,
+                6
+            ],
+            "health": 120,
+            "max_health": 120,
+            "attack": 27,
+            "defence": 10,
+            "speed": 5,
+            "inventory": {
+                "Weapon": "IronSword",
+                "Armor": "None",
+                "Accessory": "None"
+            },
+            "active_modifiers": {
+                "Flat_modifiers": {
+                    "Attack": 12
+                },
+                "Percent_modifiers": {}
+            },
+            "backpack": [
+                "IronSword"
+            ],
+            "attack_type": "Melee",
+            "temp_buffs": []
+        },
+        {
+            "id": 2,
+            "type": "goblin",
+            "position": [
+                7,
+                6
+            ],
+            "health": 21,
+            "max_health": 45,
+            "attack": 12,
+            "defence": 3,
+            "speed": 6,
+            "inventory": {
+                "Weapon": "None",
+                "Armor": "None",
+                "Accessory": "None"
+            },
+            "active_modifiers": {
+                "Flat_modifiers": {},
+                "Percent_modifiers": {}
+            },
+            "backpack": [],
+            "attack_type": "Melee",
+            "temp_buffs": []
+        },
+        {
+            "id": 3,
+            "type": "mage",
+            "position": [
+                6,
+                9
+            ],
+            "health": 70,
+            "max_health": 70,
+            "attack": 8,
+            "defence": 4,
+            "speed": 5,
+            "inventory": {
+                "Weapon": "None",
+                "Armor": "None",
+                "Accessory": "None"
+            },
+            "active_modifiers": {
+                "Flat_modifiers": {},
+                "Percent_modifiers": {}
+            },
+            "backpack": [],
+            "attack_type": "Melee",
+            "temp_buffs": [],
+            "mana": 100,
+            "max_mana": 100,
+            "spell_power": 25
+        },
+        {
+            "id": 4,
+            "type": "skeleton",
+            "position": [
+                9,
+                9
+            ],
+            "health": 60,
+            "max_health": 60,
+            "attack": 10,
+            "defence": 8,
+            "speed": 4,
+            "inventory": {
+                "Weapon": "None",
+                "Armor": "None",
+                "Accessory": "None"
+            },
+            "active_modifiers": {
+                "Flat_modifiers": {},
+                "Percent_modifiers": {}
+            },
+            "backpack": [],
+            "attack_type": "Ranged",
+            "temp_buffs": []
+        }
+    ]
+}
