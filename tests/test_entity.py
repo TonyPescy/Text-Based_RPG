@@ -23,7 +23,7 @@ these functions are handled within the CLI prior to calling this function.
 """
 
 # Imports
-from copy import replace
+from dataclasses import replace
 import unittest
 
 import domain_library as dl

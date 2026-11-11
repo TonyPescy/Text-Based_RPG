@@ -967,6 +967,138 @@ class TestGrid(unittest.TestCase):
         self.assertEqual(restored_memento.modifiers, {"Attack": 5})
         self.assertEqual(restored_memento.item_list, ["IronSword"])
 
+    # Test get_path_distance - same position
+    def test_get_path_distance_same_position(self):
+        test_grid = self.create_test_grid(7, 7)
+
+        result = test_grid.get_path_distance([2, 2], [2, 2])
+
+        self.assertEqual(result, 0)
+
+    # Test get_path_distance - horizontal path
+    def test_get_path_distance_horizontal(self):
+        test_grid = self.create_test_grid(7, 7)
+
+        result = test_grid.get_path_distance([1, 2], [5, 2])
+
+        self.assertEqual(result, 4)
+
+    # Test get_path_distance - diagonal positions
+    def test_get_path_distance_diagonal(self):
+        test_grid = self.create_test_grid(7, 7)
+
+        result = test_grid.get_path_distance([1, 1], [4, 4])
+
+        self.assertEqual(result, 6)
+
+    # Test get_path_distance - wall blocks direct path
+    def test_get_path_distance_around_wall(self):
+        test_grid = self.create_test_grid(7, 7)
+
+        # Place wall directly between positions
+        test_grid.set_tile(3, 2, "wall")
+
+        result = test_grid.get_path_distance([1, 2], [5, 2])
+
+        # Shortest route around wall takes 6 steps
+        self.assertEqual(result, 6)
+
+    # Test get_path_distance - target surrounded by walls
+    def test_get_path_distance_unreachable(self):
+        test_grid = self.create_test_grid(7, 7)
+
+        test_grid.set_tile(2, 3, "wall")
+        test_grid.set_tile(4, 3, "wall")
+        test_grid.set_tile(3, 2, "wall")
+        test_grid.set_tile(3, 4, "wall")
+
+        result = test_grid.get_path_distance([1, 1], [3, 3])
+
+        self.assertIsNone(result)
+
+    # Test get_path_distance - target is wall
+    def test_get_path_distance_target_wall(self):
+        test_grid = self.create_test_grid(7, 7)
+
+        test_grid.set_tile(4, 4, "wall")
+
+        result = test_grid.get_path_distance([1, 1], [4, 4])
+
+        self.assertIsNone(result)
+
+    # Test get_path_distance - occupied tile blocks corridor
+    def test_get_path_distance_occupied_corridor(self):
+        test_grid = self.create_test_grid(7, 7)
+
+        # Create corridor
+        for x in range(7):
+            test_grid.set_tile(x, 1, "wall")
+            test_grid.set_tile(x, 3, "wall")
+
+        # Block corridor
+        test_grid.occupy(3, 2, 99)
+
+        result = test_grid.get_path_distance([1, 2], [5, 2])
+
+        self.assertIsNone(result)
+
+    # Test get_path_distance - path around occupied tile
+    def test_get_path_distance_around_occupant(self):
+        test_grid = self.create_test_grid(7, 7)
+
+        test_grid.occupy(3, 2, 99)
+
+        result = test_grid.get_path_distance([1, 2], [5, 2])
+
+        self.assertEqual(result, 6)
+
+    # Test get_path_distance - occupied destination
+    def test_get_path_distance_occupied_destination(self):
+        test_grid = self.create_test_grid(7, 7)
+
+        test_grid.occupy(4, 2, 1)
+
+        result = test_grid.get_path_distance([1, 2], [4, 2])
+
+        self.assertEqual(result, 3)
+
+    # Test get_path_distance - invalid starting position
+    def test_get_path_distance_invalid_start(self):
+        test_grid = self.create_test_grid(7, 7)
+
+        result = test_grid.get_path_distance([-1, 2], [4, 2])
+
+        self.assertIsNone(result)
+
+    # Test get_path_distance - invalid target position
+    def test_get_path_distance_invalid_target(self):
+        test_grid = self.create_test_grid(7, 7)
+
+        result = test_grid.get_path_distance([1, 2], [7, 2])
+
+        self.assertIsNone(result)
+
+    # Test get_path_distance - wall removed
+    def test_get_path_distance_wall_removed(self):
+        test_grid = self.create_test_grid(7, 7)
+
+        # Create corridor
+        for x in range(7):
+            test_grid.set_tile(x, 1, "wall")
+            test_grid.set_tile(x, 3, "wall")
+
+        test_grid.set_tile(3, 2, "wall")
+
+        self.assertIsNone(test_grid.get_path_distance([1, 2], [5, 2]))
+
+        # Remove blocking wall
+        test_grid.set_tile(3, 2, "floor")
+
+        self.assertEqual(
+            test_grid.get_path_distance([1, 2], [5, 2]),
+            4,
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

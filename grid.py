@@ -319,6 +319,7 @@ class Grid:
     # Params:   x,y - ints - intial x and y coordinates
     #           x2,y2 - ints - target x and y coordinates
     # Returns: manhattan_distance - int
+    @staticmethod
     def manhattan_distance_calculator(x2, x, y2, y):
         try:
             x2 = int(x2)
@@ -441,6 +442,97 @@ class Grid:
         self.__width = memento.width
         self.__height = memento.height
         self.__grid = restored_grid
+
+    # Get Path Distance
+    # Finds the shortest reachable distance between two positions using A*
+    # Params: start_position - list - starting [x, y] coordinates
+    #         target_position - list - target [x, y] coordinates
+    # Returns: distance - int/None - shortest path distance or None if unreachable
+    def get_path_distance(self, start_position, target_position):
+        # Get starting coordinates
+        start_x = int(start_position[0])
+        start_y = int(start_position[1])
+
+        # Get target coordinates
+        target_x = int(target_position[0])
+        target_y = int(target_position[1])
+
+        # Get grid information
+        grid_info = self.get_info()
+
+        # Validate starting and target positions
+        if not Grid.is_valid_grid_position(
+            grid_info, start_x, start_y
+        ) or not Grid.is_valid_grid_position(grid_info, target_x, target_y):
+            return None
+
+        # Check target passability
+        if not self.is_passable(target_x, target_y):
+            return None
+
+        # Initialize priority queue
+        open_tile_list = []
+
+        # Add starting position
+        heapq.heappush(
+            open_tile_list,
+            (
+                Grid.manhattan_distance_calculator(
+                    target_x, start_x, target_y, start_y
+                ),
+                0,
+                start_x,
+                start_y,
+            ),
+        )
+
+        # Store shortest known distances
+        distances = {(start_x, start_y): 0}
+
+        # Search for shortest path
+        while open_tile_list:
+            _, distance, x, y = heapq.heappop(open_tile_list)
+
+            # Skip outdated paths
+            if distance != distances.get((x, y)):
+                continue
+
+            # Target reached
+            if x == target_x and y == target_y:
+                return distance
+
+            # Get valid neighbors (excludes walls)
+            neighbors = self.get_neighbors([x, y])
+
+            for next_x, next_y in neighbors:
+                # Ignore occupied tiles except the target
+                if (next_x, next_y) != (target_x, target_y):
+                    if self.is_occupied(next_x, next_y):
+                        continue
+
+                # Calculate new distance
+                new_distance = distance + 1
+
+                # Skip longer paths
+                if new_distance >= distances.get((next_x, next_y), float("inf")):
+                    continue
+
+                # Update shortest distance
+                distances[(next_x, next_y)] = new_distance
+
+                # Calculate A* priority
+                priority = new_distance + Grid.manhattan_distance_calculator(
+                    target_x, next_x, target_y, next_y
+                )
+
+                # Add neighbor to queue
+                heapq.heappush(
+                    open_tile_list,
+                    (priority, new_distance, next_x, next_y),
+                )
+
+        # No valid path exists
+        return None
 
 
 # Create Tile class because the grid will be made up of Tiles

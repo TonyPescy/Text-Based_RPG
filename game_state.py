@@ -656,3 +656,55 @@ class GameState:
                 return item
 
         return None
+
+    # Get Nearest Player
+    # Gets player nearest to the entity
+    # Params: entity_info - EntityInfo - The entity searching for a player
+    # Returns: nearest_player - EntityInfo/None - Nearest living player information
+    def get_nearest_player(self, entity_info):
+        # Get entity position
+        entity_x = entity_info.position[0]
+        entity_y = entity_info.position[1]
+
+        # Initialize nearest player variables
+        nearest_player = None
+        nearest_distance = float("inf")
+
+        # Check if grid exists
+        if self.__grid is None:
+            return None
+
+        # Search through all entities
+        for entity in self.__entity_list:
+            # Get entity information
+            player_info = entity.get_info()
+
+            # Only consider Warriors and Mages - Player entities
+            if player_info.e_type.lower() not in ("warrior", "mage"):
+                continue
+
+            # Check if player is alive
+            if not entity.is_alive():
+                continue
+
+            # Get player position
+            player_x = player_info.position[0]
+            player_y = player_info.position[1]
+
+            # Calculate actual path distance accounting for walls
+            distance = self.__grid.get_path_distance(
+                [entity_x, entity_y],
+                [player_x, player_y],
+            )
+
+            # Skip unreachable players
+            if distance is None:
+                continue
+
+            # Check if this player is closer
+            if distance < nearest_distance:
+                nearest_distance = distance
+                nearest_player = player_info
+
+        # Return nearest reachable player information
+        return nearest_player

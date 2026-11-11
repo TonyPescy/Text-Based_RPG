@@ -15,6 +15,8 @@ from copy import deepcopy
 import domain_library as dl
 from equipment import Equipment, create_equipment
 from dataclasses import dataclass
+from entity_state_manager import EntityStateManager
+from entity_state import DefendingState, AttackingState, FleeingState
 
 
 # Data class for entity stats
@@ -565,6 +567,13 @@ class Entity:
     class TempBuffsMemento:
         data: object
 
+    # Get Entity State Name
+    # Gets the current behavioral state of the entity
+    # Params: None
+    # Returns: state_name - String - current behavioral state name
+    def get_entity_state_name(self):
+        return self.__state_manager.get_current_state_name()
+
     # Create Inventory Memento
     # Creates a memento of the entity's inventory
     # Params: None
@@ -756,6 +765,8 @@ class Warrior(Entity):
             backpack,
             dl.AttackTypes.MELEE,
         )
+        # Initialize entity state manager
+        # self.__state_manager = EntityStateManager(self, None, DefendingState())
 
 
 # Skeleton Class extend from Entity class
@@ -792,6 +803,8 @@ class Skeleton(Entity):
             backpack,
             dl.AttackTypes.RANGED,
         )
+        # Initialize entity state manager
+        self.__state_manager = EntityStateManager(self, None, DefendingState())
 
 
 # Goblin Class extend from Entity class
@@ -829,6 +842,8 @@ class Goblin(Entity):
             backpack,
             dl.AttackTypes.MELEE,
         )
+        # Initialize entity state manager
+        self.__state_manager = EntityStateManager(self, None, DefendingState())
 
 
 # Data class for Mage stats

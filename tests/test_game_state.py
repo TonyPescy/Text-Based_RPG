@@ -1123,6 +1123,145 @@ class TestGameState(unittest.TestCase):
         # Verify result
         self.assertIsNone(result)
 
+    # Test get_nearest_player - no players
+    def test_get_nearest_player_no_players(self):
+        self.create_test_grid(7, 7)
+
+        self.game_state.spawn_entity(1, 2, "goblin")
+
+        goblin_info = self.game_state.get_entity_info_from_list(1)
+
+        result = self.game_state.get_nearest_player(goblin_info)
+
+        self.assertIsNone(result)
+
+    # Test get_nearest_player - single warrior
+    def test_get_nearest_player_single_warrior(self):
+        self.create_test_grid(7, 7)
+
+        self.game_state.spawn_entity(1, 2, "goblin")
+        self.game_state.spawn_entity(4, 2, "warrior")
+
+        goblin_info = self.game_state.get_entity_info_from_list(1)
+
+        result = self.game_state.get_nearest_player(goblin_info)
+
+        self.assertEqual(result.id, 2)
+
+    # Test get_nearest_player - single mage
+    def test_get_nearest_player_single_mage(self):
+        self.create_test_grid(7, 7)
+
+        self.game_state.spawn_entity(1, 2, "goblin")
+        self.game_state.spawn_entity(5, 5, "mage")
+
+        goblin_info = self.game_state.get_entity_info_from_list(1)
+
+        result = self.game_state.get_nearest_player(goblin_info)
+
+        self.assertEqual(result.id, 2)
+
+    # Test get_nearest_player - closest of two players
+    def test_get_nearest_player_two_players(self):
+        self.create_test_grid(7, 7)
+
+        self.game_state.spawn_entity(1, 2, "goblin")
+        self.game_state.spawn_entity(3, 2, "warrior")
+        self.game_state.spawn_entity(6, 6, "mage")
+
+        goblin_info = self.game_state.get_entity_info_from_list(1)
+
+        result = self.game_state.get_nearest_player(goblin_info)
+
+        self.assertEqual(result.id, 2)
+
+    # Test get_nearest_player - ignores monsters
+    def test_get_nearest_player_ignores_monsters(self):
+        self.create_test_grid(7, 7)
+
+        self.game_state.spawn_entity(1, 2, "goblin")
+        self.game_state.spawn_entity(2, 2, "skeleton")
+        self.game_state.spawn_entity(5, 2, "warrior")
+
+        goblin_info = self.game_state.get_entity_info_from_list(1)
+
+        result = self.game_state.get_nearest_player(goblin_info)
+
+        self.assertEqual(result.id, 3)
+
+    # Test get_nearest_player - unreachable player
+    def test_get_nearest_player_unreachable(self):
+        self.create_test_grid(7, 7)
+
+        self.game_state.spawn_entity(1, 1, "goblin")
+        self.game_state.spawn_entity(3, 3, "warrior")
+
+        # Surround Warrior with walls
+        self.game_state.set_game_grid_tile(2, 3, "wall")
+        self.game_state.set_game_grid_tile(4, 3, "wall")
+        self.game_state.set_game_grid_tile(3, 2, "wall")
+        self.game_state.set_game_grid_tile(3, 4, "wall")
+
+        goblin_info = self.game_state.get_entity_info_from_list(1)
+
+        result = self.game_state.get_nearest_player(goblin_info)
+
+        self.assertIsNone(result)
+
+    # Test get_nearest_player - chooses reachable player
+    def test_get_nearest_player_reachable_over_blocked(self):
+        self.create_test_grid(7, 7)
+
+        self.game_state.spawn_entity(1, 1, "goblin")
+        self.game_state.spawn_entity(3, 3, "warrior")
+        self.game_state.spawn_entity(5, 5, "mage")
+
+        # Surround Warrior with walls
+        self.game_state.set_game_grid_tile(2, 3, "wall")
+        self.game_state.set_game_grid_tile(4, 3, "wall")
+        self.game_state.set_game_grid_tile(3, 2, "wall")
+        self.game_state.set_game_grid_tile(3, 4, "wall")
+
+        goblin_info = self.game_state.get_entity_info_from_list(1)
+
+        result = self.game_state.get_nearest_player(goblin_info)
+
+        self.assertEqual(result.id, 3)
+
+    # Test get_nearest_player - shortest path instead of Manhattan
+    def test_get_nearest_player_shortest_path(self):
+        self.create_test_grid(7, 7)
+
+        # Goblin
+        self.game_state.spawn_entity(1, 2, "goblin")
+
+        # Warrior is geometrically closer
+        self.game_state.spawn_entity(5, 2, "warrior")
+
+        # Mage has shorter walking path
+        self.game_state.spawn_entity(1, 5, "mage")
+
+        # Wall blocks direct route to Warrior
+        for y in range(4):
+            self.game_state.set_game_grid_tile(3, y, "wall")
+
+        goblin_info = self.game_state.get_entity_info_from_list(1)
+
+        result = self.game_state.get_nearest_player(goblin_info)
+
+        # Mage should be selected
+        self.assertEqual(result.id, 3)
+
+    # Test get_nearest_player - no grid
+    def test_get_nearest_player_no_grid(self):
+        # No grid has been created
+        goblin_info = MagicMock()
+        goblin_info.position = [1, 2]
+
+        result = self.game_state.get_nearest_player(goblin_info)
+
+        self.assertIsNone(result)
+
 
 # Run the tests
 if __name__ == "__main__":
