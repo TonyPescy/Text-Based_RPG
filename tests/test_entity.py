@@ -25,7 +25,9 @@ these functions are handled within the CLI prior to calling this function.
 # Imports
 from dataclasses import replace
 import unittest
-
+from dataclasses import FrozenInstanceError
+from unittest.mock import patch
+from entity_state import DefendingState, AttackingState, FleeingState
 import domain_library as dl
 from entity import Warrior, Mage, Goblin, Skeleton, create_entity, Entity
 import equipment
@@ -973,6 +975,322 @@ class TestEntity(unittest.TestCase):
 
         # Memento should retain its original position
         self.assertEqual(memento.data, [2, 3])
+
+    # Tests for Entity State Manager
+
+    # Create State Manager Memento - Warrior
+    # Checks that player entities have no behavioral state
+    def test_create_state_manager_memento_warrior(self):
+        entity = self.create_test_entity(Warrior)
+
+        memento = entity.create_state_manager_memento()
+
+        self.assertIsInstance(memento, Entity.StateManagerMemento)
+        self.assertIsNone(memento.state_name)
+
+    # Create State Manager Memento - Mage
+    # Checks that Mage entities have no behavioral state
+    def test_create_state_manager_memento_mage(self):
+        entity = self.create_test_entity(Mage)
+
+        memento = entity.create_state_manager_memento()
+
+        self.assertIsInstance(memento, Entity.StateManagerMemento)
+        self.assertIsNone(memento.state_name)
+
+    # Create State Manager Memento - Goblin
+    # Checks that the current Goblin state is saved
+    def test_create_state_manager_memento_goblin(self):
+        game_state = self.create_test_game_state()
+        entity = self.create_spawned_entity(game_state, "goblin")
+
+        memento = entity.create_state_manager_memento()
+
+        self.assertIsInstance(memento, Entity.StateManagerMemento)
+        self.assertEqual(memento.state_name, "Defending")
+
+    # Create State Manager Memento - Skeleton
+    # Checks that the current Skeleton state is saved
+    def test_create_state_manager_memento_skeleton(self):
+        game_state = self.create_test_game_state()
+        entity = self.create_spawned_entity(game_state, "skeleton")
+
+        memento = entity.create_state_manager_memento()
+
+        self.assertEqual(memento.state_name, "Defending")
+
+    # State Manager Memento Is Frozen
+    # Checks that the saved state name cannot be reassigned
+    def test_state_manager_memento_frozen(self):
+        memento = Entity.StateManagerMemento(state_name="Defending")
+
+        with self.assertRaises(FrozenInstanceError):
+            memento.state_name = "Attacking"
+
+    # Restore State Manager - Defending
+    # Checks that a Goblin can restore DefendingState
+    def test_restore_state_manager_defending(self):
+        entity = self.create_test_entity(Goblin)
+        game_state = self.create_test_game_state()
+
+        memento = Entity.StateManagerMemento(state_name="Defending")
+
+        entity.restore_state_manager(memento, game_state)
+
+        self.assertEqual(entity.get_entity_state_name(), "Defending")
+
+    # Restore State Manager - Attacking
+    # Checks that a Goblin can restore AttackingState
+    def test_restore_state_manager_attacking(self):
+        entity = self.create_test_entity(Goblin)
+        game_state = self.create_test_game_state()
+
+        memento = Entity.StateManagerMemento(state_name="Attacking")
+
+        entity.restore_state_manager(memento, game_state)
+
+        self.assertEqual(entity.get_entity_state_name(), "Attacking")
+
+    # Restore State Manager - Fleeing
+    # Checks that a Goblin can restore FleeingState
+    def test_restore_state_manager_fleeing(self):
+        entity = self.create_test_entity(Goblin)
+        game_state = self.create_test_game_state()
+
+        memento = Entity.StateManagerMemento(state_name="Fleeing")
+
+        entity.restore_state_manager(memento, game_state)
+
+        self.assertEqual(entity.get_entity_state_name(), "Fleeing")
+
+    # Restore State Manager - Skeleton
+    # Checks that Skeleton entities can restore their state
+    def test_restore_state_manager_skeleton(self):
+        entity = self.create_test_entity(Skeleton)
+        game_state = self.create_test_game_state()
+
+        memento = Entity.StateManagerMemento(state_name="Attacking")
+
+        entity.restore_state_manager(memento, game_state)
+
+        self.assertEqual(entity.get_entity_state_name(), "Attacking")
+
+    # Restore State Manager - Player
+    # Checks that player entities can restore a None state
+    def test_restore_state_manager_player(self):
+        entity = self.create_test_entity(Warrior)
+        game_state = self.create_test_game_state()
+
+        memento = Entity.StateManagerMemento(state_name=None)
+
+        entity.restore_state_manager(memento, game_state)
+
+        self.assertIsNone(entity.get_entity_state_name())
+
+    # Restore State Manager - Mage
+    # Checks that Mage entities can restore a None state
+    def test_restore_state_manager_mage(self):
+        entity = self.create_test_entity(Mage)
+        game_state = self.create_test_game_state()
+
+        memento = Entity.StateManagerMemento(state_name=None)
+
+        entity.restore_state_manager(memento, game_state)
+
+        self.assertIsNone(entity.get_entity_state_name())
+
+    # Restore State Manager - Invalid Memento
+    # Checks that invalid Memento types raise TypeError
+    def test_restore_state_manager_invalid_memento(self):
+        entity = self.create_test_entity(Goblin)
+
+        with self.assertRaises(TypeError):
+            entity.restore_state_manager("invalid", None)
+
+    # Restore State Manager - Missing Enemy State
+    # Checks that enemy entities cannot restore a None state
+    def test_restore_state_manager_enemy_none(self):
+        entity = self.create_test_entity(Goblin)
+
+        memento = Entity.StateManagerMemento(state_name=None)
+
+        with self.assertRaises(ValueError):
+            entity.restore_state_manager(memento, None)
+
+    # Restore State Manager - Player With Enemy State
+    # Checks that player entities cannot restore enemy states
+    def test_restore_state_manager_player_invalid_state(self):
+        entity = self.create_test_entity(Warrior)
+
+        memento = Entity.StateManagerMemento(state_name="Attacking")
+
+        with self.assertRaises(ValueError):
+            entity.restore_state_manager(memento, None)
+
+    # Restore State Manager - Invalid State Name
+    # Checks that unknown behavioral states raise ValueError
+    def test_restore_state_manager_invalid_state_name(self):
+        entity = self.create_test_entity(Goblin)
+
+        memento = Entity.StateManagerMemento(state_name="Unknown")
+
+        with self.assertRaises(ValueError):
+            entity.restore_state_manager(memento, None)
+
+    # Initialize State Manager - Goblin
+    # Checks that Goblins initialize in DefendingState
+    def test_initialize_state_manager_goblin(self):
+        entity = self.create_test_entity(Goblin)
+        game_state = self.create_test_game_state()
+
+        entity.initialize_state_manager(game_state)
+
+        self.assertEqual(entity.get_entity_state_name(), "Defending")
+
+    # Initialize State Manager - Skeleton
+    # Checks that Skeletons initialize in DefendingState
+    def test_initialize_state_manager_skeleton(self):
+        entity = self.create_test_entity(Skeleton)
+        game_state = self.create_test_game_state()
+
+        entity.initialize_state_manager(game_state)
+
+        self.assertEqual(entity.get_entity_state_name(), "Defending")
+
+    # Initialize State Manager - Warrior
+    # Checks that Warriors do not receive a state manager
+    def test_initialize_state_manager_warrior(self):
+        entity = self.create_test_entity(Warrior)
+        game_state = self.create_test_game_state()
+
+        entity.initialize_state_manager(game_state)
+
+        self.assertIsNone(entity.get_entity_state_name())
+
+    # Initialize State Manager - Mage
+    # Checks that Mages do not receive a state manager
+    def test_initialize_state_manager_mage(self):
+        entity = self.create_test_entity(Mage)
+        game_state = self.create_test_game_state()
+
+        entity.initialize_state_manager(game_state)
+
+        self.assertIsNone(entity.get_entity_state_name())
+
+    # Initialize State Manager - Preserve Existing State
+    # Checks that reconnecting does not reset the current state
+    def test_initialize_state_manager_preserves_state(self):
+        entity = self.create_test_entity(Goblin)
+        game_state = self.create_test_game_state()
+
+        memento = Entity.StateManagerMemento(state_name="Fleeing")
+
+        entity.restore_state_manager(memento, None)
+        entity.initialize_state_manager(game_state)
+
+        self.assertEqual(entity.get_entity_state_name(), "Fleeing")
+
+    # Get Entity State Name - Uninitialized
+    # Checks that entities without a manager return None
+    def test_get_entity_state_name_uninitialized(self):
+        entity = self.create_test_entity(Goblin)
+
+        self.assertIsNone(entity.get_entity_state_name())
+
+    # Get Entity State Name - Initialized
+    # Checks that the current behavioral state is returned
+    def test_get_entity_state_name_initialized(self):
+        entity = self.create_test_entity(Goblin)
+        game_state = self.create_test_game_state()
+
+        entity.initialize_state_manager(game_state)
+
+        self.assertEqual(entity.get_entity_state_name(), "Defending")
+
+    # Update Entity State - No Manager
+    # Checks that player entities do not update AI states
+    def test_update_entity_state_no_manager(self):
+        entity = self.create_test_entity(Warrior)
+
+        result = entity.update_entity_state()
+
+        self.assertIsNone(result)
+
+    # Update Entity State - Calls Manager Update
+    # Checks that updating an enemy delegates to its state manager
+    def test_update_entity_state_calls_manager(self):
+        entity = self.create_test_entity(Goblin)
+        game_state = self.create_test_game_state()
+
+        entity.initialize_state_manager(game_state)
+
+        # Mock the State Manager update method
+        with patch(
+            "entity.EntityStateManager.update", return_value=True
+        ) as mock_update:
+            result = entity.update_entity_state()
+
+        mock_update.assert_called_once_with()
+        self.assertTrue(result)
+
+    # State Manager Memento - Round Trip
+    # Checks that a saved behavioral state can be restored
+    def test_state_manager_memento_round_trip(self):
+        entity = self.create_test_entity(Goblin)
+        game_state = self.create_test_game_state()
+
+        # Restore an attacking state
+        entity.restore_state_manager(
+            Entity.StateManagerMemento("Attacking"), game_state
+        )
+
+        # Save the current state
+        memento = entity.create_state_manager_memento()
+
+        # Change the state
+        entity.restore_state_manager(
+            Entity.StateManagerMemento("Defending"), game_state
+        )
+
+        # Restore the saved state
+        entity.restore_state_manager(memento, game_state)
+
+        self.assertEqual(entity.get_entity_state_name(), "Attacking")
+
+    # Entity Memento - Includes State Manager
+    # Checks that the full Entity Memento includes behavioral state
+    def test_entity_memento_includes_state_manager(self):
+        game_state = self.create_test_game_state()
+        entity = self.create_spawned_entity(game_state, "goblin")
+
+        memento = entity.create_memento()
+
+        self.assertIsInstance(memento.state_manager, Entity.StateManagerMemento)
+        self.assertEqual(memento.state_manager.state_name, "Defending")
+
+    # Entity Memento - Restore Behavioral State
+    # Checks that restoring an Entity Memento restores AI state
+    def test_entity_memento_restores_state_manager(self):
+        game_state = self.create_test_game_state()
+        entity = self.create_spawned_entity(game_state, "goblin")
+
+        # Set initial state to Attacking
+        entity.restore_state_manager(
+            Entity.StateManagerMemento("Attacking"), game_state
+        )
+
+        # Save full entity Memento
+        memento = entity.create_memento()
+
+        # Change current state to Defending
+        entity.restore_state_manager(
+            Entity.StateManagerMemento("Defending"), game_state
+        )
+
+        # Restore full entity Memento
+        entity.restore(memento)
+
+        self.assertEqual(entity.get_entity_state_name(), "Attacking")
 
 
 if __name__ == "__main__":

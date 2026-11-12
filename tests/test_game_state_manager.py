@@ -30,6 +30,7 @@ import tempfile
 from game_state import GameState
 import json
 import unittest
+from entity import Entity
 from unittest.mock import patch
 from command_manager import CommandManager
 
@@ -73,6 +74,27 @@ class TestGameStateManager(unittest.TestCase):
             "grid": None,
             "entities": [],
         }
+
+    # Create Entity Memento For Testing
+    # Creates a GameState with a spawned entity and returns its Memento
+    # Params: entity_type - str - type of entity to spawn
+    #         state_name - str/None - behavioral state to assign
+    # Returns: GameState.Memento - Memento containing the entity
+    def create_entity_memento(self, entity_type="goblin", state_name=None):
+        game_state = GameState()
+        game_state.create_grid(5, 5)
+
+        # Spawn entity
+        entity_id = game_state.spawn_entity(2, 2, entity_type)
+        entity = game_state.get_entity_from_list(entity_id)
+
+        # Assign a specific behavioral state when requested
+        if state_name is not None:
+            entity.restore_state_manager(
+                Entity.StateManagerMemento(state_name=state_name), game_state
+            )
+
+        return game_state.create_memento(self.command_manager)
 
     # Create Empty Game State Memento
     # Creates a Memento representing a new game state.
@@ -375,6 +397,251 @@ class TestGameStateManager(unittest.TestCase):
             # Test FileNotFoundError
             with self.assertRaises(FileNotFoundError):
                 self.manager.delete_save("missing_save")
+
+    # Test Memento To Data - Goblin Defending
+    # Checks that a Goblin's default behavioral state is serialized
+    def test_memento_to_data_goblin_defending(self):
+        memento = self.create_entity_memento("goblin")
+
+        save_data = self.manager.memento_to_data(memento)
+
+        self.assertEqual(
+            save_data["entities"][0]["state_manager"], {"state_name": "Defending"}
+        )
+
+    # Test Memento To Data - Goblin Attacking
+    # Checks that an Attacking state is serialized
+    def test_memento_to_data_goblin_attacking(self):
+        memento = self.create_entity_memento("goblin", "Attacking")
+
+        save_data = self.manager.memento_to_data(memento)
+
+        self.assertEqual(
+            save_data["entities"][0]["state_manager"]["state_name"], "Attacking"
+        )
+
+    # Test Memento To Data - Goblin Fleeing
+    # Checks that a Fleeing state is serialized
+    def test_memento_to_data_goblin_fleeing(self):
+        memento = self.create_entity_memento("goblin", "Fleeing")
+
+        save_data = self.manager.memento_to_data(memento)
+
+        self.assertEqual(
+            save_data["entities"][0]["state_manager"]["state_name"], "Fleeing"
+        )
+
+    # Test Memento To Data - Skeleton
+    # Checks that Skeleton behavioral states are serialized
+    def test_memento_to_data_skeleton(self):
+        memento = self.create_entity_memento("skeleton", "Attacking")
+
+        save_data = self.manager.memento_to_data(memento)
+
+        self.assertEqual(
+            save_data["entities"][0]["state_manager"]["state_name"], "Attacking"
+        )
+
+    # Test Memento To Data - Warrior
+    # Checks that player entities serialize with no behavioral state
+    def test_memento_to_data_warrior(self):
+        memento = self.create_entity_memento("warrior")
+
+        save_data = self.manager.memento_to_data(memento)
+
+        self.assertEqual(
+            save_data["entities"][0]["state_manager"], {"state_name": None}
+        )
+
+    # Test Memento To Data - Mage
+    # Checks that wrapped Mage Mementos serialize without AI state
+    def test_memento_to_data_mage(self):
+        memento = self.create_entity_memento("mage")
+
+        save_data = self.manager.memento_to_data(memento)
+
+        self.assertEqual(
+            save_data["entities"][0]["state_manager"], {"state_name": None}
+        )
+
+    # Test Memento To Data - JSON Serialization
+    # Checks that behavioral state data can be serialized into JSON
+    def test_memento_to_data_entity_json_serializable(self):
+        memento = self.create_entity_memento("goblin", "Fleeing")
+
+        save_data = self.manager.memento_to_data(memento)
+
+        serialized_data = json.dumps(save_data)
+
+        self.assertIsInstance(serialized_data, str)
+
+        # Verify state is preserved after JSON conversion
+        decoded_data = json.loads(serialized_data)
+
+        self.assertEqual(
+            decoded_data["entities"][0]["state_manager"]["state_name"], "Fleeing"
+        )
+
+    # Test Data To Memento - Defending
+    # Checks that Defending state is reconstructed
+    def test_data_to_memento_defending(self):
+        memento = self.create_entity_memento("goblin")
+        save_data = self.manager.memento_to_data(memento)
+
+        restored_memento = self.manager.data_to_memento(save_data)
+
+        entity_memento = restored_memento.entity_mementos[0]
+
+        self.assertIsInstance(entity_memento.state_manager, Entity.StateManagerMemento)
+        self.assertEqual(entity_memento.state_manager.state_name, "Defending")
+
+    # Test Data To Memento - Attacking
+    # Checks that Attacking state is reconstructed
+    def test_data_to_memento_attacking(self):
+        memento = self.create_entity_memento("goblin", "Attacking")
+        save_data = self.manager.memento_to_data(memento)
+
+        restored_memento = self.manager.data_to_memento(save_data)
+
+        self.assertEqual(
+            restored_memento.entity_mementos[0].state_manager.state_name, "Attacking"
+        )
+
+    # Test Data To Memento - Fleeing
+    # Checks that Fleeing state is reconstructed
+    def test_data_to_memento_fleeing(self):
+        memento = self.create_entity_memento("goblin", "Fleeing")
+        save_data = self.manager.memento_to_data(memento)
+
+        restored_memento = self.manager.data_to_memento(save_data)
+
+        self.assertEqual(
+            restored_memento.entity_mementos[0].state_manager.state_name, "Fleeing"
+        )
+
+    # Test Data To Memento - Skeleton
+    # Checks that Skeleton state is reconstructed
+    def test_data_to_memento_skeleton(self):
+        memento = self.create_entity_memento("skeleton", "Attacking")
+        save_data = self.manager.memento_to_data(memento)
+
+        restored_memento = self.manager.data_to_memento(save_data)
+
+        self.assertEqual(
+            restored_memento.entity_mementos[0].state_manager.state_name, "Attacking"
+        )
+
+    # Test Data To Memento - Warrior
+    # Checks that Warriors restore with no behavioral state
+    def test_data_to_memento_warrior(self):
+        memento = self.create_entity_memento("warrior")
+        save_data = self.manager.memento_to_data(memento)
+
+        restored_memento = self.manager.data_to_memento(save_data)
+
+        self.assertIsNone(restored_memento.entity_mementos[0].state_manager.state_name)
+
+    # Test Data To Memento - Mage
+    # Checks that Mage Mementos preserve their wrapped Entity Memento
+    def test_data_to_memento_mage(self):
+        memento = self.create_entity_memento("mage")
+        save_data = self.manager.memento_to_data(memento)
+
+        restored_memento = self.manager.data_to_memento(save_data)
+
+        mage_memento = restored_memento.entity_mementos[0]
+
+        self.assertIsNone(mage_memento.entity_memento.state_manager.state_name)
+
+    # Test Data To Memento - Missing Enemy State
+    # Checks that older save files default enemies to Defending
+    def test_data_to_memento_missing_enemy_state(self):
+        memento = self.create_entity_memento("goblin")
+        save_data = self.manager.memento_to_data(memento)
+
+        # Simulate an older save file without state_manager
+        del save_data["entities"][0]["state_manager"]
+
+        restored_memento = self.manager.data_to_memento(save_data)
+
+        self.assertEqual(
+            restored_memento.entity_mementos[0].state_manager.state_name, "Defending"
+        )
+
+    # Test Data To Memento - Missing Player State
+    # Checks that older save files restore players without AI state
+    def test_data_to_memento_missing_player_state(self):
+        memento = self.create_entity_memento("warrior")
+        save_data = self.manager.memento_to_data(memento)
+
+        # Simulate an older save file without state_manager
+        del save_data["entities"][0]["state_manager"]
+
+        restored_memento = self.manager.data_to_memento(save_data)
+
+        self.assertIsNone(restored_memento.entity_mementos[0].state_manager.state_name)
+
+    # Test State Manager Memento Round Trip
+    # Checks that a behavioral state survives serialization and reconstruction
+    def test_state_manager_memento_round_trip(self):
+        original_memento = self.create_entity_memento("goblin", "Fleeing")
+
+        # Convert Memento to JSON data
+        save_data = self.manager.memento_to_data(original_memento)
+
+        # Simulate actual JSON serialization
+        json_data = json.loads(json.dumps(save_data))
+
+        # Convert JSON data back into Memento
+        restored_memento = self.manager.data_to_memento(json_data)
+
+        original_state = original_memento.entity_mementos[0].state_manager.state_name
+        restored_state = restored_memento.entity_mementos[0].state_manager.state_name
+
+        self.assertEqual(original_state, restored_state)
+        self.assertEqual(restored_state, "Fleeing")
+
+    # Test Multiple Entity State Managers Round Trip
+    # Checks that each entity preserves its own behavioral state
+    def test_multiple_entity_state_managers_round_trip(self):
+        game_state = GameState()
+        game_state.create_grid(5, 5)
+
+        # Spawn different entity types
+        goblin_id = game_state.spawn_entity(0, 0, "goblin")
+        skeleton_id = game_state.spawn_entity(1, 1, "skeleton")
+        warrior_id = game_state.spawn_entity(2, 2, "warrior")
+        mage_id = game_state.spawn_entity(3, 3, "mage")
+
+        # Assign enemy states
+        goblin = game_state.get_entity_from_list(goblin_id)
+        skeleton = game_state.get_entity_from_list(skeleton_id)
+
+        goblin.restore_state_manager(
+            Entity.StateManagerMemento("Attacking"), game_state
+        )
+        skeleton.restore_state_manager(
+            Entity.StateManagerMemento("Fleeing"), game_state
+        )
+
+        # Create Memento and serialize
+        original_memento = game_state.create_memento(self.command_manager)
+        save_data = self.manager.memento_to_data(original_memento)
+
+        # Simulate JSON save/load
+        json_data = json.loads(json.dumps(save_data))
+        restored_memento = self.manager.data_to_memento(json_data)
+
+        # Extract states, handling Mage's wrapped Memento
+        restored_states = []
+
+        for entity_memento in restored_memento.entity_mementos:
+            if hasattr(entity_memento, "entity_memento"):
+                entity_memento = entity_memento.entity_memento
+
+            restored_states.append(entity_memento.state_manager.state_name)
+
+        self.assertEqual(restored_states, ["Attacking", "Fleeing", None, None])
 
 
 if __name__ == "main":

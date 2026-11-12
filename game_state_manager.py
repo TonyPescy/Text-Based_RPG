@@ -234,6 +234,7 @@ class GameStateManager:
                     else base_memento.attack_type
                 ),
                 "temp_buffs": copy.deepcopy(base_memento.temp_buffs.data),
+                "state_manager": {"state_name": base_memento.state_manager.state_name},
             }
 
             # Counts
@@ -396,6 +397,8 @@ class GameStateManager:
 
                 backpack_items.append(item)
 
+            state_manager_data = entity_data.get("state_manager") or {}
+
             # Reconstruct the base Entity Memento.
             entity_memento = Entity.Memento(
                 entity_id=entity_data["id"],
@@ -414,6 +417,12 @@ class GameStateManager:
                 attack_type=AttackTypes(entity_data["attack_type"]),
                 temp_buffs=Entity.TempBuffsMemento(
                     data=copy.deepcopy(entity_data["temp_buffs"])
+                ),
+                state_manager=Entity.StateManagerMemento(
+                    state_name=state_manager_data.get(
+                        "state_name",
+                        "Defending" if entity_type in ("goblin", "skeleton") else None,
+                    )
                 ),
             )
 

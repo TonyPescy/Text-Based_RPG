@@ -507,6 +507,308 @@ class TestEntityStateManager(unittest.TestCase):
             entity_info, target_info
         )
 
+    # Test move_away_from_target - successful movement
+    def test_move_away_from_target_success(self):
+        manager, game_state, entity_info = self.create_test_manager(position=[3, 3])
+
+        # Create target information
+        target_info = MagicMock()
+        target_info.position = [4, 3]
+
+        # Set flee position
+        game_state.get_flee_position.return_value = [2, 3]
+
+        result = manager.move_away_from_target(target_info)
+
+        self.assertTrue(result)
+
+        game_state.get_flee_position.assert_called_once_with(entity_info, target_info)
+
+        game_state.move_entity.assert_called_once_with(1, 2, 3)
+
+    # Test move_away_from_target - no escape position
+    def test_move_away_from_target_no_escape(self):
+        manager, game_state, entity_info = self.create_test_manager(position=[3, 3])
+
+        target_info = MagicMock()
+        target_info.position = [4, 3]
+
+        # No valid escape tile
+        game_state.get_flee_position.return_value = None
+
+        result = manager.move_away_from_target(target_info)
+
+        self.assertFalse(result)
+        game_state.move_entity.assert_not_called()
+
+    # Test move_away_from_target - flee left
+    def test_move_away_from_target_left(self):
+        manager, game_state, entity_info = self.create_test_manager(position=[3, 3])
+
+        target_info = MagicMock()
+        target_info.position = [4, 3]
+
+        game_state.get_flee_position.return_value = [2, 3]
+
+        result = manager.move_away_from_target(target_info)
+
+        self.assertTrue(result)
+        game_state.move_entity.assert_called_once_with(1, 2, 3)
+
+    # Test move_away_from_target - flee right
+    def test_move_away_from_target_right(self):
+        manager, game_state, entity_info = self.create_test_manager(position=[3, 3])
+
+        target_info = MagicMock()
+        target_info.position = [2, 3]
+
+        game_state.get_flee_position.return_value = [4, 3]
+
+        result = manager.move_away_from_target(target_info)
+
+        self.assertTrue(result)
+        game_state.move_entity.assert_called_once_with(1, 4, 3)
+
+    # Test move_away_from_target - flee upward
+    def test_move_away_from_target_up(self):
+        manager, game_state, entity_info = self.create_test_manager(position=[3, 3])
+
+        target_info = MagicMock()
+        target_info.position = [3, 2]
+
+        game_state.get_flee_position.return_value = [3, 4]
+
+        result = manager.move_away_from_target(target_info)
+
+        self.assertTrue(result)
+        game_state.move_entity.assert_called_once_with(1, 3, 4)
+
+    # Test move_away_from_target - flee downward
+    def test_move_away_from_target_down(self):
+        manager, game_state, entity_info = self.create_test_manager(position=[3, 3])
+
+        target_info = MagicMock()
+        target_info.position = [3, 4]
+
+        game_state.get_flee_position.return_value = [3, 2]
+
+        result = manager.move_away_from_target(target_info)
+
+        self.assertTrue(result)
+        game_state.move_entity.assert_called_once_with(1, 3, 2)
+
+    # Test move_away_from_target - correct entity ID
+    def test_move_away_from_target_correct_entity_id(self):
+        manager, game_state, entity_info = self.create_test_manager(position=[3, 3])
+
+        # Set different entity ID
+        entity_info.id = 5
+
+        target_info = MagicMock()
+        target_info.position = [4, 3]
+
+        game_state.get_flee_position.return_value = [2, 3]
+
+        result = manager.move_away_from_target(target_info)
+
+        self.assertTrue(result)
+        game_state.move_entity.assert_called_once_with(5, 2, 3)
+
+    # Test move_away_from_target - grid boundary
+    def test_move_away_from_target_grid_boundary(self):
+        manager, game_state, entity_info = self.create_test_manager(position=[0, 0])
+
+        target_info = MagicMock()
+        target_info.position = [1, 0]
+
+        # Only valid escape position
+        game_state.get_flee_position.return_value = [0, 1]
+
+        result = manager.move_away_from_target(target_info)
+
+        self.assertTrue(result)
+        game_state.move_entity.assert_called_once_with(1, 0, 1)
+
+    # Test move_away_from_target - speed does not affect movement
+    def test_move_away_from_target_high_speed(self):
+        manager, game_state, entity_info = self.create_test_manager(
+            position=[3, 3], speed=5
+        )
+
+        target_info = MagicMock()
+        target_info.position = [4, 3]
+
+        # Current fleeing logic selects one neighboring tile
+        game_state.get_flee_position.return_value = [2, 3]
+
+        result = manager.move_away_from_target(target_info)
+
+        self.assertTrue(result)
+        game_state.move_entity.assert_called_once_with(1, 2, 3)
+
+    # Test set_game_state - updates GameState reference
+    # Checks that the manager uses the new GameState
+    def test_set_game_state_updates_reference(self):
+        manager, old_game_state, entity_info = self.create_test_manager()
+
+        # Create new GameState
+        new_game_state = MagicMock()
+
+        # Update GameState reference
+        manager.set_game_state(new_game_state)
+
+        # Set distance result on new GameState
+        new_game_state.get_distance_between_entities.return_value = 5
+
+        target_info = MagicMock()
+        target_info.position = [5, 2]
+
+        result = manager.get_distance_to_player(target_info)
+
+        self.assertEqual(result, 5)
+
+        # Verify new GameState was used
+        new_game_state.get_distance_between_entities.assert_called_once_with(
+            entity_info, target_info
+        )
+
+        # Verify old GameState was not used
+        old_game_state.get_distance_between_entities.assert_not_called()
+
+    # Test set_game_state - preserves current state
+    # Checks that changing GameState does not reset behavioral state
+    def test_set_game_state_preserves_current_state(self):
+        manager, game_state, entity_info = self.create_test_manager()
+
+        # Transition to Attacking
+        manager.transition_to(AttackingState())
+
+        self.assertEqual(manager.get_current_state_name(), "Attacking")
+
+        # Replace GameState
+        new_game_state = MagicMock()
+        manager.set_game_state(new_game_state)
+
+        # Behavioral state should remain unchanged
+        self.assertEqual(manager.get_current_state_name(), "Attacking")
+
+    # Test set_game_state - reconnect after None
+    # Checks that a manager created without GameState can reconnect
+    def test_set_game_state_reconnect_after_none(self):
+        entity = MagicMock()
+        entity_info = MagicMock()
+        entity_info.id = 1
+        entity.get_info.return_value = entity_info
+
+        # Create manager without GameState
+        manager = EntityStateManager(entity, None, DefendingState())
+
+        # Reconnect to GameState
+        game_state = MagicMock()
+        manager.set_game_state(game_state)
+
+        game_state.attack_entity.return_value = 10
+
+        result = manager.attack_target(2)
+
+        self.assertEqual(result, 10)
+        game_state.attack_entity.assert_called_once_with(1, 2)
+
+    # Test set_game_state - multiple replacements
+    # Checks that the most recently assigned GameState is used
+    def test_set_game_state_multiple_replacements(self):
+        manager, original_game_state, entity_info = self.create_test_manager()
+
+        first_game_state = MagicMock()
+        second_game_state = MagicMock()
+
+        # Replace GameState twice
+        manager.set_game_state(first_game_state)
+        manager.set_game_state(second_game_state)
+
+        second_game_state.attack_entity.return_value = 8
+
+        result = manager.attack_target(3)
+
+        self.assertEqual(result, 8)
+        second_game_state.attack_entity.assert_called_once_with(1, 3)
+
+        # Previous references should not be used
+        original_game_state.attack_entity.assert_not_called()
+        first_game_state.attack_entity.assert_not_called()
+
+    # Test set_game_state - preserves Fleeing state
+    # Checks that a restored fleeing enemy remains fleeing
+    def test_set_game_state_preserves_fleeing_state(self):
+        entity = MagicMock()
+
+        manager = EntityStateManager(entity, None, FleeingState())
+
+        # Reconnect manager to active GameState
+        game_state = MagicMock()
+        manager.set_game_state(game_state)
+
+        self.assertEqual(manager.get_current_state_name(), "Fleeing")
+
+    # Test set_game_state - move away uses new GameState
+    # Checks that fleeing movement uses the reconnected GameState
+    def test_set_game_state_move_away_uses_new_game_state(self):
+        manager, old_game_state, entity_info = self.create_test_manager(position=[3, 3])
+
+        # Create replacement GameState
+        new_game_state = MagicMock()
+        new_game_state.get_flee_position.return_value = [2, 3]
+
+        manager.set_game_state(new_game_state)
+
+        target_info = MagicMock()
+        target_info.position = [4, 3]
+
+        result = manager.move_away_from_target(target_info)
+
+        self.assertTrue(result)
+
+        # Verify new GameState handles fleeing
+        new_game_state.get_flee_position.assert_called_once_with(
+            entity_info, target_info
+        )
+        new_game_state.move_entity.assert_called_once_with(1, 2, 3)
+
+        # Verify old GameState was not used
+        old_game_state.get_flee_position.assert_not_called()
+        old_game_state.move_entity.assert_not_called()
+
+    # Test move_away_from_target - tuple flee position
+    # Checks that tuple coordinates work correctly
+    def test_move_away_from_target_tuple_position(self):
+        manager, game_state, entity_info = self.create_test_manager(position=[3, 3])
+
+        target_info = MagicMock()
+        target_info.position = [4, 3]
+
+        # GameState returns tuple instead of list
+        game_state.get_flee_position.return_value = (2, 3)
+
+        result = manager.move_away_from_target(target_info)
+
+        self.assertTrue(result)
+        game_state.move_entity.assert_called_once_with(1, 2, 3)
+
+    # Test move_away_from_target - correct target information
+    # Checks that the correct entity information is passed
+    def test_move_away_from_target_correct_target(self):
+        manager, game_state, entity_info = self.create_test_manager(position=[3, 3])
+
+        target_info = MagicMock()
+        target_info.id = 7
+        target_info.position = [4, 3]
+
+        game_state.get_flee_position.return_value = [2, 3]
+
+        manager.move_away_from_target(target_info)
+
+        game_state.get_flee_position.assert_called_once_with(entity_info, target_info)
+
 
 if __name__ == "__main__":
     unittest.main()

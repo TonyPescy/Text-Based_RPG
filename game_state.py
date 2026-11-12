@@ -280,21 +280,40 @@ class GameState:
     # Params:   x/y - ints - positions on grid
     #           entity_type - String - type of entity to spawn
     # Returns: id - int - entity id
+    # Spawn Entity
+    # Spawns entity for game grid
+    # Params: x/y - ints - positions on grid
+    #         entity_type - String - type of entity to spawn
+    # Returns: id - int - entity id
     def spawn_entity(self, x, y, entity_type):
-        # Spawned entity should be a immutable copy of the entity spawned, so that it can be updated without affecting the original entity
+        # Spawn entity on grid
         spawned_entity = self.__grid.spawn_entity(
             int(x), int(y), entity_type, self.__entity_ids_issued
         )
-        # Increment entity_ids_issued to account for new entity
+
+        # Check if entity was created successfully
+        if spawned_entity is None:
+            return None
+
+        # Get newly assigned entity ID
+        entity_id = self.__entity_ids_issued
+
+        # Increment entity IDs issued
         self.__entity_ids_issued += 1
-        # Add to list
-        self.__entity_list.append(
-            spawned_entity
-        )  # append real entity object to list, not copy
-        # Update Entity
-        self.update_entity(self.__entity_ids_issued - 1)
+
+        # Add real entity object to list
+        self.__entity_list.append(spawned_entity)
+
+        # Initialize state manager for enemy entities
+        spawned_entity.initialize_state_manager(self)
+
+        # Update entity stats
+        self.update_entity(entity_id)
+
+        # Mark game as unsaved
         self.mark_as_unsaved()
-        return self.__entity_ids_issued - 1
+
+        return entity_id
 
     # Spawn Loot
     # Spawns loot on game grid
@@ -580,8 +599,9 @@ class GameState:
         self.__map_created = memento.map_created
         self.__turn_number = memento.turn_number
 
-        # get game state manager
-        # gs_manager =
+        # Reconnect state managers after restoring entities
+        for entity in self.__entity_list:
+            entity.reconnect_state_manager(self)
 
         # Restore the Command Manager's history
         # Restore the Command Manager's history if one exists.

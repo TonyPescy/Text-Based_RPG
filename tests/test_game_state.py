@@ -1698,6 +1698,210 @@ class TestGameState(unittest.TestCase):
         self.assertEqual(distance, len(path) - 1)
         self.assertEqual(distance, 6)
 
+    # Test Spawn Entity - Goblin State Manager
+    # Checks that spawning a Goblin initializes DefendingState
+    def test_spawn_entity_goblin_state_manager(self):
+        self.create_test_grid()
+
+        entity_id = self.game_state.spawn_entity(2, 2, "goblin")
+
+        entity = self.game_state.get_entity_from_list(entity_id)
+
+        self.assertIsNotNone(entity)
+        self.assertEqual(entity.get_entity_state_name(), "Defending")
+
+    # Test Spawn Entity - Skeleton State Manager
+    # Checks that spawning a Skeleton initializes DefendingState
+    def test_spawn_entity_skeleton_state_manager(self):
+        self.create_test_grid()
+
+        entity_id = self.game_state.spawn_entity(2, 2, "skeleton")
+
+        entity = self.game_state.get_entity_from_list(entity_id)
+
+        self.assertIsNotNone(entity)
+        self.assertEqual(entity.get_entity_state_name(), "Defending")
+
+    # Test Spawn Entity - Warrior State Manager
+    # Checks that Warriors do not have behavioral states
+    def test_spawn_entity_warrior_no_state_manager(self):
+        self.create_test_grid()
+
+        entity_id = self.game_state.spawn_entity(2, 2, "warrior")
+
+        entity = self.game_state.get_entity_from_list(entity_id)
+
+        self.assertIsNone(entity.get_entity_state_name())
+
+    # Test Spawn Entity - Mage State Manager
+    # Checks that Mages do not have behavioral states
+    def test_spawn_entity_mage_no_state_manager(self):
+        self.create_test_grid()
+
+        entity_id = self.game_state.spawn_entity(2, 2, "mage")
+
+        entity = self.game_state.get_entity_from_list(entity_id)
+
+        self.assertIsNone(entity.get_entity_state_name())
+
+    # Test Spawn Entity - Initializes State Manager
+    # Checks that the new entity receives the current GameState
+    def test_spawn_entity_initializes_state_manager(self):
+        self.create_test_grid()
+
+        with patch.object(
+            ent.Goblin, "initialize_state_manager", autospec=True
+        ) as mock_initialize:
+
+            entity_id = self.game_state.spawn_entity(2, 2, "goblin")
+
+        entity = self.game_state.get_entity_from_list(entity_id)
+
+        mock_initialize.assert_called_once_with(entity, self.game_state)
+
+    # Test Spawn Entity - Updates Entity
+    # Checks that entity stats are updated after spawning
+    def test_spawn_entity_calls_update_entity(self):
+        self.create_test_grid()
+
+        with patch.object(self.game_state, "update_entity") as mock_update:
+
+            entity_id = self.game_state.spawn_entity(2, 2, "goblin")
+
+        self.assertEqual(entity_id, 1)
+        mock_update.assert_called_once_with(1)
+
+    # Test Spawn Entity - Initializes Before Updating
+    # Checks that the state manager is initialized before stats update
+    def test_spawn_entity_initialization_order(self):
+        self.create_test_grid()
+
+        # Track method execution order
+        call_order = []
+
+        original_initialize = ent.Goblin.initialize_state_manager
+
+        def track_initialize(entity, game_state):
+            call_order.append("initialize")
+            return original_initialize(entity, game_state)
+
+        def track_update(entity_id):
+            call_order.append("update")
+
+        with patch.object(
+            ent.Goblin, "initialize_state_manager", track_initialize
+        ), patch.object(self.game_state, "update_entity", side_effect=track_update):
+            self.game_state.spawn_entity(2, 2, "goblin")
+
+        self.assertEqual(call_order, ["initialize", "update"])
+
+    # Test Spawn Entity - Returns Correct ID
+    # Checks that each successful spawn returns its assigned ID
+    def test_spawn_entity_returns_correct_ids(self):
+        self.create_test_grid()
+
+        first_id = self.game_state.spawn_entity(0, 0, "warrior")
+        second_id = self.game_state.spawn_entity(1, 0, "goblin")
+        third_id = self.game_state.spawn_entity(2, 0, "skeleton")
+
+        self.assertEqual(first_id, 1)
+        self.assertEqual(second_id, 2)
+        self.assertEqual(third_id, 3)
+
+    # Test Spawn Entity - Failed Spawn
+    # Checks that a failed Grid spawn returns None
+    def test_spawn_entity_failed_spawn(self):
+        self.create_test_grid()
+
+        # Mock Grid.spawn_entity to fail
+        with patch.object(
+            self.game_state._GameState__grid, "spawn_entity", return_value=None
+        ):
+            result = self.game_state.spawn_entity(2, 2, "goblin")
+
+        self.assertIsNone(result)
+        self.assertFalse(self.game_state.entities_exists())
+
+        # Entity ID counter should remain unchanged
+        self.assertEqual(self.game_state._GameState__entity_ids_issued, 1)
+
+    # Test Spawn Entity - Failed Spawn Preserves ID
+    # Checks that a failed spawn does not consume an entity ID
+    def test_spawn_entity_failed_spawn_preserves_id(self):
+        self.create_test_grid()
+
+        # Force first spawn to fail
+        with patch.object(
+            self.game_state._GameState__grid, "spawn_entity", return_value=None
+        ):
+            failed_id = self.game_state.spawn_entity(0, 0, "goblin")
+
+        # Spawn valid entity afterward
+        successful_id = self.game_state.spawn_entity(1, 1, "warrior")
+
+        self.assertIsNone(failed_id)
+        self.assertEqual(successful_id, 1)
+
+    # Test Spawn Entity - Registers Real Entity
+    # Checks that GameState stores the actual spawned entity
+    def test_spawn_entity_registers_real_entity(self):
+        self.create_test_grid()
+
+        entity_id = self.game_state.spawn_entity(2, 2, "goblin")
+
+        entity = self.game_state.get_entity_from_list(entity_id)
+
+        self.assertIsNotNone(entity)
+        self.assertEqual(entity.get_entity_state_name(), "Defending")
+        self.assertEqual(entity.get_info().position, [2, 2])
+
+    # Test Spawn Entity - Marks Game As Unsaved
+    # Checks that spawning changes the saved-state flag
+    def test_spawn_entity_marks_game_unsaved(self):
+        self.create_test_grid()
+
+        # Simulate saved game
+        self.game_state.mark_as_saved()
+
+        self.assertTrue(self.game_state.get_game_state_info()[2])
+
+        # Spawn entity
+        self.game_state.spawn_entity(2, 2, "goblin")
+
+        # Game should now be unsaved
+        self.assertFalse(self.game_state.get_game_state_info()[2])
+
+    # Test Spawn Entity - Converts String Coordinates
+    # Checks that coordinates are converted to integers
+    def test_spawn_entity_string_coordinates(self):
+        self.create_test_grid()
+
+        entity_id = self.game_state.spawn_entity("2", "3", "goblin")
+
+        entity_info = self.game_state.get_entity_info_from_list(entity_id)
+
+        self.assertEqual(entity_info.position, [2, 3])
+        self.assertTrue(self.game_state.is_grid_tile_occupied(2, 3))
+
+    # Test Spawn Entity - Failed Spawn Preserves Saved Status
+    # Checks that unsuccessful spawning does not mark the game unsaved
+    def test_spawn_entity_failed_spawn_preserves_saved_status(self):
+        self.create_test_grid()
+
+        # Mark game as saved
+        self.game_state.mark_as_saved()
+
+        # Force spawning failure
+        with patch.object(
+            self.game_state._GameState__grid, "spawn_entity", return_value=None
+        ):
+            result = self.game_state.spawn_entity(2, 2, "goblin")
+
+        self.assertIsNone(result)
+
+        # Saved status should remain unchanged
+        self.assertTrue(self.game_state.get_game_state_info()[2])
+
 
 # Run the tests
 if __name__ == "__main__":

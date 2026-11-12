@@ -188,3 +188,38 @@ class EntityStateManager:
         )
 
         return True
+
+    # Move Away From Target
+    # Moves the entity one tile away from the target
+    # Uses GameState to find the best available escape position
+    # Params: target_info - EntityInfo - threatening entity information
+    # Returns: bool - True if movement was successful, False otherwise
+    def move_away_from_target(self, target_info):
+        # Get entity information
+        entity_info = self.get_entity_info()
+
+        # Get best escape position
+        flee_position = self.__game_state.get_flee_position(
+            entity_info,
+            target_info,
+        )
+
+        # No valid escape position found
+        if flee_position is None:
+            return False
+
+        # Move entity to escape position
+        self.__game_state.move_entity(
+            entity_info.id,
+            flee_position[0],
+            flee_position[1],
+        )
+
+        return True
+
+    # Set Game State
+    # Updates the GameState reference used by this manager
+    # Params: game_state - GameState - current game state
+    # Returns: None
+    def set_game_state(self, game_state):
+        self.__game_state = game_state

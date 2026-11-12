@@ -35,6 +35,7 @@ class EntityInfo:
     backpack: tuple
     attack_type: str
     temp_buffs: tuple
+    state_manager: str
 
 
 # Entity class with all methods needed for entities
@@ -75,6 +76,7 @@ class Entity:
         self.__backpack = deepcopy(backpack)
         self.__attack_type = attack_type
         self.__temp_buffs = []  # temp buffs list of dictionarys
+        self.__state_manager = None
 
         # Temp Buffs Structure
         """
@@ -90,6 +92,11 @@ class Entity:
     # Params: None
     # Returns: EntityInfo - all info for current entity
     def get_info(self):
+        if self.__state_manager is not None:
+            temp_state_manager = self.__state_manager.get_current_state_name()
+        else:
+            temp_state_manager = None
+
         return EntityInfo(
             id=self.__id,
             e_type=self.__e_type,
@@ -134,6 +141,7 @@ class Entity:
                 )
                 for buff in self.__temp_buffs
             ),
+            state_manager=temp_state_manager,
         )
 
     # Get Stats End
@@ -567,12 +575,96 @@ class Entity:
     class TempBuffsMemento:
         data: object
 
-    # Get Entity State Name
+    # Memento DataClass for Entity State Manager
+    @dataclass(frozen=True)
+    class StateManagerMemento:
+        state_name: str | None
+
+    # Create State Manager Memento
+    # Saves the current behavioral state of the entity
+    # Params: None
+    # Returns: StateManagerMemento
+    def create_state_manager_memento(self):
+        return Entity.StateManagerMemento(state_name=self.get_entity_state_name())
+
+    # Restore State Manager
+    # Restores the entity's behavioral state
+    # Params: memento - StateManagerMemento - saved state information
+    #         game_state - GameState - current game state
+    # Returns: None
+    def restore_state_manager(self, memento, game_state):
+        if not isinstance(memento, Entity.StateManagerMemento):
+            raise TypeError("Invalid State Manager memento")
+
+        # No behavioral state for player entities
+        if memento.state_name is None:
+            if self.__e_type.lower() in ("goblin", "skeleton"):
+                raise ValueError("Enemy entity is missing behavioral state")
+            self.__state_manager = None
+            return
+
+        # Only enemies should have behavioral states
+        if self.__e_type.lower() not in ("goblin", "skeleton"):
+            raise ValueError("Player entity cannot have behavioral state")
+
+        # Determine state class
+        match memento.state_name:
+            case "Defending":
+                state = DefendingState()
+            case "Attacking":
+                state = AttackingState()
+            case "Fleeing":
+                state = FleeingState()
+            case _:
+                raise ValueError(f"Invalid entity state: {memento.state_name}")
+
+        # Reconstruct state manager
+        self.__state_manager = EntityStateManager(self, game_state, state)
+
+    """# Get Entity State Name
     # Gets the current behavioral state of the entity
     # Params: None
     # Returns: state_name - String - current behavioral state name
     def get_entity_state_name(self):
+        return self.__state_manager.get_current_state_name()"""
+
+    # Initialize Entity State Manager
+    # Creates a state manager for enemy entities
+    # Params: game_state - GameState - current game state
+    # Returns: None
+    def initialize_state_manager(self, game_state):
+        # Only enemies have behavioral states
+        if self.__e_type.lower() not in ("goblin", "skeleton"):
+            return
+
+        # Create state manager if one does not exist
+        if self.__state_manager is None:
+            self.__state_manager = EntityStateManager(
+                self, game_state, DefendingState()
+            )
+        else:
+            # Reconnect existing manager to game state
+            self.__state_manager.set_game_state(game_state)
+
+    # Get Entity State Name
+    # Gets the current behavioral state of the entity
+    # Params: None
+    # Returns: str/None - current state name or None
+    def get_entity_state_name(self):
+        if self.__state_manager is None:
+            return None
+
         return self.__state_manager.get_current_state_name()
+
+    # Update Entity State
+    # Processes the entity's current behavioral state
+    # Params: None
+    # Returns: object - result of the state update
+    def update_entity_state(self):
+        if self.__state_manager is None:
+            return None
+
+        return self.__state_manager.update()
 
     # Create Inventory Memento
     # Creates a memento of the entity's inventory
@@ -675,6 +767,7 @@ class Entity:
         backpack: object
         attack_type: object
         temp_buffs: object
+        state_manager: object
 
     # Create Memento
     # Create entity memento
@@ -695,6 +788,7 @@ class Entity:
             backpack=self.create_backpack_memento(),
             attack_type=deepcopy(self.__attack_type),
             temp_buffs=self.create_temp_buffs_memento(),
+            state_manager=self.create_state_manager_memento(),
         )
 
     # Restore
@@ -717,6 +811,7 @@ class Entity:
         self.restore_backpack(memento.backpack)
         self.__attack_type = memento.attack_type
         self.restore_temp_buffs(memento.temp_buffs)
+        self.restore_state_manager(memento.state_manager, None)
 
         if self.__backpack is None:
             raise ValueError(f"Backpack was not restored for entity {self.__id}")
@@ -728,6 +823,13 @@ class Entity:
     @property
     def id(self):
         return self.__id"""
+
+    # Restore State Manager After Entity Restore
+    # Reconnects behavioral state after loading an entity
+    # Params: game_state - GameState - restored game state
+    # Returns: None
+    def reconnect_state_manager(self, game_state):
+        self.initialize_state_manager(game_state)
 
 
 # Warrior Class extend from Entity class
