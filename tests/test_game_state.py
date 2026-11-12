@@ -1262,6 +1262,442 @@ class TestGameState(unittest.TestCase):
 
         self.assertIsNone(result)
 
+    # Test get_distance_between_entities - no grid
+    def test_get_distance_between_entities_no_grid(self):
+        entity_info = MagicMock()
+        entity_info.position = [1, 2]
+
+        target_info = MagicMock()
+        target_info.position = [4, 2]
+
+        result = self.game_state.get_distance_between_entities(entity_info, target_info)
+
+        self.assertIsNone(result)
+
+    # Test get_distance_between_entities - horizontal path
+    def test_get_distance_between_entities_horizontal(self):
+        self.create_test_grid(7, 7)
+
+        self.game_state.spawn_entity(1, 2, "goblin")
+        self.game_state.spawn_entity(5, 2, "warrior")
+
+        entity_info = self.game_state.get_entity_info_from_list(1)
+        target_info = self.game_state.get_entity_info_from_list(2)
+
+        result = self.game_state.get_distance_between_entities(entity_info, target_info)
+
+        self.assertEqual(result, 4)
+
+    # Test get_distance_between_entities - diagonal positions
+    def test_get_distance_between_entities_diagonal(self):
+        self.create_test_grid(7, 7)
+
+        self.game_state.spawn_entity(1, 1, "goblin")
+        self.game_state.spawn_entity(4, 4, "warrior")
+
+        entity_info = self.game_state.get_entity_info_from_list(1)
+        target_info = self.game_state.get_entity_info_from_list(2)
+
+        result = self.game_state.get_distance_between_entities(entity_info, target_info)
+
+        self.assertEqual(result, 6)
+
+    # Test get_distance_between_entities - path around wall
+    def test_get_distance_between_entities_around_wall(self):
+        self.create_test_grid(7, 7)
+
+        self.game_state.spawn_entity(1, 2, "goblin")
+        self.game_state.spawn_entity(5, 2, "warrior")
+
+        # Block direct path
+        self.game_state.set_game_grid_tile(3, 2, "wall")
+
+        entity_info = self.game_state.get_entity_info_from_list(1)
+        target_info = self.game_state.get_entity_info_from_list(2)
+
+        result = self.game_state.get_distance_between_entities(entity_info, target_info)
+
+        self.assertEqual(result, 6)
+
+    # Test get_distance_between_entities - unreachable target
+    def test_get_distance_between_entities_unreachable(self):
+        self.create_test_grid(7, 7)
+
+        self.game_state.spawn_entity(1, 1, "goblin")
+        self.game_state.spawn_entity(3, 3, "warrior")
+
+        # Surround target with walls
+        self.game_state.set_game_grid_tile(2, 3, "wall")
+        self.game_state.set_game_grid_tile(4, 3, "wall")
+        self.game_state.set_game_grid_tile(3, 2, "wall")
+        self.game_state.set_game_grid_tile(3, 4, "wall")
+
+        entity_info = self.game_state.get_entity_info_from_list(1)
+        target_info = self.game_state.get_entity_info_from_list(2)
+
+        result = self.game_state.get_distance_between_entities(entity_info, target_info)
+
+        self.assertIsNone(result)
+
+    # Test get_distance_between_entities - occupied tile blocks path
+    def test_get_distance_between_entities_occupied_corridor(self):
+        self.create_test_grid(7, 7)
+
+        self.game_state.spawn_entity(1, 2, "goblin")
+        self.game_state.spawn_entity(5, 2, "warrior")
+        self.game_state.spawn_entity(3, 2, "skeleton")
+
+        # Create corridor
+        for x in range(7):
+            self.game_state.set_game_grid_tile(x, 1, "wall")
+            self.game_state.set_game_grid_tile(x, 3, "wall")
+
+        entity_info = self.game_state.get_entity_info_from_list(1)
+        target_info = self.game_state.get_entity_info_from_list(2)
+
+        result = self.game_state.get_distance_between_entities(entity_info, target_info)
+
+        self.assertIsNone(result)
+
+    # Test get_flee_position - no grid
+    def test_get_flee_position_no_grid(self):
+        entity_info = MagicMock()
+        entity_info.position = [2, 2]
+
+        target_info = MagicMock()
+        target_info.position = [3, 2]
+
+        result = self.game_state.get_flee_position(entity_info, target_info)
+
+        self.assertIsNone(result)
+
+    # Test get_flee_position - flee left
+    def test_get_flee_position_left(self):
+        self.create_test_grid(7, 7)
+
+        self.game_state.spawn_entity(3, 3, "goblin")
+        self.game_state.spawn_entity(4, 3, "warrior")
+
+        entity_info = self.game_state.get_entity_info_from_list(1)
+        target_info = self.game_state.get_entity_info_from_list(2)
+
+        # Block alternative escape routes
+        self.game_state.set_game_grid_tile(3, 2, "wall")
+        self.game_state.set_game_grid_tile(3, 4, "wall")
+
+        result = self.game_state.get_flee_position(entity_info, target_info)
+
+        self.assertEqual(result, [2, 3])
+
+    # Test get_flee_position - flee right
+    def test_get_flee_position_right(self):
+        self.create_test_grid(7, 7)
+
+        self.game_state.spawn_entity(3, 3, "goblin")
+        self.game_state.spawn_entity(2, 3, "warrior")
+
+        entity_info = self.game_state.get_entity_info_from_list(1)
+        target_info = self.game_state.get_entity_info_from_list(2)
+
+        # Block alternative escape routes
+        self.game_state.set_game_grid_tile(3, 2, "wall")
+        self.game_state.set_game_grid_tile(3, 4, "wall")
+
+        result = self.game_state.get_flee_position(entity_info, target_info)
+
+        self.assertEqual(result, [4, 3])
+
+    # Test get_flee_position - flee upward
+    def test_get_flee_position_up(self):
+        self.create_test_grid(7, 7)
+
+        self.game_state.spawn_entity(3, 3, "goblin")
+        self.game_state.spawn_entity(3, 2, "warrior")
+
+        entity_info = self.game_state.get_entity_info_from_list(1)
+        target_info = self.game_state.get_entity_info_from_list(2)
+
+        result = self.game_state.get_flee_position(entity_info, target_info)
+
+        self.assertEqual(result, [3, 4])
+
+    # Test get_flee_position - flee downward
+    def test_get_flee_position_down(self):
+        self.create_test_grid(7, 7)
+
+        self.game_state.spawn_entity(3, 3, "goblin")
+        self.game_state.spawn_entity(3, 4, "warrior")
+
+        entity_info = self.game_state.get_entity_info_from_list(1)
+        target_info = self.game_state.get_entity_info_from_list(2)
+
+        result = self.game_state.get_flee_position(entity_info, target_info)
+
+        self.assertEqual(result, [3, 2])
+
+    # Test get_flee_position - surrounded by walls
+    def test_get_flee_position_surrounded_by_walls(self):
+        self.create_test_grid(7, 7)
+
+        self.game_state.spawn_entity(3, 3, "goblin")
+        self.game_state.spawn_entity(5, 5, "warrior")
+
+        # Surround monster with walls
+        self.game_state.set_game_grid_tile(2, 3, "wall")
+        self.game_state.set_game_grid_tile(4, 3, "wall")
+        self.game_state.set_game_grid_tile(3, 2, "wall")
+        self.game_state.set_game_grid_tile(3, 4, "wall")
+
+        entity_info = self.game_state.get_entity_info_from_list(1)
+        target_info = self.game_state.get_entity_info_from_list(2)
+
+        result = self.game_state.get_flee_position(entity_info, target_info)
+
+        self.assertIsNone(result)
+
+    # Test get_flee_position - occupied escape tile
+    def test_get_flee_position_occupied_tile(self):
+        self.create_test_grid(7, 7)
+
+        self.game_state.spawn_entity(3, 3, "goblin")
+        self.game_state.spawn_entity(4, 3, "warrior")
+
+        # Occupy preferred escape tile
+        self.game_state.spawn_entity(2, 3, "skeleton")
+
+        # Block other escape routes
+        self.game_state.set_game_grid_tile(3, 2, "wall")
+        self.game_state.set_game_grid_tile(3, 4, "wall")
+
+        entity_info = self.game_state.get_entity_info_from_list(1)
+        target_info = self.game_state.get_entity_info_from_list(2)
+
+        result = self.game_state.get_flee_position(entity_info, target_info)
+
+        self.assertIsNone(result)
+
+    # Test get_flee_position - alternative escape tile
+    def test_get_flee_position_alternative_tile(self):
+        self.create_test_grid(7, 7)
+
+        self.game_state.spawn_entity(3, 3, "goblin")
+        self.game_state.spawn_entity(4, 3, "warrior")
+
+        # Block left escape route
+        self.game_state.set_game_grid_tile(2, 3, "wall")
+
+        entity_info = self.game_state.get_entity_info_from_list(1)
+        target_info = self.game_state.get_entity_info_from_list(2)
+
+        result = self.game_state.get_flee_position(entity_info, target_info)
+
+        # Both vertical directions increase distance
+        self.assertIn(result, [[3, 2], [3, 4]])
+
+    # Test get_flee_position - does not move closer
+    def test_get_flee_position_no_better_tile(self):
+        self.create_test_grid(7, 7)
+
+        self.game_state.spawn_entity(0, 0, "goblin")
+        self.game_state.spawn_entity(1, 1, "warrior")
+
+        # Block both possible escape tiles
+        self.game_state.set_game_grid_tile(1, 0, "wall")
+        self.game_state.set_game_grid_tile(0, 1, "wall")
+
+        entity_info = self.game_state.get_entity_info_from_list(1)
+        target_info = self.game_state.get_entity_info_from_list(2)
+
+        result = self.game_state.get_flee_position(entity_info, target_info)
+
+        self.assertIsNone(result)
+
+    # Test get_flee_position - stays within grid bounds
+    def test_get_flee_position_grid_boundary(self):
+        self.create_test_grid(7, 7)
+
+        self.game_state.spawn_entity(0, 0, "goblin")
+        self.game_state.spawn_entity(1, 0, "warrior")
+
+        entity_info = self.game_state.get_entity_info_from_list(1)
+        target_info = self.game_state.get_entity_info_from_list(2)
+
+        result = self.game_state.get_flee_position(entity_info, target_info)
+
+        self.assertEqual(result, [0, 1])
+
+    # Test get_shortest_path_between_entities - no grid
+    def test_get_shortest_path_between_entities_no_grid(self):
+        entity_info = MagicMock()
+        entity_info.position = [1, 2]
+
+        target_info = MagicMock()
+        target_info.position = [4, 2]
+
+        result = self.game_state.get_shortest_path_between_entities(
+            entity_info, target_info
+        )
+
+        self.assertIsNone(result)
+
+    # Test get_shortest_path_between_entities - horizontal path
+    def test_get_shortest_path_between_entities_horizontal(self):
+        self.create_test_grid(7, 7)
+
+        self.game_state.spawn_entity(1, 2, "goblin")
+        self.game_state.spawn_entity(5, 2, "warrior")
+
+        entity_info = self.game_state.get_entity_info_from_list(1)
+        target_info = self.game_state.get_entity_info_from_list(2)
+
+        result = self.game_state.get_shortest_path_between_entities(
+            entity_info, target_info
+        )
+
+        expected_path = [
+            (1, 2),
+            (2, 2),
+            (3, 2),
+            (4, 2),
+            (5, 2),
+        ]
+
+        self.assertEqual(result, expected_path)
+
+    # Test get_shortest_path_between_entities - diagonal path
+    def test_get_shortest_path_between_entities_diagonal(self):
+        self.create_test_grid(7, 7)
+
+        self.game_state.spawn_entity(1, 1, "goblin")
+        self.game_state.spawn_entity(4, 4, "warrior")
+
+        entity_info = self.game_state.get_entity_info_from_list(1)
+        target_info = self.game_state.get_entity_info_from_list(2)
+
+        result = self.game_state.get_shortest_path_between_entities(
+            entity_info, target_info
+        )
+
+        self.assertIsNotNone(result)
+        self.assertEqual(result[0], (1, 1))
+        self.assertEqual(result[-1], (4, 4))
+        self.assertEqual(len(result), 7)
+
+    # Test get_shortest_path_between_entities - around wall
+    def test_get_shortest_path_between_entities_around_wall(self):
+        self.create_test_grid(7, 7)
+
+        self.game_state.spawn_entity(1, 2, "goblin")
+        self.game_state.spawn_entity(5, 2, "warrior")
+
+        # Block direct path
+        self.game_state.set_game_grid_tile(3, 2, "wall")
+
+        entity_info = self.game_state.get_entity_info_from_list(1)
+        target_info = self.game_state.get_entity_info_from_list(2)
+
+        result = self.game_state.get_shortest_path_between_entities(
+            entity_info, target_info
+        )
+
+        self.assertIsNotNone(result)
+        self.assertEqual(result[0], (1, 2))
+        self.assertEqual(result[-1], (5, 2))
+        self.assertEqual(len(result), 7)
+        self.assertNotIn((3, 2), result)
+
+    # Test get_shortest_path_between_entities - unreachable target
+    def test_get_shortest_path_between_entities_unreachable(self):
+        self.create_test_grid(7, 7)
+
+        self.game_state.spawn_entity(1, 1, "goblin")
+        self.game_state.spawn_entity(3, 3, "warrior")
+
+        # Surround target with walls
+        self.game_state.set_game_grid_tile(2, 3, "wall")
+        self.game_state.set_game_grid_tile(4, 3, "wall")
+        self.game_state.set_game_grid_tile(3, 2, "wall")
+        self.game_state.set_game_grid_tile(3, 4, "wall")
+
+        entity_info = self.game_state.get_entity_info_from_list(1)
+        target_info = self.game_state.get_entity_info_from_list(2)
+
+        result = self.game_state.get_shortest_path_between_entities(
+            entity_info, target_info
+        )
+
+        self.assertIsNone(result)
+
+    # Test get_shortest_path_between_entities - occupied corridor
+    def test_get_shortest_path_between_entities_occupied_corridor(self):
+        self.create_test_grid(7, 7)
+
+        self.game_state.spawn_entity(1, 2, "goblin")
+        self.game_state.spawn_entity(5, 2, "warrior")
+        self.game_state.spawn_entity(3, 2, "skeleton")
+
+        # Create corridor
+        for x in range(7):
+            self.game_state.set_game_grid_tile(x, 1, "wall")
+            self.game_state.set_game_grid_tile(x, 3, "wall")
+
+        entity_info = self.game_state.get_entity_info_from_list(1)
+        target_info = self.game_state.get_entity_info_from_list(2)
+
+        result = self.game_state.get_shortest_path_between_entities(
+            entity_info, target_info
+        )
+
+        self.assertIsNone(result)
+
+    # Test get_shortest_path_between_entities - occupied target
+    def test_get_shortest_path_between_entities_occupied_target(self):
+        self.create_test_grid(7, 7)
+
+        self.game_state.spawn_entity(1, 2, "goblin")
+        self.game_state.spawn_entity(4, 2, "warrior")
+
+        entity_info = self.game_state.get_entity_info_from_list(1)
+        target_info = self.game_state.get_entity_info_from_list(2)
+
+        result = self.game_state.get_shortest_path_between_entities(
+            entity_info, target_info
+        )
+
+        expected_path = [
+            (1, 2),
+            (2, 2),
+            (3, 2),
+            (4, 2),
+        ]
+
+        self.assertEqual(result, expected_path)
+
+    # Test get_shortest_path_between_entities - distance consistency
+    def test_get_shortest_path_between_entities_matches_distance(self):
+        self.create_test_grid(7, 7)
+
+        self.game_state.spawn_entity(1, 2, "goblin")
+        self.game_state.spawn_entity(5, 2, "warrior")
+
+        # Place obstacle
+        self.game_state.set_game_grid_tile(3, 2, "wall")
+
+        entity_info = self.game_state.get_entity_info_from_list(1)
+        target_info = self.game_state.get_entity_info_from_list(2)
+
+        path = self.game_state.get_shortest_path_between_entities(
+            entity_info, target_info
+        )
+
+        distance = self.game_state.get_distance_between_entities(
+            entity_info, target_info
+        )
+
+        self.assertIsNotNone(path)
+        self.assertEqual(distance, len(path) - 1)
+        self.assertEqual(distance, 6)
+
 
 # Run the tests
 if __name__ == "__main__":

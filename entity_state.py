@@ -11,6 +11,12 @@ Purpose: Houses all state classes and methods.
 """
 
 from abc import ABC, abstractmethod
+from domain_library import AttackTypes, MELEE_RANGE, RANGED_RANGE
+
+# Constants
+DETECTION_RANGE = 8  # Entities will detect players up to 8 tiles away
+FLEE_HEALTH_THRESHOLD = 0.25  # Threshold for when entities will start fleeing
+RECOVERED_HEALTH_THRESHOLD = 0.5  # Threshold for when entities wil return to defending
 
 
 # Entity State Class
@@ -60,23 +66,25 @@ class DefendingState(EntityState):
         pass
 
     # Update
-    # Executes defending behavior and checks for nearby threats
-    # Params: context - EntityStateManager - manager handling the entity's state transitions
-    # Returns: None
+    # Checks for nearby players and transitions to attacking
+    # Params: context - EntityStateManager - entity state manager
+    # Returns: String - action performed
     def update(self, context):
+        # Get entity information
         entity_info = context.get_entity_info()
-        # Get nearest player
+
+        # Find nearest player
         player = context.get_nearest_player()
 
         # No players found
         if player is None:
-            return f"Entity {entity_info.id} is Defending!"
+            return "Defending"
 
         # Get distance to player
         distance = context.get_distance_to_player(player)
 
-        # Check detection range
-        if distance <= int(entity_info.speed):
+        # Player is within detection range
+        if distance is not None and distance <= DETECTION_RANGE:
             context.transition_to(AttackingState())
             return "Defending -> Attacking"
 
@@ -110,12 +118,12 @@ class AttackingState(EntityState):
     # Update
     # Executes attacking behavior and checks for state transition triggers
     # Params: context - EntityStateManager - manager handling the entity's state transitions
-    # Returns: None
+    # Returns: String - action performed
     def update(self, context):
         # Get entity information
         entity_info = context.get_entity_info()
 
-        # Check health percentage
+        # Calculate health percentage
         health_percentage = (
             entity_info.health / entity_info.max_health
             if entity_info.max_health > 0
@@ -123,7 +131,7 @@ class AttackingState(EntityState):
         )
 
         # Transition to fleeing if health is low
-        if health_percentage < 0.25:
+        if health_percentage < FLEE_HEALTH_THRESHOLD:
             context.transition_to(FleeingState())
             return "Attacking -> Fleeing"
 
@@ -135,22 +143,35 @@ class AttackingState(EntityState):
             context.transition_to(DefendingState())
             return "Attacking -> Defending"
 
-        # Get distance
-        distance = context.get_distance_to_player(player)
+        # Get movement distance using A*
+        movement_distance = context.get_distance_to_player(player)
 
-        # Target too far away
-        if distance > entity_info.speed:
-            context.transition_to(DefendingState())
-            return "Attacking -> Defending"
+        # Get attack distance using Manhattan distance
+        attack_distance = abs(entity_info.position[0] - player.position[0]) + abs(
+            entity_info.position[1] - player.position[1]
+        )
 
-        # Target within attack range
-        if distance <= 1:
+        # Determine attack range
+        if entity_info.attack_type == AttackTypes.RANGED:
+            attack_range = RANGED_RANGE
+        else:
+            attack_range = MELEE_RANGE
+
+        # Attack if target is within attack range
+        if attack_distance <= attack_range:
             context.attack_target(player.id)
             return "Attack"
 
+        # Target is unreachable or outside detection range
+        if movement_distance is None or movement_distance > DETECTION_RANGE:
+            context.transition_to(DefendingState())
+            return "Attacking -> Defending"
+
         # Move toward target
-        context.move_toward_target(player)
-        return "Move"
+        if context.move_toward_target(player):
+            return "Move"
+
+        return "Attacking"
 
     # Exit
     # Performs cleanup when the entity leaves the attacking state
@@ -180,7 +201,7 @@ class FleeingState(EntityState):
     # Update
     # Executes fleeing behavior and checks whether the entity is safe
     # Params: context - EntityStateManager - manager handling the entity's state transitions
-    # Returns: None
+    # Returns: String - action performed
     def update(self, context):
         # Get entity information
         entity_info = context.get_entity_info()
@@ -195,12 +216,18 @@ class FleeingState(EntityState):
             else 0
         )
 
-        # Return to defending when recovered and safe
-        if health_percentage >= 0.50:
-            if (
-                player is None
-                or context.get_distance_to_player(player) > entity_info.speed
-            ):
+        # Check whether monster has recovered
+        if health_percentage >= RECOVERED_HEALTH_THRESHOLD:
+            # No player found
+            if player is None:
+                context.transition_to(DefendingState())
+                return "Fleeing -> Defending"
+
+            # Get distance to player
+            distance = context.get_distance_to_player(player)
+
+            # Player is outside detection range
+            if distance is None or distance > DETECTION_RANGE:
                 context.transition_to(DefendingState())
                 return "Fleeing -> Defending"
 
@@ -208,10 +235,11 @@ class FleeingState(EntityState):
         if player is None:
             return "Fleeing"
 
-        # Move away from nearest player
-        context.move_away_from_target(player)
+        # Move away from player
+        if context.move_away_from_target(player):
+            return "Flee"
 
-        return "Flee"
+        return "Fleeing"
 
     # Exit
     # Performs cleanup when the entity leaves the fleeing state

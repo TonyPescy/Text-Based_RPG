@@ -708,3 +708,72 @@ class GameState:
 
         # Return nearest reachable player information
         return nearest_player
+
+    # Get Path Distance Between Entities
+    # Gets the shortest path distance between two entities
+    # Params: entity_info - EntityInfo - starting entity
+    #         target_info - EntityInfo - target entity
+    # Returns: distance - int/None - shortest distance or None
+    def get_distance_between_entities(self, entity_info, target_info):
+        if self.__grid is None:
+            return None
+
+        return self.__grid.get_path_distance(
+            entity_info.position,
+            target_info.position,
+        )
+
+    # Get Flee Position
+    # Finds a neighboring tile that increases distance from a target
+    # Params: entity_info - EntityInfo - fleeing entity
+    #         target_info - EntityInfo - threatening entity
+    # Returns: position - list/None - best escape position
+    def get_flee_position(self, entity_info, target_info):
+        # Check grid exists
+        if self.__grid is None:
+            return None
+
+        # Get neighboring tiles
+        neighbors = self.__grid.get_neighbors(entity_info.position)
+
+        # Current distance from player
+        current_distance = abs(entity_info.position[0] - target_info.position[0]) + abs(
+            entity_info.position[1] - target_info.position[1]
+        )
+
+        best_position = None
+        best_distance = current_distance
+
+        # Check each neighboring tile
+        for x, y in neighbors:
+            # Skip occupied tiles
+            if self.__grid.is_occupied(x, y):
+                continue
+
+            # Calculate distance from player
+            distance = abs(x - target_info.position[0]) + abs(
+                y - target_info.position[1]
+            )
+
+            # Check if tile increases distance
+            if distance > best_distance:
+                best_distance = distance
+                best_position = [x, y]
+
+        return best_position
+
+    # Get Shortest Path Between Entities
+    # Gets the shortest reachable path between two entities
+    # Params: entity_info - EntityInfo - starting entity information
+    #         target_info - EntityInfo - target entity information
+    # Returns: path - list/None - shortest path or None if unreachable
+    def get_shortest_path_between_entities(self, entity_info, target_info):
+        # Check grid exists
+        if self.__grid is None:
+            return None
+
+        # Get shortest path
+        return self.__grid.get_shortest_path(
+            entity_info.position,
+            target_info.position,
+        )

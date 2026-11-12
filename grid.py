@@ -444,11 +444,24 @@ class Grid:
         self.__grid = restored_grid
 
     # Get Path Distance
-    # Finds the shortest reachable distance between two positions using A*
+    # Gets the shortest reachable distance between two positions
+    # Params: start_position - list - starting coordinates
+    #         target_position - list - target coordinates
+    # Returns: distance - int/None - shortest distance or None
+    def get_path_distance(self, start_position, target_position):
+        path = self.get_shortest_path(start_position, target_position)
+
+        if path is None:
+            return None
+
+        return len(path) - 1
+
+    # Get Shortest Path
+    # Finds the shortest reachable path between two positions using A*
     # Params: start_position - list - starting [x, y] coordinates
     #         target_position - list - target [x, y] coordinates
-    # Returns: distance - int/None - shortest path distance or None if unreachable
-    def get_path_distance(self, start_position, target_position):
+    # Returns: path - list/None - shortest path or None if unreachable
+    def get_shortest_path(self, start_position, target_position):
         # Get starting coordinates
         start_x = int(start_position[0])
         start_y = int(start_position[1])
@@ -473,21 +486,22 @@ class Grid:
         # Initialize priority queue
         open_tile_list = []
 
+        # Calculate initial heuristic
+        heuristic = Grid.manhattan_distance_calculator(
+            target_x, start_x, target_y, start_y
+        )
+
         # Add starting position
         heapq.heappush(
             open_tile_list,
-            (
-                Grid.manhattan_distance_calculator(
-                    target_x, start_x, target_y, start_y
-                ),
-                0,
-                start_x,
-                start_y,
-            ),
+            (heuristic, 0, start_x, start_y),
         )
 
         # Store shortest known distances
         distances = {(start_x, start_y): 0}
+
+        # Store parent positions for path reconstruction
+        came_from = {}
 
         # Search for shortest path
         while open_tile_list:
@@ -499,7 +513,17 @@ class Grid:
 
             # Target reached
             if x == target_x and y == target_y:
-                return distance
+                # Reconstruct path from target to start
+                path = [(x, y)]
+
+                while (x, y) in came_from:
+                    x, y = came_from[(x, y)]
+                    path.append((x, y))
+
+                # Reverse path to start -> target
+                path.reverse()
+
+                return path
 
             # Get valid neighbors (excludes walls)
             neighbors = self.get_neighbors([x, y])
@@ -519,6 +543,9 @@ class Grid:
 
                 # Update shortest distance
                 distances[(next_x, next_y)] = new_distance
+
+                # Store previous position
+                came_from[(next_x, next_y)] = (x, y)
 
                 # Calculate A* priority
                 priority = new_distance + Grid.manhattan_distance_calculator(

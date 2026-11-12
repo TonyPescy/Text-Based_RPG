@@ -10,6 +10,9 @@ Filename: entity_state_manager.py
 Purpose: Houses all functions necessary for proper entity state management in the game
 """
 
+# Imports
+from domain_library import AttackTypes
+
 
 # Entity State Manager
 class EntityStateManager:
@@ -96,3 +99,92 @@ class EntityStateManager:
     # Returns: player_info - EntityInfo | None - nearest player information
     def get_nearest_player(self):
         return self.__game_state.get_nearest_player(self.__entity.get_info())
+
+    # Get Distance To Player
+    # Gets the shortest reachable distance to the target player
+    # Params: player_info - EntityInfo - target player
+    # Returns: distance - int/None - distance or None if unreachable
+    def get_distance_to_player(self, player_info):
+        entity_info = self.get_entity_info()
+
+        return self.__game_state.get_distance_between_entities(
+            entity_info,
+            player_info,
+        )
+
+    # Attack Target
+    # Makes the entity attack another entity
+    # Params: target_id - int - target entity ID
+    # Returns: damage - int - damage dealt
+    def attack_target(self, target_id):
+        entity_info = self.get_entity_info()
+
+        return self.__game_state.attack_entity(
+            entity_info.id,
+            target_id,
+        )
+
+    # Move Toward Target
+    # Moves the entity toward its target using A* pathfinding
+    # Stops when within attack range or movement speed is exhausted
+    # Params: target_info - EntityInfo - target player information
+    # Returns: bool - True if movement was successful, False otherwise
+    def move_toward_target(self, target_info):
+        # Get entity information
+        entity_info = self.get_entity_info()
+
+        # Get shortest path to target
+        path = self.__game_state.get_shortest_path_between_entities(
+            entity_info,
+            target_info,
+        )
+
+        # Check if path exists
+        if path is None or len(path) < 2:
+            return False
+
+        # Determine attack range
+        if entity_info.attack_type == AttackTypes.RANGED:
+            attack_range = 3
+        else:
+            attack_range = 1
+
+        # Get maximum movement distance
+        movement_speed = max(0, int(entity_info.speed))
+
+        # Track best position
+        best_position = None
+
+        # Check each tile along path
+        for step in range(1, min(movement_speed, len(path) - 1) + 1):
+            # Get position along path
+            next_x, next_y = path[step]
+
+            # Stop before occupied tile
+            if self.__game_state.is_grid_tile_occupied(next_x, next_y):
+                break
+
+            # Update best position
+            best_position = [next_x, next_y]
+
+            # Calculate attack distance from this tile
+            attack_distance = abs(next_x - target_info.position[0]) + abs(
+                next_y - target_info.position[1]
+            )
+
+            # Stop once within attack range
+            if attack_distance <= attack_range:
+                break
+
+        # No valid movement found
+        if best_position is None:
+            return False
+
+        # Move entity to selected position
+        self.__game_state.move_entity(
+            entity_info.id,
+            best_position[0],
+            best_position[1],
+        )
+
+        return True

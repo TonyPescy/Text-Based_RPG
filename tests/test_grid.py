@@ -1099,6 +1099,298 @@ class TestGrid(unittest.TestCase):
             4,
         )
 
+    # Test get_shortest_path - same position
+    def test_get_shortest_path_same_position(self):
+        test_grid = self.create_test_grid(7, 7)
+
+        result = test_grid.get_shortest_path([2, 2], [2, 2])
+
+        self.assertEqual(result, [(2, 2)])
+
+    # Test get_shortest_path - horizontal path
+    def test_get_shortest_path_horizontal(self):
+        test_grid = self.create_test_grid(7, 7)
+
+        result = test_grid.get_shortest_path([1, 2], [5, 2])
+
+        expected_path = [
+            (1, 2),
+            (2, 2),
+            (3, 2),
+            (4, 2),
+            (5, 2),
+        ]
+
+        self.assertEqual(result, expected_path)
+
+    # Test get_shortest_path - vertical path
+    def test_get_shortest_path_vertical(self):
+        test_grid = self.create_test_grid(7, 7)
+
+        result = test_grid.get_shortest_path([2, 1], [2, 5])
+
+        expected_path = [
+            (2, 1),
+            (2, 2),
+            (2, 3),
+            (2, 4),
+            (2, 5),
+        ]
+
+        self.assertEqual(result, expected_path)
+
+    # Test get_shortest_path - diagonal positions
+    def test_get_shortest_path_diagonal(self):
+        test_grid = self.create_test_grid(7, 7)
+
+        result = test_grid.get_shortest_path([1, 1], [4, 4])
+
+        # Multiple shortest paths are possible
+        self.assertIsNotNone(result)
+        self.assertEqual(result[0], (1, 1))
+        self.assertEqual(result[-1], (4, 4))
+        self.assertEqual(len(result), 7)
+
+        # Verify each movement is one tile
+        for index in range(len(result) - 1):
+            x1, y1 = result[index]
+            x2, y2 = result[index + 1]
+
+            self.assertEqual(abs(x2 - x1) + abs(y2 - y1), 1)
+
+    # Test get_shortest_path - path around wall
+    def test_get_shortest_path_around_wall(self):
+        test_grid = self.create_test_grid(7, 7)
+
+        # Place wall between starting position and target
+        test_grid.set_tile(3, 2, "wall")
+
+        result = test_grid.get_shortest_path([1, 2], [5, 2])
+
+        # Shortest path requires six movements
+        self.assertIsNotNone(result)
+        self.assertEqual(result[0], (1, 2))
+        self.assertEqual(result[-1], (5, 2))
+        self.assertEqual(len(result), 7)
+
+        # Ensure path avoids wall
+        self.assertNotIn((3, 2), result)
+
+    # Test get_shortest_path - target surrounded by walls
+    def test_get_shortest_path_unreachable(self):
+        test_grid = self.create_test_grid(7, 7)
+
+        # Surround target with walls
+        test_grid.set_tile(2, 3, "wall")
+        test_grid.set_tile(4, 3, "wall")
+        test_grid.set_tile(3, 2, "wall")
+        test_grid.set_tile(3, 4, "wall")
+
+        result = test_grid.get_shortest_path([1, 1], [3, 3])
+
+        self.assertIsNone(result)
+
+    # Test get_shortest_path - target is wall
+    def test_get_shortest_path_target_wall(self):
+        test_grid = self.create_test_grid(7, 7)
+
+        test_grid.set_tile(4, 4, "wall")
+
+        result = test_grid.get_shortest_path([1, 1], [4, 4])
+
+        self.assertIsNone(result)
+
+    # Test get_shortest_path - occupied tile blocks corridor
+    def test_get_shortest_path_occupied_corridor(self):
+        test_grid = self.create_test_grid(7, 7)
+
+        # Create corridor
+        for x in range(7):
+            test_grid.set_tile(x, 1, "wall")
+            test_grid.set_tile(x, 3, "wall")
+
+        # Block corridor
+        test_grid.occupy(3, 2, 99)
+
+        result = test_grid.get_shortest_path([1, 2], [5, 2])
+
+        self.assertIsNone(result)
+
+    # Test get_shortest_path - path around occupied tile
+    def test_get_shortest_path_around_occupant(self):
+        test_grid = self.create_test_grid(7, 7)
+
+        test_grid.occupy(3, 2, 99)
+
+        result = test_grid.get_shortest_path([1, 2], [5, 2])
+
+        self.assertIsNotNone(result)
+        self.assertEqual(result[0], (1, 2))
+        self.assertEqual(result[-1], (5, 2))
+        self.assertEqual(len(result), 7)
+
+        # Path must avoid occupied tile
+        self.assertNotIn((3, 2), result)
+
+    # Test get_shortest_path - occupied destination
+    def test_get_shortest_path_occupied_destination(self):
+        test_grid = self.create_test_grid(7, 7)
+
+        # Occupy target tile
+        test_grid.occupy(4, 2, 1)
+
+        result = test_grid.get_shortest_path([1, 2], [4, 2])
+
+        expected_path = [
+            (1, 2),
+            (2, 2),
+            (3, 2),
+            (4, 2),
+        ]
+
+        self.assertEqual(result, expected_path)
+
+    # Test get_shortest_path - invalid starting position
+    def test_get_shortest_path_invalid_start(self):
+        test_grid = self.create_test_grid(7, 7)
+
+        result = test_grid.get_shortest_path([-1, 2], [4, 2])
+
+        self.assertIsNone(result)
+
+    # Test get_shortest_path - invalid target position
+    def test_get_shortest_path_invalid_target(self):
+        test_grid = self.create_test_grid(7, 7)
+
+        result = test_grid.get_shortest_path([1, 2], [7, 2])
+
+        self.assertIsNone(result)
+
+    # Test get_shortest_path - string coordinates
+    def test_get_shortest_path_string_coordinates(self):
+        test_grid = self.create_test_grid(7, 7)
+
+        result = test_grid.get_shortest_path(
+            ["1", "2"],
+            ["4", "2"],
+        )
+
+        expected_path = [
+            (1, 2),
+            (2, 2),
+            (3, 2),
+            (4, 2),
+        ]
+
+        self.assertEqual(result, expected_path)
+
+    # Test get_shortest_path - shallow water is passable
+    def test_get_shortest_path_shallow_water(self):
+        test_grid = self.create_test_grid(7, 7)
+
+        # Set tile to shallow water
+        test_grid.set_tile(2, 2, "shallowwater")
+
+        result = test_grid.get_shortest_path([1, 2], [3, 2])
+
+        expected_path = [
+            (1, 2),
+            (2, 2),
+            (3, 2),
+        ]
+
+        self.assertEqual(result, expected_path)
+
+    # Test get_shortest_path - forest is passable
+    def test_get_shortest_path_forest(self):
+        test_grid = self.create_test_grid(7, 7)
+
+        # Set tile to forest
+        test_grid.set_tile(2, 2, "forest")
+
+        result = test_grid.get_shortest_path([1, 2], [3, 2])
+
+        expected_path = [
+            (1, 2),
+            (2, 2),
+            (3, 2),
+        ]
+
+        self.assertEqual(result, expected_path)
+
+    # Test get_shortest_path - wall removed
+    def test_get_shortest_path_wall_removed(self):
+        test_grid = self.create_test_grid(7, 7)
+
+        # Create corridor
+        for x in range(7):
+            test_grid.set_tile(x, 1, "wall")
+            test_grid.set_tile(x, 3, "wall")
+
+        # Block corridor
+        test_grid.set_tile(3, 2, "wall")
+
+        self.assertIsNone(test_grid.get_shortest_path([1, 2], [5, 2]))
+
+        # Remove wall
+        test_grid.set_tile(3, 2, "floor")
+
+        result = test_grid.get_shortest_path([1, 2], [5, 2])
+
+        expected_path = [
+            (1, 2),
+            (2, 2),
+            (3, 2),
+            (4, 2),
+            (5, 2),
+        ]
+
+        self.assertEqual(result, expected_path)
+
+    # Test get_shortest_path - lower grid boundary
+    def test_get_shortest_path_lower_boundary(self):
+        test_grid = self.create_test_grid(7, 7)
+
+        result = test_grid.get_shortest_path([0, 0], [2, 0])
+
+        expected_path = [
+            (0, 0),
+            (1, 0),
+            (2, 0),
+        ]
+
+        self.assertEqual(result, expected_path)
+
+    # Test get_shortest_path - upper grid boundary
+    def test_get_shortest_path_upper_boundary(self):
+        test_grid = self.create_test_grid(7, 7)
+
+        result = test_grid.get_shortest_path([4, 6], [6, 6])
+
+        expected_path = [
+            (4, 6),
+            (5, 6),
+            (6, 6),
+        ]
+
+        self.assertEqual(result, expected_path)
+
+    # Test get_shortest_path - distance matches path length
+    def test_get_shortest_path_matches_distance(self):
+        test_grid = self.create_test_grid(7, 7)
+
+        # Place walls
+        test_grid.set_tile(3, 2, "wall")
+        test_grid.set_tile(3, 3, "wall")
+
+        # Get shortest path and distance
+        path = test_grid.get_shortest_path([1, 2], [5, 2])
+        distance = test_grid.get_path_distance([1, 2], [5, 2])
+
+        self.assertIsNotNone(path)
+        self.assertEqual(distance, len(path) - 1)
+        self.assertEqual(distance, 6)
+
 
 if __name__ == "__main__":
     unittest.main()

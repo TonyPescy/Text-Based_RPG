@@ -384,6 +384,7 @@ Exit the game by using the keyboard interrupt or by entering "quit" as a command
     - **Fleeing** Entity has less than 25% of their max health remaining.
 - Each state is responsible to tell the manager when it is time to transition.
 - Attacking and Fleeing AI movement use A* pathfinding.
+- Currently moving and attacking are considered seperate actions, therefore an entity cannot move towards the player and attack on the same tick/turn.
 
 ### Entity State Manager
 - Houses all functions needed for entity state management.
