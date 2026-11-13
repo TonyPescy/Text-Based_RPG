@@ -1,0 +1,14 @@
+load file1
+state 1
+state 2
+force 2 attacking
+state 2
+simulate 2
+state 2
+force 3 fleeing
+state 3
+simulate 3
+history
+undo
+redo
+save file2

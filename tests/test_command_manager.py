@@ -32,6 +32,8 @@ from command import (
     InitCommand,
     SaveCommand,
     LoadCommand,
+    SimulateCommand,
+    ForceStateCommand,
 )
 
 
@@ -304,6 +306,8 @@ class TestCommandManager(unittest.TestCase):
             ("InitCommand", InitCommand),
             ("SaveCommand", SaveCommand),
             ("LoadCommand", LoadCommand),
+            ("ForceStateCommand", ForceStateCommand),
+            ("SimulateCommand", SimulateCommand),
         ]
 
         # Test each supported command type
@@ -414,6 +418,268 @@ class TestCommandManager(unittest.TestCase):
 
         with self.assertRaises(TypeError):
             manager.restore(object(), object())
+
+    # Force State Command Factory Tests Start
+
+    # Test Create Force State Command From Memento
+    # Verify that the factory creates and restores a ForceStateCommand
+    # Returns: None
+    def test_create_force_state_command_from_memento(self):
+        game_state = MagicMock()
+        game_state_manager = GameStateManager()
+        command_manager = CommandManager()
+
+        command_memento = Command.Memento(
+            command_type="ForceStateCommand",
+            data={
+                "entity_id": 1,
+                "state_name": "Attacking",
+                "old_state": "Defending",
+                "executed": True,
+            },
+        )
+
+        command = create_command_from_memento(
+            command_memento,
+            game_state,
+            game_state_manager,
+            command_manager,
+        )
+
+        self.assertIsInstance(command, ForceStateCommand)
+        self.assertEqual(command.get_name(), "Force State")
+
+        restored_memento = command.create_memento()
+
+        self.assertEqual(restored_memento.command_type, "ForceStateCommand")
+        self.assertEqual(restored_memento.data["entity_id"], 1)
+        self.assertEqual(restored_memento.data["state_name"], "Attacking")
+        self.assertEqual(restored_memento.data["old_state"], "Defending")
+        self.assertTrue(restored_memento.data["executed"])
+
+    # Test Create Force State Command With Fleeing State
+    # Verify that the factory restores a different behavioral state
+    # Returns: None
+    def test_create_force_state_command_fleeing(self):
+        game_state = MagicMock()
+        game_state_manager = GameStateManager()
+        command_manager = CommandManager()
+
+        command_memento = Command.Memento(
+            command_type="ForceStateCommand",
+            data={
+                "entity_id": 2,
+                "state_name": "Fleeing",
+                "old_state": "Attacking",
+                "executed": True,
+            },
+        )
+
+        command = create_command_from_memento(
+            command_memento,
+            game_state,
+            game_state_manager,
+            command_manager,
+        )
+
+        self.assertIsInstance(command, ForceStateCommand)
+
+        restored_memento = command.create_memento()
+
+        self.assertEqual(restored_memento.data["entity_id"], 2)
+        self.assertEqual(restored_memento.data["state_name"], "Fleeing")
+        self.assertEqual(restored_memento.data["old_state"], "Attacking")
+
+    # Test Create Force State Command Before Execution
+    # Verify that an unexecuted command is restored correctly
+    # Returns: None
+    def test_create_force_state_command_not_executed(self):
+        game_state = MagicMock()
+        game_state_manager = GameStateManager()
+        command_manager = CommandManager()
+
+        command_memento = Command.Memento(
+            command_type="ForceStateCommand",
+            data={
+                "entity_id": 1,
+                "state_name": "Defending",
+                "old_state": None,
+                "executed": False,
+            },
+        )
+
+        command = create_command_from_memento(
+            command_memento,
+            game_state,
+            game_state_manager,
+            command_manager,
+        )
+
+        self.assertIsInstance(command, ForceStateCommand)
+
+        restored_memento = command.create_memento()
+
+        self.assertIsNone(restored_memento.data["old_state"])
+        self.assertFalse(restored_memento.data["executed"])
+
+    # Simulate Command Factory Tests Start
+
+    # Test Create Simulate Command From Memento
+    # Verify that the factory creates and restores a SimulateCommand
+    # Returns: None
+    def test_create_simulate_command_from_memento(self):
+        game_state = MagicMock()
+        game_state_manager = GameStateManager()
+        command_manager = CommandManager()
+
+        old_state = {"turn_number": 3}
+
+        command_memento = Command.Memento(
+            command_type="SimulateCommand",
+            data={
+                "entity_id": 1,
+                "old_state": old_state,
+                "executed": True,
+            },
+        )
+
+        command = create_command_from_memento(
+            command_memento,
+            game_state,
+            game_state_manager,
+            command_manager,
+        )
+
+        self.assertIsInstance(command, SimulateCommand)
+        self.assertEqual(command.get_name(), "Simulate")
+
+        restored_memento = command.create_memento()
+
+        self.assertEqual(restored_memento.command_type, "SimulateCommand")
+        self.assertEqual(restored_memento.data["entity_id"], 1)
+        self.assertEqual(restored_memento.data["old_state"], old_state)
+        self.assertTrue(restored_memento.data["executed"])
+
+    # Test Create Simulate Command Before Execution
+    # Verify that a simulation without a previous snapshot is restored
+    # Returns: None
+    def test_create_simulate_command_not_executed(self):
+        game_state = MagicMock()
+        game_state_manager = GameStateManager()
+        command_manager = CommandManager()
+
+        command_memento = Command.Memento(
+            command_type="SimulateCommand",
+            data={
+                "entity_id": 2,
+                "old_state": None,
+                "executed": False,
+            },
+        )
+
+        command = create_command_from_memento(
+            command_memento,
+            game_state,
+            game_state_manager,
+            command_manager,
+        )
+
+        self.assertIsInstance(command, SimulateCommand)
+
+        restored_memento = command.create_memento()
+
+        self.assertEqual(restored_memento.data["entity_id"], 2)
+        self.assertIsNone(restored_memento.data["old_state"])
+        self.assertFalse(restored_memento.data["executed"])
+
+    # Test Simulate Command Memento Deep Copy
+    # Verify that changing the original snapshot does not affect
+    # the snapshot stored by the restored command
+    # Returns: None
+    def test_create_simulate_command_memento_deepcopy(self):
+        game_state = MagicMock()
+        game_state_manager = GameStateManager()
+        command_manager = CommandManager()
+
+        old_state = {"entities": [{"id": 1, "health": 100}]}
+
+        command_memento = Command.Memento(
+            command_type="SimulateCommand",
+            data={
+                "entity_id": 1,
+                "old_state": old_state,
+                "executed": True,
+            },
+        )
+
+        command = create_command_from_memento(
+            command_memento,
+            game_state,
+            game_state_manager,
+            command_manager,
+        )
+
+        # Modify original snapshot after restoration
+        old_state["entities"][0]["health"] = 25
+
+        restored_memento = command.create_memento()
+
+        # Restored command should retain the original health
+        self.assertEqual(
+            restored_memento.data["old_state"]["entities"][0]["health"],
+            100,
+        )
+
+    # Test Restore History With AI Commands
+    # Verify that ForceStateCommand and SimulateCommand are
+    # reconstructed in the correct command history stacks
+    # Returns: None
+    def test_restore_history_with_ai_commands(self):
+        game_state = MagicMock()
+        game_state_manager = GameStateManager()
+        command_manager = CommandManager()
+
+        force_memento = Command.Memento(
+            command_type="ForceStateCommand",
+            data={
+                "entity_id": 1,
+                "state_name": "Attacking",
+                "old_state": "Defending",
+                "executed": True,
+            },
+        )
+
+        simulate_memento = Command.Memento(
+            command_type="SimulateCommand",
+            data={
+                "entity_id": 2,
+                "old_state": None,
+                "executed": False,
+            },
+        )
+
+        manager_memento = CommandManager.Memento(
+            undo_history=(force_memento,),
+            redo_history=(simulate_memento,),
+        )
+
+        command_manager.restore(
+            manager_memento,
+            game_state,
+            game_state_manager,
+            command_manager,
+        )
+
+        self.assertEqual(command_manager.get_history_info(), (1, 1))
+
+        undo_command = command_manager._CommandManager__undo_history[0]
+        redo_command = command_manager._CommandManager__redo_history[0]
+
+        self.assertIsInstance(undo_command, ForceStateCommand)
+        self.assertIsInstance(redo_command, SimulateCommand)
+
+        self.assertEqual(undo_command.get_name(), "Force State")
+        self.assertEqual(redo_command.get_name(), "Simulate")
 
 
 if __name__ == "__main__":

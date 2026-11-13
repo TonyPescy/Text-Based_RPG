@@ -37,10 +37,44 @@ Exit the game by using the keyboard interrupt or by entering "quit" as a command
 ## Entities
 [Table of Contents](#table-of-contents)
 
-- Warrior
-- Mage
-- Goblin
-- Skeleton
+### Player Entities
+- **Warrior**
+| Stat         | Base Value |
+| ------------- |:-------------:|
+| Health         | 120 |
+| Attack      |  15    |
+| Defence      | 10 |
+| Speed        | 5 |
+| Attack Type | Melee |
+- **Mage**
+| Stat         | Base Value |
+| ------------- |:-------------:|
+| Health         | 70 |
+|  Mana  |  100  |
+|  Spell Power  |  25  |
+| Attack      |  8    |
+| Defence      | 4 |
+| Speed        | 5 |
+| Attack Type | Melee / Caster |
+
+
+### Non-player Entities
+- **Goblin**
+| Stat         | Base Value |
+| ------------- |:-------------:|
+| Health         | 45 |
+| Attack      |  12    |
+| Defence      | 3 |
+| Speed        | 6 |
+| Attack Type | Melee |
+- **Skeleton**
+| Stat         | Base Value |
+| ------------- |:-------------:|
+| Health         | 60 |
+| Attack      |  10    |
+| Defence      | 8 |
+| Speed        | 4 |
+| Attack Type | Ranged |
 
 ## Equipment
 [Table of Contents](#table-of-contents)
@@ -91,7 +125,7 @@ Exit the game by using the keyboard interrupt or by entering "quit" as a command
 ### Init Map
 **Description:** Will create a map with the provided width and height.
 
-**Called as:** init map width height
+**Called as:** init map [width] [height]
 
 **Contraints:** Width and height are integers between 5 and 50 inclusive.
 
@@ -100,7 +134,7 @@ Exit the game by using the keyboard interrupt or by entering "quit" as a command
 ### Set Tile
 **Description:** Will set the tile at a given grid position to be the provided tile type.
 
-**Called as:** set tile x y tile_type
+**Called as:** set tile [x] [y] [tile_type]
 
 **Contraints:** tile_type must be within list of valid tile types, (x,y) must be integers within the current grid bounds, and map must have been created.
 
@@ -110,8 +144,8 @@ Exit the game by using the keyboard interrupt or by entering "quit" as a command
 **Description:** Will spawn specified entity or item at given grid position
 
 **Called as:** 
-- spawn entity_type x y -> Spawns entity at given coordinates
-- spawn loot item_name x y -> Spawns loot at given coordinates
+- spawn [entity_type] [x] [y] -> Spawns entity at given coordinates
+- spawn loot [item_name] [x] [y] -> Spawns loot at given coordinates
 
 **Contraints:**  (x,y) must be integers within current grid bounds and map must have been created.
 - **Spawn Entity:** entity_type must be within list of valid entity types and there must not be any other entity already present at the given grid position.
@@ -122,7 +156,7 @@ Exit the game by using the keyboard interrupt or by entering "quit" as a command
 ### Swap
 **Description:** Will equip provided item in the given, or determined, inventory slot to a "player".
 
-**Called as:** swap id slot item_name
+**Called as:** swap [id] [slot] [item_name]
 
 **Contraints:** item must be within the list of valid items. id must be an integer within the current entity list and slot must be within valid slots.
 
@@ -131,7 +165,7 @@ Exit the game by using the keyboard interrupt or by entering "quit" as a command
 ### Inventory
 **Description:** Will display the current inventory of provided entity.
 
-**Called as:** inventory id
+**Called as:** inventory [id]
 
 **Contraints:** An entity with a matching id must exist.
 
@@ -140,7 +174,7 @@ Exit the game by using the keyboard interrupt or by entering "quit" as a command
 ### Inspect
 **Description:** Will display the stats of an entity given its id.
 
-**Called as:** inspect id
+**Called as:** inspect [id]
 
 **Contraints:** The id must be an integer that corresponds to a valid entity within the entity list.
 
@@ -149,7 +183,7 @@ Exit the game by using the keyboard interrupt or by entering "quit" as a command
 ### Tile
 **Description:** Will display a description of the tile at the given grid position.
 
-**Called as:** tile x y
+**Called as:** tile [x] [y]
 
 **Contraints:** (x,y) must be integers within the current grid bounds and the map must have been created.
 
@@ -158,7 +192,7 @@ Exit the game by using the keyboard interrupt or by entering "quit" as a command
 ### Pickup
 **Description:** Will pickup the item with the given name at the given entity's current location, if it is present.
 
-**Called as:** pickup id item_name
+**Called as:** pickup [id] [item_name]
 
 **Contraints:** id must be an integer within the current entity list, the item with the same name must be located at the same tile as the entity, and the entity must have space in their backpack for the item.
 
@@ -167,7 +201,7 @@ Exit the game by using the keyboard interrupt or by entering "quit" as a command
 ### Drop
 **Description:** Will drop the item with the given name at the given entity's current location.
 
-**Called as:** drop id item_name
+**Called as:** drop [id] [item_name]
 
 **Contraints:** id must be an integer within the current entity list and an item with the same name must be within the entity's backpack.
 
@@ -176,7 +210,7 @@ Exit the game by using the keyboard interrupt or by entering "quit" as a command
 ### Give
 **Description:** Will give the item with the given name to the matching entity.
 
-**Called as:** give id item_name
+**Called as:** give [id] [item_name]
 
 **Contraints:** id must be an integer within the current entity list and the item must be a valid item.
 
@@ -185,7 +219,7 @@ Exit the game by using the keyboard interrupt or by entering "quit" as a command
 ### Use
 **Description:** Will use the item with the given name on the matching entity.
 
-**Called as:** use id item_name
+**Called as:** use [id] [item_name]
 
 **Contraints:** id must be an integer within the current entity list and the item must be a valid consumable within the given entity's inventory.
 
@@ -194,7 +228,7 @@ Exit the game by using the keyboard interrupt or by entering "quit" as a command
 ### Move
 **Description:** Will move the given entity to the grid position if they are within range and a valid.
 
-**Called as:** move id x y
+**Called as:** move [id] [x] [y]
 
 **Contraints:** id must be an integer within the current entity list and the x,y must correspond to a valid grid position for the entity to occupy.
 
@@ -203,7 +237,7 @@ Exit the game by using the keyboard interrupt or by entering "quit" as a command
 ### Attack
 **Description:** First entity will attack the second entity with damage being calculated as attack vs defence. When an defender's health reaches zero they will die and receive the "Dead" status.
 
-**Called as:** attack attacker_id defender_id
+**Called as:** attack [attacker_id] [defender_id]
 
 **Contraints:** ids must be an integer within the current entity list and the defender must be within the attack range of the attacker. 
 
@@ -212,7 +246,7 @@ Exit the game by using the keyboard interrupt or by entering "quit" as a command
 ### Cast
 **Description:** First entity will cast a spell on the other entity. This can do damage using the spell power and the spell damage modifier against the targets defence, it can heal them, and it can apply an effect on them. When a targets health reaches zero they will die and receive the "Dead" status.
 
-**Called as:** cast caster_id target_id spell_name
+**Called as:** cast [caster_id] [target_id] [spell_name]
 
 **Contraints:** ids must be an integer within the current entity list and the defender must be within the spell range of the caster. The spell must also exist in the valid spell list
 
@@ -280,6 +314,33 @@ Exit the game by using the keyboard interrupt or by entering "quit" as a command
 **Contraints:** None
 
 **Undoable/Redoable:** False
+
+### State
+**Description:** Gets current state of specified entity.
+
+**Called as:** state [id]
+
+**Contraints:** id must be a valid integer, entity id, and correspond to a non-player entity.
+
+**Undoable/Redoable:** False
+
+### Simulate
+**Description:** Executes the specified entities current state.
+
+**Called as:** simulate [id]
+
+**Contraints:** id must be a valid integer, entity id, and correspond to a non-player entity.
+
+**Undoable/Redoable:** True
+
+### Force
+**Description:** Forces an entity into a specific state for testing and debugging.
+
+**Called as:** force [id] [state_name]
+
+**Contraints:** id must be a valid integer, entity id, and correspond to a non-player entity. state name must be a valid state for the corresponding entity id.
+
+**Undoable/Redoable:** True
 
 ## Design Decisions
 [Table of Contents](#table-of-contents)
@@ -379,8 +440,8 @@ Exit the game by using the keyboard interrupt or by entering "quit" as a command
     - **Attacking** Entity is attempting to chase and attack player.
     - **Fleeing** Entity is attempting to run away and escape player.
 - Triggers for the states are:
-    - **Defending** Player out of range of entity.
-    - **Attacking** Player is within range of entity.
+    - **Defending** Player out of speed range of entity.
+    - **Attacking** Player is within speed range of entity.
     - **Fleeing** Entity has less than 25% of their max health remaining.
 - Each state is responsible to tell the manager when it is time to transition.
 - Attacking and Fleeing AI movement use A* pathfinding.

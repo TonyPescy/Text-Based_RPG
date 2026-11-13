@@ -160,7 +160,7 @@ class AttackingState(EntityState):
         # Attack if target is within attack range
         if attack_distance <= attack_range:
             context.attack_target(player.id)
-            return "Attack"
+            return "Attacking -> Attack Made"
 
         # Target is unreachable or outside detection range
         if movement_distance is None or movement_distance > DETECTION_RANGE:
@@ -169,7 +169,7 @@ class AttackingState(EntityState):
 
         # Move toward target
         if context.move_toward_target(player):
-            return "Move"
+            return "Attacking -> Moving Towards Player"
 
         return "Attacking"
 
@@ -237,7 +237,7 @@ class FleeingState(EntityState):
 
         # Move away from player
         if context.move_away_from_target(player):
-            return "Flee"
+            return "Fleeing"
 
         return "Fleeing"
 

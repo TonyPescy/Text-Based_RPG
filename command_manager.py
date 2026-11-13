@@ -28,6 +28,8 @@ from command import (
     InitCommand,
     SaveCommand,
     LoadCommand,
+    SimulateCommand,
+    ForceStateCommand,
 )
 
 
@@ -58,6 +60,8 @@ def create_command_from_memento(
         "InitCommand": InitCommand,
         "SaveCommand": SaveCommand,
         "LoadCommand": LoadCommand,
+        "ForceStateCommand": ForceStateCommand,
+        "SimulateCommand": SimulateCommand,
     }
 
     # Get the command type

@@ -41,6 +41,9 @@ from command import (
     HistoryCommand,
     UndoCommand,
     RedoCommand,
+    StateCommand,
+    ForceStateCommand,
+    SimulateCommand,
 )
 
 
@@ -4118,6 +4121,701 @@ class TestCommand(unittest.TestCase):
         self.assertEqual(restored.data["filename"], "save1.json")
         self.assertEqual(restored.data["memento"], old_state)
         self.assertTrue(restored.data["executed"])
+
+    # Test State Command Execute
+    # Verify that the current behavioral state is displayed
+    def test_state_command_execute(self):
+        game_state = MagicMock()
+        entity = MagicMock()
+
+        entity.get_entity_state_name.return_value = "Defending"
+        game_state.get_entity_from_list.return_value = entity
+
+        command = StateCommand(game_state, 1)
+
+        with patch("sys.stdout", new_callable=StringIO) as mock_stdout:
+            command.execute()
+
+        game_state.get_entity_from_list.assert_called_once_with(1)
+        entity.get_entity_state_name.assert_called_once()
+        self.assertEqual(
+            mock_stdout.getvalue().strip(), "ok: entity 1 state: Defending!"
+        )
+
+    # Test State Command With Different States
+    # Verify that all behavioral state names display correctly
+    def test_state_command_all_states(self):
+        for state_name in ("Defending", "Attacking", "Fleeing"):
+            with self.subTest(state=state_name):
+                game_state = MagicMock()
+                entity = MagicMock()
+
+                entity.get_entity_state_name.return_value = state_name
+                game_state.get_entity_from_list.return_value = entity
+
+                command = StateCommand(game_state, 2)
+
+                with patch("sys.stdout", new_callable=StringIO) as output:
+                    command.execute()
+
+                self.assertEqual(
+                    output.getvalue().strip(), f"ok: entity 2 state: {state_name}!"
+                )
+
+    # Test State Command Invalid Entity
+    # Verify that nonexistent entities raise an error
+    def test_state_command_invalid_entity(self):
+        game_state = MagicMock()
+        game_state.get_entity_from_list.return_value = None
+
+        command = StateCommand(game_state, 999)
+
+        with self.assertRaisesRegex(ValueError, "Entity does not exist!"):
+            command.execute()
+
+    # Test State Command Without Behavioral State
+    # Verify that player entities cannot query AI states
+    def test_state_command_no_behavioral_state(self):
+        game_state = MagicMock()
+        entity = MagicMock()
+
+        entity.get_entity_state_name.return_value = None
+        game_state.get_entity_from_list.return_value = entity
+
+        command = StateCommand(game_state, 1)
+
+        with self.assertRaisesRegex(
+            ValueError, "Entity does not have a behavioral state"
+        ):
+            command.execute()
+
+    # Test State Command Redo
+    # Verify that redo executes the state query again
+    def test_state_command_redo(self):
+        game_state = MagicMock()
+        entity = MagicMock()
+
+        entity.get_entity_state_name.return_value = "Attacking"
+        game_state.get_entity_from_list.return_value = entity
+
+        command = StateCommand(game_state, 1)
+
+        with patch("sys.stdout", new_callable=StringIO) as output:
+            command.redo()
+
+        self.assertEqual(output.getvalue().strip(), "ok: entity 1 state: Attacking!")
+
+    # Test State Command Undo
+    # Verify that undo does not modify the game state
+    def test_state_command_undo(self):
+        game_state = MagicMock()
+
+        command = StateCommand(game_state, 1)
+        command.undo()
+
+        game_state.assert_not_called()
+
+    # Test State Command Get Name
+    def test_state_command_get_name(self):
+        command = StateCommand(MagicMock(), 1)
+
+        self.assertEqual(command.get_name(), "State")
+
+    # Test State Command Is Undoable
+    def test_state_command_is_undoable(self):
+        command = StateCommand(MagicMock(), 1)
+
+        self.assertFalse(command.is_undoable())
+
+    # Test State Command String Entity ID
+    # Verify that string IDs are converted into integers
+    def test_state_command_string_entity_id(self):
+        game_state = MagicMock()
+        entity = MagicMock()
+
+        entity.get_entity_state_name.return_value = "Defending"
+        game_state.get_entity_from_list.return_value = entity
+
+        command = StateCommand(game_state, "5")
+
+        with patch("sys.stdout", new_callable=StringIO):
+            command.execute()
+
+        game_state.get_entity_from_list.assert_called_once_with(5)
+
+    # Test Force State Command Execute
+    # Verify that an entity is forced into the requested state
+    def test_force_state_command_execute(self):
+        game_state = MagicMock()
+        entity = MagicMock()
+
+        entity.get_entity_state_name.return_value = "Defending"
+        entity.create_state_manager_memento.return_value = Entity.StateManagerMemento(
+            "Defending"
+        )
+        game_state.get_entity_from_list.return_value = entity
+
+        command = ForceStateCommand(game_state, 1, "Attacking")
+
+        with patch("sys.stdout", new_callable=StringIO) as output:
+            command.execute()
+
+        entity.restore_state_manager.assert_called_once_with(
+            Entity.StateManagerMemento("Attacking"), game_state
+        )
+        entity.create_state_manager_memento.assert_called_once()
+        game_state.mark_as_unsaved.assert_called_once()
+
+        self.assertEqual(
+            output.getvalue().strip(), "ok: entity 1 transitioned to Attacking!"
+        )
+
+    # Test Force State Command All States
+    # Verify that each supported state can be forced
+    def test_force_state_command_all_states(self):
+        for state_name in ("Defending", "Attacking", "Fleeing"):
+            with self.subTest(state=state_name):
+                game_state = MagicMock()
+                entity = MagicMock()
+
+                entity.get_entity_state_name.return_value = "Defending"
+                entity.create_state_manager_memento.return_value = (
+                    Entity.StateManagerMemento("Defending")
+                )
+                game_state.get_entity_from_list.return_value = entity
+
+                command = ForceStateCommand(game_state, 1, state_name)
+
+                with patch("sys.stdout", new_callable=StringIO):
+                    command.execute()
+
+                entity.restore_state_manager.assert_called_once_with(
+                    Entity.StateManagerMemento(state_name), game_state
+                )
+
+    # Test Force State Command Invalid Entity
+    # Verify that nonexistent entities raise an error
+    def test_force_state_command_invalid_entity(self):
+        game_state = MagicMock()
+        game_state.get_entity_from_list.return_value = None
+
+        command = ForceStateCommand(game_state, 999, "Fleeing")
+
+        with self.assertRaisesRegex(ValueError, "Entity does not exist!"):
+            command.execute()
+
+        game_state.mark_as_unsaved.assert_not_called()
+
+    # Test Force State Command Without Behavioral State
+    # Verify that player entities cannot be forced into AI states
+    def test_force_state_command_no_behavioral_state(self):
+        game_state = MagicMock()
+        entity = MagicMock()
+
+        entity.get_entity_state_name.return_value = None
+        game_state.get_entity_from_list.return_value = entity
+
+        command = ForceStateCommand(game_state, 1, "Attacking")
+
+        with self.assertRaisesRegex(
+            ValueError, "Entity does not have a behavioral state!"
+        ):
+            command.execute()
+
+        entity.restore_state_manager.assert_not_called()
+        game_state.mark_as_unsaved.assert_not_called()
+
+    # Test Force State Command Undo
+    # Verify that undo restores the original behavioral state
+    def test_force_state_command_undo(self):
+        game_state = MagicMock()
+        entity = MagicMock()
+
+        old_memento = Entity.StateManagerMemento("Defending")
+        entity.get_entity_state_name.return_value = "Defending"
+        entity.create_state_manager_memento.return_value = old_memento
+        game_state.get_entity_from_list.return_value = entity
+
+        command = ForceStateCommand(game_state, 1, "Fleeing")
+
+        with patch("sys.stdout", new_callable=StringIO):
+            command.execute()
+
+        entity.restore_state_manager.reset_mock()
+        game_state.mark_as_unsaved.reset_mock()
+
+        command.undo()
+
+        entity.restore_state_manager.assert_called_once_with(old_memento, game_state)
+        game_state.mark_as_unsaved.assert_called_once()
+
+    # Test Force State Command Undo Before Execute
+    def test_force_state_command_undo_before_execute(self):
+        game_state = MagicMock()
+        command = ForceStateCommand(game_state, 1, "Attacking")
+
+        with self.assertRaisesRegex(ValueError, "State has not been forced!"):
+            command.undo()
+
+        game_state.get_entity_from_list.assert_not_called()
+
+    # Test Force State Command Undo Missing Entity
+    def test_force_state_command_undo_missing_entity(self):
+        game_state = MagicMock()
+        entity = MagicMock()
+
+        entity.get_entity_state_name.return_value = "Defending"
+        entity.create_state_manager_memento.return_value = Entity.StateManagerMemento(
+            "Defending"
+        )
+        game_state.get_entity_from_list.return_value = entity
+
+        command = ForceStateCommand(game_state, 1, "Attacking")
+
+        with patch("sys.stdout", new_callable=StringIO):
+            command.execute()
+
+        game_state.get_entity_from_list.return_value = None
+
+        with self.assertRaisesRegex(ValueError, "Entity does not exist!"):
+            command.undo()
+
+    # Test Force State Command Redo
+    # Verify that redo forces the requested state again
+    def test_force_state_command_redo(self):
+        game_state = MagicMock()
+        entity = MagicMock()
+
+        entity.get_entity_state_name.return_value = "Defending"
+        entity.create_state_manager_memento.return_value = Entity.StateManagerMemento(
+            "Defending"
+        )
+        game_state.get_entity_from_list.return_value = entity
+
+        command = ForceStateCommand(game_state, 1, "Attacking")
+
+        with patch("sys.stdout", new_callable=StringIO):
+            command.execute()
+
+        command.undo()
+        entity.restore_state_manager.reset_mock()
+
+        with patch("sys.stdout", new_callable=StringIO):
+            command.redo()
+
+        entity.restore_state_manager.assert_called_once_with(
+            Entity.StateManagerMemento("Attacking"), game_state
+        )
+
+    # Test Force State Command Redo Before Undo
+    def test_force_state_command_redo_before_undo(self):
+        game_state = MagicMock()
+        entity = MagicMock()
+
+        entity.get_entity_state_name.return_value = "Defending"
+        entity.create_state_manager_memento.return_value = Entity.StateManagerMemento(
+            "Defending"
+        )
+        game_state.get_entity_from_list.return_value = entity
+
+        command = ForceStateCommand(game_state, 1, "Attacking")
+
+        with patch("sys.stdout", new_callable=StringIO):
+            command.execute()
+
+        with self.assertRaisesRegex(ValueError, "State has already been forced!"):
+            command.redo()
+
+    # Test Force State Command Get Name
+    def test_force_state_command_get_name(self):
+        command = ForceStateCommand(MagicMock(), 1, "Fleeing")
+
+        self.assertEqual(command.get_name(), "Force State")
+
+    # Test Force State Command Create Memento
+    def test_force_state_command_create_memento(self):
+        game_state = MagicMock()
+        entity = MagicMock()
+
+        entity.get_entity_state_name.return_value = "Defending"
+        entity.create_state_manager_memento.return_value = Entity.StateManagerMemento(
+            "Defending"
+        )
+        game_state.get_entity_from_list.return_value = entity
+
+        command = ForceStateCommand(game_state, 1, "Attacking")
+
+        with patch("sys.stdout", new_callable=StringIO):
+            command.execute()
+
+        memento = command.create_memento()
+
+        self.assertIsInstance(memento, Command.Memento)
+        self.assertEqual(memento.command_type, "ForceStateCommand")
+        self.assertEqual(memento.data["entity_id"], 1)
+        self.assertEqual(memento.data["state_name"], "Attacking")
+        self.assertEqual(memento.data["old_state"], "Defending")
+        self.assertTrue(memento.data["executed"])
+
+    # Test Force State Command Memento Before Execute
+    def test_force_state_command_memento_before_execute(self):
+        command = ForceStateCommand(MagicMock(), 1, "Fleeing")
+
+        memento = command.create_memento()
+
+        self.assertIsNone(memento.data["old_state"])
+        self.assertFalse(memento.data["executed"])
+
+    # Test Force State Command Restore
+    # Verify that command information is reconstructed
+    def test_force_state_command_restore(self):
+        game_state = MagicMock()
+        original = ForceStateCommand(game_state, 2, "Fleeing")
+
+        memento = original.create_memento()
+        restored = ForceStateCommand.__new__(ForceStateCommand)
+
+        restored.restore(memento, game_state)
+
+        self.assertEqual(restored.get_name(), "Force State")
+        self.assertEqual(restored.create_memento().data, memento.data)
+
+    # Test Force State Command Restore With Previous State
+    def test_force_state_command_restore_previous_state(self):
+        game_state = MagicMock()
+        entity = MagicMock()
+
+        entity.get_entity_state_name.return_value = "Defending"
+        entity.create_state_manager_memento.return_value = Entity.StateManagerMemento(
+            "Defending"
+        )
+        game_state.get_entity_from_list.return_value = entity
+
+        command = ForceStateCommand(game_state, 1, "Attacking")
+
+        with patch("sys.stdout", new_callable=StringIO):
+            command.execute()
+
+        memento = command.create_memento()
+
+        restored = ForceStateCommand.__new__(ForceStateCommand)
+        restored.restore(memento, game_state)
+        restored.undo()
+
+        entity.restore_state_manager.assert_called_with(
+            Entity.StateManagerMemento("Defending"), game_state
+        )
+
+    # Test Force State Command Restore Invalid Memento
+    def test_force_state_command_restore_invalid_memento(self):
+        command = ForceStateCommand(MagicMock(), 1, "Attacking")
+
+        with self.assertRaises(TypeError):
+            command.restore("invalid", MagicMock())
+
+    # Test Force State Command Restore Wrong Type
+    def test_force_state_command_restore_wrong_type(self):
+        command = ForceStateCommand(MagicMock(), 1, "Attacking")
+
+        memento = Command.Memento(command_type="SimulateCommand", data={})
+
+        with self.assertRaisesRegex(
+            ValueError, "Incorrect Force State Command memento!"
+        ):
+            command.restore(memento, MagicMock())
+
+    # Test Simulate Command Execute
+    # Verify that AI behavior is evaluated
+    def test_simulate_command_execute(self):
+        game_state = MagicMock()
+        command_manager = MagicMock()
+        game_state_manager = MagicMock()
+        entity = MagicMock()
+
+        entity.get_entity_state_name.return_value = "Attacking"
+        entity.update_entity_state.return_value = "Attack"
+        game_state.get_entity_from_list.return_value = entity
+
+        command = SimulateCommand(game_state, 1, command_manager, game_state_manager)
+
+        with patch("sys.stdout", new_callable=StringIO) as output:
+            command.execute()
+
+        game_state.get_entity_from_list.assert_called_once_with(1)
+        game_state.create_memento.assert_called_once_with(command_manager)
+        entity.update_entity_state.assert_called_once()
+        game_state.mark_as_unsaved.assert_called_once()
+
+        self.assertEqual(
+            output.getvalue().strip(), "ok: simulated for 1 command: Attack!"
+        )
+
+    # Test Simulate Command Different Results
+    # Verify that the AI result is displayed correctly
+    def test_simulate_command_results(self):
+        for result in ("Attack", "Move", "Defend", "Flee"):
+            with self.subTest(result=result):
+                game_state = MagicMock()
+                entity = MagicMock()
+
+                entity.get_entity_state_name.return_value = "Defending"
+                entity.update_entity_state.return_value = result
+                game_state.get_entity_from_list.return_value = entity
+
+                command = SimulateCommand(game_state, 1, MagicMock(), MagicMock())
+
+                with patch("sys.stdout", new_callable=StringIO) as output:
+                    command.execute()
+
+                self.assertEqual(
+                    output.getvalue().strip(), f"ok: simulated for 1 command: {result}!"
+                )
+
+    # Test Simulate Command Invalid Entity
+    def test_simulate_command_invalid_entity(self):
+        game_state = MagicMock()
+        game_state.get_entity_from_list.return_value = None
+
+        command = SimulateCommand(game_state, 999, MagicMock(), MagicMock())
+
+        with self.assertRaisesRegex(ValueError, "Entity does not exist!"):
+            command.execute()
+
+        game_state.create_memento.assert_not_called()
+
+    # Test Simulate Command Without AI
+    def test_simulate_command_no_behavioral_state(self):
+        game_state = MagicMock()
+        entity = MagicMock()
+
+        entity.get_entity_state_name.return_value = None
+        game_state.get_entity_from_list.return_value = entity
+
+        command = SimulateCommand(game_state, 1, MagicMock(), MagicMock())
+
+        with self.assertRaisesRegex(
+            ValueError, "Entity does not have a behavioral state!"
+        ):
+            command.execute()
+
+        entity.update_entity_state.assert_not_called()
+        game_state.create_memento.assert_not_called()
+
+    # Test Simulate Command Execution Failure
+    # Verify that a failed simulation restores the previous game state
+    def test_simulate_command_execute_failure(self):
+        game_state = MagicMock()
+        command_manager = MagicMock()
+        game_state_manager = MagicMock()
+        entity = MagicMock()
+
+        old_state = {"turn": 5}
+        game_state.create_memento.return_value = old_state
+        game_state.get_entity_from_list.return_value = entity
+
+        entity.get_entity_state_name.return_value = "Attacking"
+        entity.update_entity_state.side_effect = ValueError("AI failed!")
+
+        command = SimulateCommand(game_state, 1, command_manager, game_state_manager)
+
+        with self.assertRaisesRegex(ValueError, "AI failed!"):
+            command.execute()
+
+        game_state.restore.assert_called_once_with(
+            old_state, command_manager, game_state_manager
+        )
+        game_state.mark_as_unsaved.assert_not_called()
+
+    # Test Simulate Command Undo
+    # Verify that the previous game state is restored
+    def test_simulate_command_undo(self):
+        game_state = MagicMock()
+        command_manager = MagicMock()
+        game_state_manager = MagicMock()
+        entity = MagicMock()
+
+        old_state = {"turn": 5}
+        game_state.create_memento.return_value = old_state
+        game_state.get_entity_from_list.return_value = entity
+        entity.get_entity_state_name.return_value = "Defending"
+        entity.update_entity_state.return_value = "Move"
+
+        command = SimulateCommand(game_state, 1, command_manager, game_state_manager)
+
+        with patch("sys.stdout", new_callable=StringIO):
+            command.execute()
+
+        command.undo()
+
+        game_state.restore.assert_called_once_with(
+            old_state, command_manager, game_state_manager
+        )
+
+    # Test Simulate Command Undo Before Execute
+    def test_simulate_command_undo_before_execute(self):
+        game_state = MagicMock()
+
+        command = SimulateCommand(game_state, 1, MagicMock(), MagicMock())
+
+        with self.assertRaisesRegex(ValueError, "Simulation has not been executed!"):
+            command.undo()
+
+        game_state.restore.assert_not_called()
+
+    # Test Simulate Command Redo
+    # Verify that AI is evaluated again after undo
+    def test_simulate_command_redo(self):
+        game_state = MagicMock()
+        entity = MagicMock()
+
+        entity.get_entity_state_name.return_value = "Defending"
+        entity.update_entity_state.return_value = "Move"
+        game_state.get_entity_from_list.return_value = entity
+
+        command = SimulateCommand(game_state, 1, MagicMock(), MagicMock())
+
+        with patch("sys.stdout", new_callable=StringIO):
+            command.execute()
+
+        command.undo()
+
+        with patch("sys.stdout", new_callable=StringIO):
+            command.redo()
+
+        self.assertEqual(entity.update_entity_state.call_count, 2)
+
+    # Test Simulate Command Redo Before Undo
+    def test_simulate_command_redo_before_undo(self):
+        game_state = MagicMock()
+        entity = MagicMock()
+
+        entity.get_entity_state_name.return_value = "Defending"
+        game_state.get_entity_from_list.return_value = entity
+
+        command = SimulateCommand(game_state, 1, MagicMock(), MagicMock())
+
+        with patch("sys.stdout", new_callable=StringIO):
+            command.execute()
+
+        with self.assertRaisesRegex(
+            ValueError, "Simulation has already been executed!"
+        ):
+            command.redo()
+
+    # Test Simulate Command Get Name
+    def test_simulate_command_get_name(self):
+        command = SimulateCommand(MagicMock(), 1, MagicMock(), MagicMock())
+
+        self.assertEqual(command.get_name(), "Simulate")
+
+    # Test Simulate Command Create Memento
+    def test_simulate_command_create_memento(self):
+        game_state = MagicMock()
+        entity = MagicMock()
+
+        old_state = {"turn": 5}
+        game_state.create_memento.return_value = old_state
+        game_state.get_entity_from_list.return_value = entity
+        entity.get_entity_state_name.return_value = "Attacking"
+        entity.update_entity_state.return_value = "Attack"
+
+        command = SimulateCommand(game_state, 1, MagicMock(), MagicMock())
+
+        with patch("sys.stdout", new_callable=StringIO):
+            command.execute()
+
+        memento = command.create_memento()
+
+        self.assertIsInstance(memento, Command.Memento)
+        self.assertEqual(memento.command_type, "SimulateCommand")
+        self.assertEqual(memento.data["entity_id"], 1)
+        self.assertEqual(memento.data["old_state"], old_state)
+        self.assertTrue(memento.data["executed"])
+
+    # Test Simulate Command Memento Before Execute
+    def test_simulate_command_memento_before_execute(self):
+        command = SimulateCommand(MagicMock(), 1, MagicMock(), MagicMock())
+
+        memento = command.create_memento()
+
+        self.assertIsNone(memento.data["old_state"])
+        self.assertFalse(memento.data["executed"])
+
+    # Test Simulate Command Restore
+    def test_simulate_command_restore(self):
+        game_state = MagicMock()
+        command_manager = MagicMock()
+        game_state_manager = MagicMock()
+
+        original = SimulateCommand(game_state, 1, command_manager, game_state_manager)
+
+        memento = original.create_memento()
+
+        restored = SimulateCommand.__new__(SimulateCommand)
+        restored.restore(memento, game_state, game_state_manager, command_manager)
+
+        self.assertEqual(restored.get_name(), "Simulate")
+        self.assertEqual(restored.create_memento().data, memento.data)
+
+    # Test Simulate Command Restore And Undo
+    # Verify that a restored command retains its previous snapshot
+    def test_simulate_command_restore_and_undo(self):
+        game_state = MagicMock()
+        command_manager = MagicMock()
+        game_state_manager = MagicMock()
+        entity = MagicMock()
+
+        old_state = {"turn": 5}
+        game_state.create_memento.return_value = old_state
+        game_state.get_entity_from_list.return_value = entity
+        entity.get_entity_state_name.return_value = "Defending"
+
+        command = SimulateCommand(game_state, 1, command_manager, game_state_manager)
+
+        with patch("sys.stdout", new_callable=StringIO):
+            command.execute()
+
+        memento = command.create_memento()
+
+        restored = SimulateCommand.__new__(SimulateCommand)
+        restored.restore(memento, game_state, game_state_manager, command_manager)
+
+        restored.undo()
+
+        game_state.restore.assert_called_once_with(
+            old_state, command_manager, game_state_manager
+        )
+
+    # Test Simulate Command Restore Invalid Memento
+    def test_simulate_command_restore_invalid_memento(self):
+        command = SimulateCommand(MagicMock(), 1, MagicMock(), MagicMock())
+
+        with self.assertRaises(TypeError):
+            command.restore("invalid", MagicMock())
+
+    # Test Simulate Command Restore Wrong Type
+    def test_simulate_command_restore_wrong_type(self):
+        command = SimulateCommand(MagicMock(), 1, MagicMock(), MagicMock())
+
+        memento = Command.Memento(command_type="ForceStateCommand", data={})
+
+        with self.assertRaisesRegex(ValueError, "Incorrect Simulate Command memento!"):
+            command.restore(memento, MagicMock())
+
+    # Test Simulate Command String Entity ID
+    def test_simulate_command_string_entity_id(self):
+        game_state = MagicMock()
+        entity = MagicMock()
+
+        entity.get_entity_state_name.return_value = "Defending"
+        game_state.get_entity_from_list.return_value = entity
+
+        command = SimulateCommand(game_state, "5", MagicMock(), MagicMock())
+
+        with patch("sys.stdout", new_callable=StringIO):
+            command.execute()
+
+        game_state.get_entity_from_list.assert_called_once_with(5)
 
 
 if __name__ == "__main__":

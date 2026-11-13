@@ -40,6 +40,9 @@ from command import (
     HistoryCommand,
     UndoCommand,
     RedoCommand,
+    StateCommand,
+    SimulateCommand,
+    ForceStateCommand,
 )
 
 # from spell import get_spell
@@ -92,6 +95,9 @@ class CLI:
             "undo": self.process_undo_command,
             "redo": self.process_redo_command,
             "history": self.process_history_command,
+            "state": self.process_state_command,
+            "simulate": self.process_simulate_command,
+            "force": self.process_force_state_command,
         }
 
         # Match handler to command
@@ -989,7 +995,7 @@ class CLI:
             self.command_manager.execute_command(command)
 
         except (AttributeError, TypeError, ValueError) as error:
-            print(f"error: state_info_failed {error}!")
+            print(f"error: state_info_failed - {error}!")
 
     # Spawn Entity For CLI
     # Contains logic for all entity spawning in the CLI
@@ -1088,7 +1094,7 @@ class CLI:
     # Returns: None
     def process_history_command(self, command_pieces):
         if len(command_pieces) != 1:
-            print("error: history_failed Invalid command!")
+            print("error: history_failed - Invalid command!")
             return
 
         try:
@@ -1096,7 +1102,7 @@ class CLI:
             self.command_manager.execute_command(history_command)
 
         except (AttributeError, TypeError, ValueError) as error:
-            print(f"error: history_failed {error}")
+            print(f"error: history_failed - {error}")
 
     # Capitalize If String Start
     # Will capitalize and return string if it is a string
@@ -1108,3 +1114,115 @@ class CLI:
             return value.capitalize()
         else:
             return value
+
+    # Process State Command
+    # Displays the current behavioral state of an entity
+    # Params: command_pieces - list - command arguments
+    # Returns: None
+    def process_state_command(self, command_pieces):
+        # Validate command arguments
+        if len(command_pieces) != 2:
+            print("error: entity_state_failed - Invalid arguments!")
+            return
+
+        # Ensure map exists
+        if not self.game_state.is_map_created():
+            print("error: entity_state_failed - Map does not exist!")
+            return
+
+        try:
+            # Validate entity ID
+            entity_id = int(command_pieces[1])
+            # Get Entity
+            entity_info = self.game_state.get_entity_info_from_list(entity_id)
+            if entity_info is None:
+                print("error: entity_state_failed - Invalid entity ID!")
+                return
+
+            # Create Command
+            command = StateCommand(self.game_state, entity_id)
+
+            # Execute Command
+            self.command_manager.execute_command(command)
+
+        except (ValueError, TypeError) as error:
+            print(f"error: entity_state_failed - {error}!")
+
+    # Process Simulate Command
+    # Forces an entity to evaluate and execute AI behavior
+    # Params: command_pieces - list - command arguments
+    # Returns: None
+    def process_simulate_command(self, command_pieces):
+        # Validate command arguments
+        if len(command_pieces) != 2:
+            print("error: simulate_ai_failed - Invalid arguments!")
+            return
+
+        # Ensure map exists
+        if not self.game_state.is_map_created():
+            print("error: simulate_ai_failed - Map does not exist!")
+            return
+
+        try:
+            # Validate entity ID
+            entity_id = int(command_pieces[1])
+            # Get Entity
+            entity_info = self.game_state.get_entity_info_from_list(entity_id)
+            if entity_info is None:
+                print("error: simulate_ai_failed - Invalid entity ID!")
+                return
+            # Create Command
+            command = SimulateCommand(
+                self.game_state,
+                entity_id,
+                self.command_manager,
+                self.game_state_manager,
+            )
+
+            # Execute Command
+            self.command_manager.execute_command(command)
+
+        except (ValueError, TypeError) as error:
+            print(f"error: simulate_ai_failed - {error}!")
+
+    # Process Force State Command
+    # Manually forces an entity into a behavioral state
+    # Params: command_pieces - list - command arguments
+    # Returns: None
+    def process_force_state_command(self, command_pieces):
+        # Validate command arguments
+        if len(command_pieces) != 3:
+            print("error: force_state_failed - Invalid arguments!")
+            return
+
+        # Ensure map exists
+        if not self.game_state.is_map_created():
+            print("error: force_state_failed - Map does not exist!")
+            return
+
+        # Normalize behavioral state name
+        state_name = command_pieces[2].capitalize()
+
+        # Validate behavioral state
+        valid_states = ("Defending", "Attacking", "Fleeing")
+
+        if state_name not in valid_states:
+            print("error: force_state_failed - Invalid behavioral state!")
+            return
+
+        try:
+            # Validate entity ID
+            entity_id = int(command_pieces[1])
+            # Get Entity
+            entity_info = self.game_state.get_entity_info_from_list(entity_id)
+            if entity_info is None:
+                print("error: force_state_failed - Invalid entity ID!")
+                return
+                # Create Command
+            command = ForceStateCommand(self.game_state, entity_id, state_name)
+
+            # Execute Command
+            self.command_manager.execute_command(command)
+
+        except (ValueError, TypeError) as error:
+            print(f"error: force_state_failed - {error}!")

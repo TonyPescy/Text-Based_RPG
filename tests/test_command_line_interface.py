@@ -2244,7 +2244,7 @@ class TestCLI(unittest.TestCase):
 
         output = mock_stdout.getvalue()
 
-        self.assertEqual(output, "error: history_failed Invalid command!\n")
+        self.assertEqual(output, "error: history_failed - Invalid command!\n")
         test_cli.command_manager.execute_command.assert_not_called()
 
     # Test History Command Error
@@ -2260,7 +2260,7 @@ class TestCLI(unittest.TestCase):
 
         output = mock_stdout.getvalue()
 
-        self.assertEqual(output, "error: history_failed Test error\n")
+        self.assertEqual(output, "error: history_failed - Test error\n")
 
     # Test History Command Attribute Error
     # Verify that the CLI handles an AttributeError
@@ -2277,7 +2277,438 @@ class TestCLI(unittest.TestCase):
 
         output = mock_stdout.getvalue()
 
-        self.assertEqual(output, "error: history_failed Missing method\n")
+        self.assertEqual(output, "error: history_failed - Missing method\n")
+
+    # State Command Tests Start
+
+    # Test State Command Invalid Arguments
+    def test_state_command_invalid_arguments(self):
+        test_cli = self.create_test_cli()
+
+        output = self.process_command_and_get_output(test_cli, "state")
+
+        self.assertIn("entity_state_failed", output)
+        self.assertIn("Invalid arguments", output)
+
+    # Test State Command Extra Arguments
+    def test_state_command_extra_arguments(self):
+        test_cli = self.create_test_cli()
+
+        output = self.process_command_and_get_output(test_cli, "state 1 extra")
+
+        self.assertIn("entity_state_failed", output)
+        self.assertIn("Invalid arguments", output)
+
+    # Test State Command Without Map
+    def test_state_command_without_map(self):
+        test_cli = self.create_test_cli()
+
+        output = self.process_command_and_get_output(test_cli, "state 1")
+
+        self.assertIn("entity_state_failed", output)
+        self.assertIn("Map does not exist", output)
+
+    # Test State Command Invalid Entity ID
+    def test_state_command_invalid_entity_id(self):
+        test_cli = self.create_test_cli()
+        self.create_test_map(test_cli)
+
+        output = self.process_command_and_get_output(test_cli, "state 99")
+
+        self.assertIn("Invalid entity ID", output)
+
+    # Test State Command With Negative Entity ID
+    def test_state_command_negative_entity_id(self):
+        test_cli = self.create_test_cli()
+        self.create_test_map(test_cli)
+
+        output = self.process_command_and_get_output(test_cli, "state -1")
+
+        self.assertIn("Invalid entity ID", output)
+
+    # Test State Command With Player Entity
+    # Player entities should not have behavioral states
+    def test_state_command_player_entity(self):
+        test_cli = self.create_test_cli()
+        self.create_test_map(test_cli)
+        self.create_test_entity(test_cli, "Warrior", 1, 1)
+
+        output = self.process_command_and_get_output(test_cli, "state 1")
+
+        self.assertIn("entity_state_failed", output)
+        self.assertIn("does not have a behavioral state", output)
+
+    # Test State Command With Mage
+    def test_state_command_mage_entity(self):
+        test_cli = self.create_test_cli()
+        self.create_test_map(test_cli)
+        self.create_test_entity(test_cli, "Mage", 1, 1)
+
+        output = self.process_command_and_get_output(test_cli, "state 1")
+
+        self.assertIn("does not have a behavioral state", output)
+
+    # Test State Command With Goblin
+    def test_state_command_goblin_success(self):
+        test_cli = self.create_test_cli()
+        self.create_test_map(test_cli)
+        self.create_test_entity(test_cli, "Goblin", 1, 1)
+
+        output = self.process_command_and_get_output(test_cli, "state 1")
+
+        self.assertIn("ok: entity 1 state: Defending!", output)
+
+    # Test State Command With Skeleton
+    def test_state_command_skeleton_success(self):
+        test_cli = self.create_test_cli()
+        self.create_test_map(test_cli)
+        self.create_test_entity(test_cli, "Skeleton", 1, 1)
+
+        output = self.process_command_and_get_output(test_cli, "state 1")
+
+        self.assertIn("ok: entity 1 state: Defending!", output)
+
+    # Test State Command With Multiple Entities
+    def test_state_command_multiple_entities(self):
+        test_cli = self.create_test_cli()
+        self.create_test_map(test_cli)
+        self.create_test_entity(test_cli, "Warrior", 1, 1)
+        self.create_test_entity(test_cli, "Goblin", 2, 2)
+
+        output = self.process_command_and_get_output(test_cli, "state 2")
+
+        self.assertIn("ok: entity 2 state: Defending!", output)
+
+    # Force State Command Tests Start
+
+    # Test Force State Command Invalid Arguments
+    def test_force_state_command_invalid_arguments(self):
+        test_cli = self.create_test_cli()
+
+        output = self.process_command_and_get_output(test_cli, "force  1")
+
+        self.assertIn("force_state_failed", output)
+        self.assertIn("Invalid arguments", output)
+
+    # Test Force State Command Extra Arguments
+    def test_force_state_command_extra_arguments(self):
+        test_cli = self.create_test_cli()
+
+        output = self.process_command_and_get_output(
+            test_cli, "force  1 Attacking extra"
+        )
+
+        self.assertIn("force_state_failed", output)
+        self.assertIn("Invalid arguments", output)
+
+    # Test Force State Command Without Map
+    def test_force_state_command_without_map(self):
+        test_cli = self.create_test_cli()
+
+        output = self.process_command_and_get_output(test_cli, "force  1 Attacking")
+
+        self.assertIn("force_state_failed", output)
+        self.assertIn("Map does not exist", output)
+
+    # Test Force State Command Invalid Entity ID
+    def test_force_state_command_invalid_entity_id(self):
+        test_cli = self.create_test_cli()
+        self.create_test_map(test_cli)
+
+        output = self.process_command_and_get_output(test_cli, "force 99 Attacking")
+
+        self.assertIn("force_state_failed", output)
+        self.assertIn("Invalid entity ID", output)
+
+    # Test Force State Command Negative Entity ID
+    def test_force_state_command_negative_entity_id(self):
+        test_cli = self.create_test_cli()
+        self.create_test_map(test_cli)
+
+        output = self.process_command_and_get_output(test_cli, "force  -1 Attacking")
+
+        self.assertIn("Invalid entity ID", output)
+
+    # Test Force State Command Invalid Behavioral State
+    def test_force_state_command_invalid_state(self):
+        test_cli = self.create_test_cli()
+        self.create_test_map(test_cli)
+        self.create_test_entity(test_cli, "Goblin", 1, 1)
+
+        output = self.process_command_and_get_output(test_cli, "force  1 Sleeping")
+
+        self.assertIn("force_state_failed", output)
+        self.assertIn("Invalid behavioral state", output)
+
+    # Test Force State Command With Warrior
+    def test_force_state_command_warrior_entity(self):
+        test_cli = self.create_test_cli()
+        self.create_test_map(test_cli)
+        self.create_test_entity(test_cli, "Warrior", 1, 1)
+
+        output = self.process_command_and_get_output(test_cli, "force  1 Attacking")
+
+        self.assertIn("force_state_failed", output)
+        self.assertIn("does not have a behavioral state", output)
+
+    # Test Force State Command Attacking
+    def test_force_state_command_attacking_success(self):
+        test_cli = self.create_test_cli()
+        self.create_test_map(test_cli)
+        self.create_test_entity(test_cli, "Goblin", 1, 1)
+
+        output = self.process_command_and_get_output(test_cli, "force  1 Attacking")
+
+        self.assertIn("ok: entity 1 transitioned to Attacking!", output)
+
+        entity = test_cli.game_state.get_entity_from_list(1)
+        self.assertEqual(entity.get_entity_state_name(), "Attacking")
+
+    # Test Force State Command Fleeing
+    def test_force_state_command_fleeing_success(self):
+        test_cli = self.create_test_cli()
+        self.create_test_map(test_cli)
+        self.create_test_entity(test_cli, "Goblin", 1, 1)
+
+        output = self.process_command_and_get_output(test_cli, "force  1 Fleeing")
+
+        self.assertIn("ok: entity 1 transitioned to Fleeing!", output)
+
+        entity = test_cli.game_state.get_entity_from_list(1)
+        self.assertEqual(entity.get_entity_state_name(), "Fleeing")
+
+    # Test Force State Command Defending
+    def test_force_state_command_defending_success(self):
+        test_cli = self.create_test_cli()
+        self.create_test_map(test_cli)
+        self.create_test_entity(test_cli, "Goblin", 1, 1)
+
+        self.process_command_and_get_output(test_cli, "force  1 Attacking")
+
+        output = self.process_command_and_get_output(test_cli, "force  1 Defending")
+
+        self.assertIn("ok: entity 1 transitioned to Defending!", output)
+
+        entity = test_cli.game_state.get_entity_from_list(1)
+        self.assertEqual(entity.get_entity_state_name(), "Defending")
+
+    # Test Force State Command Case Insensitivity
+    def test_force_state_command_lowercase_state(self):
+        test_cli = self.create_test_cli()
+        self.create_test_map(test_cli)
+        self.create_test_entity(test_cli, "Goblin", 1, 1)
+
+        output = self.process_command_and_get_output(test_cli, "force  1 attacking")
+
+        self.assertIn("transitioned to Attacking", output)
+
+        entity = test_cli.game_state.get_entity_from_list(1)
+        self.assertEqual(entity.get_entity_state_name(), "Attacking")
+
+    # Test Force State Command Skeleton
+    def test_force_state_command_skeleton_success(self):
+        test_cli = self.create_test_cli()
+        self.create_test_map(test_cli)
+        self.create_test_entity(test_cli, "Skeleton", 1, 1)
+
+        output = self.process_command_and_get_output(test_cli, "force  1 Fleeing")
+
+        self.assertIn("transitioned to Fleeing", output)
+
+        entity = test_cli.game_state.get_entity_from_list(1)
+        self.assertEqual(entity.get_entity_state_name(), "Fleeing")
+
+    # Test Force State Command Changes Only Target
+    def test_force_state_command_only_changes_target(self):
+        test_cli = self.create_test_cli()
+        self.create_test_map(test_cli)
+        self.create_test_entity(test_cli, "Goblin", 1, 1)
+        self.create_test_entity(test_cli, "Skeleton", 3, 3)
+
+        self.process_command_and_get_output(test_cli, "force  1 Attacking")
+
+        goblin = test_cli.game_state.get_entity_from_list(1)
+        skeleton = test_cli.game_state.get_entity_from_list(2)
+
+        self.assertEqual(goblin.get_entity_state_name(), "Attacking")
+        self.assertEqual(skeleton.get_entity_state_name(), "Defending")
+
+    # Test Force State Command And State Query
+    def test_force_state_command_state_query_interaction(self):
+        test_cli = self.create_test_cli()
+        self.create_test_map(test_cli)
+        self.create_test_entity(test_cli, "Goblin", 1, 1)
+
+        self.process_command_and_get_output(test_cli, "force  1 Fleeing")
+
+        output = self.process_command_and_get_output(test_cli, "state 1")
+
+        self.assertIn("state: Fleeing!", output)
+
+    # Simulate Command Tests Start
+
+    # Test Simulate Command Invalid Arguments
+    def test_simulate_command_invalid_arguments(self):
+        test_cli = self.create_test_cli()
+
+        output = self.process_command_and_get_output(test_cli, "simulate")
+
+        self.assertIn("simulate_ai_failed", output)
+        self.assertIn("Invalid arguments", output)
+
+    # Test Simulate Command Extra Arguments
+    def test_simulate_command_extra_arguments(self):
+        test_cli = self.create_test_cli()
+
+        output = self.process_command_and_get_output(test_cli, "simulate 1 extra")
+
+        self.assertIn("simulate_ai_failed", output)
+        self.assertIn("Invalid arguments", output)
+
+    # Test Simulate Command Without Map
+    def test_simulate_command_without_map(self):
+        test_cli = self.create_test_cli()
+
+        output = self.process_command_and_get_output(test_cli, "simulate 1")
+
+        self.assertIn("simulate_ai_failed", output)
+        self.assertIn("Map does not exist", output)
+
+    # Test Simulate Command Invalid Entity ID
+    def test_simulate_command_invalid_entity_id(self):
+        test_cli = self.create_test_cli()
+        self.create_test_map(test_cli)
+
+        output = self.process_command_and_get_output(test_cli, "simulate 99")
+
+        self.assertIn("Invalid entity ID", output)
+
+    # Test Simulate Command Negative Entity ID
+    def test_simulate_command_negative_entity_id(self):
+        test_cli = self.create_test_cli()
+        self.create_test_map(test_cli)
+
+        output = self.process_command_and_get_output(test_cli, "simulate -1")
+
+        self.assertIn("Invalid entity ID", output)
+
+    # Test Simulate Command With Warrior
+    def test_simulate_command_warrior_entity(self):
+        test_cli = self.create_test_cli()
+        self.create_test_map(test_cli)
+        self.create_test_entity(test_cli, "Warrior", 1, 1)
+
+        output = self.process_command_and_get_output(test_cli, "simulate 1")
+
+        self.assertIn("simulate_ai_failed", output)
+        self.assertIn("does not have a behavioral state", output)
+
+    # Test Simulate Command With Mage
+    def test_simulate_command_mage_entity(self):
+        test_cli = self.create_test_cli()
+        self.create_test_map(test_cli)
+        self.create_test_entity(test_cli, "Mage", 1, 1)
+
+        output = self.process_command_and_get_output(test_cli, "simulate 1")
+
+        self.assertIn("does not have a behavioral state", output)
+
+    # Test Simulate Command With Goblin
+    def test_simulate_command_goblin_success(self):
+        test_cli = self.create_test_cli()
+        self.create_test_map(test_cli)
+        self.create_test_entity(test_cli, "Goblin", 1, 1)
+
+        output = self.process_command_and_get_output(test_cli, "simulate 1")
+
+        self.assertIn("ok: simulated for 1 command:", output)
+
+    # Test Simulate Command With Skeleton
+    def test_simulate_command_skeleton_success(self):
+        test_cli = self.create_test_cli()
+        self.create_test_map(test_cli)
+        self.create_test_entity(test_cli, "Skeleton", 1, 1)
+
+        output = self.process_command_and_get_output(test_cli, "simulate 1")
+
+        self.assertIn("ok: simulated for 1 command:", output)
+
+    # Test Simulate Command With Nearby Player
+    def test_simulate_command_with_nearby_player(self):
+        test_cli = self.create_test_cli()
+        self.create_test_map(test_cli)
+        self.create_test_entity(test_cli, "Warrior", 2, 1)
+        self.create_test_entity(test_cli, "Goblin", 1, 1)
+
+        output = self.process_command_and_get_output(test_cli, "simulate 2")
+
+        self.assertIn("ok: simulated for 2 command:", output)
+
+    # Test Simulate Command Only Targets Selected Entity
+    def test_simulate_command_target_entity(self):
+        test_cli = self.create_test_cli()
+        self.create_test_map(test_cli)
+        self.create_test_entity(test_cli, "Goblin", 1, 1)
+        self.create_test_entity(test_cli, "Skeleton", 5, 5)
+
+        output = self.process_command_and_get_output(test_cli, "simulate 2")
+
+        self.assertIn("ok: simulated for 2 command:", output)
+
+    # Test Simulate Command After Force State
+    def test_simulate_command_after_force_state(self):
+        test_cli = self.create_test_cli()
+        self.create_test_map(test_cli)
+        self.create_test_entity(test_cli, "Goblin", 1, 1)
+
+        self.process_command_and_get_output(test_cli, "force  1 Attacking")
+
+        output = self.process_command_and_get_output(test_cli, "simulate 1")
+
+        self.assertIn("ok: simulated for 1 command:", output)
+
+    # Test Simulate Command Executes AI Once
+    def test_simulate_command_calls_entity_update(self):
+        test_cli = self.create_test_cli()
+        self.create_test_map(test_cli)
+        self.create_test_entity(test_cli, "Goblin", 1, 1)
+
+        entity = test_cli.game_state.get_entity_from_list(1)
+
+        with patch.object(
+            entity, "update_entity_state", return_value="Defend"
+        ) as mock_update:
+            output = self.process_command_and_get_output(test_cli, "simulate 1")
+
+        mock_update.assert_called_once()
+        self.assertIn("command: Defend!", output)
+
+    # Test State Command Non-Integer Entity ID
+    def test_state_command_non_integer_entity_id(self):
+        test_cli = self.create_test_cli()
+        self.create_test_map(test_cli)
+
+        output = self.process_command_and_get_output(test_cli, "state nope")
+
+        self.assertIn("entity_state_failed", output)
+
+    # Test Simulate Command Non-Integer Entity ID
+    def test_simulate_command_non_integer_entity_id(self):
+        test_cli = self.create_test_cli()
+        self.create_test_map(test_cli)
+
+        output = self.process_command_and_get_output(test_cli, "simulate nope")
+
+        self.assertIn("simulate_ai_failed", output)
+
+    # Test Force State Command Non-Integer Entity ID
+    def test_force_state_command_non_integer_entity_id(self):
+        test_cli = self.create_test_cli()
+        self.create_test_map(test_cli)
+
+        output = self.process_command_and_get_output(test_cli, "force  nope Attacking")
+
+        self.assertIn("force_state_failed", output)
 
 
 if __name__ == "__main__":

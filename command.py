@@ -2173,3 +2173,266 @@ class RedoCommand(Command):
     # Returns: False
     def is_undoable(self):
         return False
+
+
+# State Command extends Command
+# Displays the current behavioral state of an entity
+class StateCommand(Command):
+
+    # Initialize State Command
+    def __init__(self, game_state, entity_id):
+        self.__game_state = game_state
+        self.__entity_id = int(entity_id)
+        self.__name = "State"
+
+    # Execute
+    # Displays the entity's current behavioral state
+    # Params: None
+    # Returns: None
+    def execute(self):
+        # Get entity
+        entity = self.__game_state.get_entity_from_list(self.__entity_id)
+
+        if entity is None:
+            raise ValueError("Entity does not exist!")
+
+        # Get current behavioral state
+        state_name = entity.get_entity_state_name()
+
+        if state_name is None:
+            raise ValueError("Entity does not have a behavioral state")
+
+        # Success output
+        print(f"ok: entity {self.__entity_id} state: {state_name}!")
+
+    # Undo
+    # Read-only command
+    def undo(self):
+        pass
+
+    # Redo
+    # Re-executes the query
+    def redo(self):
+        self.execute()
+
+    # Get Name
+    def get_name(self):
+        return self.__name
+
+    # Is Undoable
+    def is_undoable(self):
+        return False
+
+
+# Force State Command extends Command
+# Forces an enemy into a specified behavioral state
+class ForceStateCommand(Command):
+
+    # Initialize Force State Command
+    def __init__(self, game_state, entity_id, state_name):
+        self.__game_state = game_state
+        self.__entity_id = int(entity_id)
+        self.__state_name = state_name
+        self.__name = "Force State"
+        self.__old_state = None
+        self.__executed = False
+
+    # Execute
+    # Forces the entity into the requested behavioral state
+    def execute(self):
+        # Get entity
+        entity = self.__game_state.get_entity_from_list(self.__entity_id)
+
+        if entity is None:
+            raise ValueError("Entity does not exist!")
+
+        # Ensure entity supports behavioral states
+        if entity.get_entity_state_name() is None:
+            raise ValueError("Entity does not have a behavioral state!")
+
+        # Save original behavioral state for undo
+        if not self.__executed:
+            self.__old_state = entity.create_state_manager_memento()
+
+        # Restore requested state through existing Memento logic
+        entity.restore_state_manager(
+            Entity.StateManagerMemento(state_name=self.__state_name), self.__game_state
+        )
+
+        # Mark game as modified
+        self.__game_state.mark_as_unsaved()
+
+        self.__executed = True
+
+        print(f"ok: entity {self.__entity_id} " f"transitioned to {self.__state_name}!")
+
+    # Undo
+    # Restores the entity's previous behavioral state
+    def undo(self):
+        if not self.__executed:
+            raise ValueError("State has not been forced!")
+
+        entity = self.__game_state.get_entity_from_list(self.__entity_id)
+
+        if entity is None:
+            raise ValueError("Entity does not exist!")
+
+        entity.restore_state_manager(self.__old_state, self.__game_state)
+
+        self.__game_state.mark_as_unsaved()
+        self.__executed = False
+
+    # Redo
+    # Forces the state again
+    def redo(self):
+        if self.__executed:
+            raise ValueError("State has already been forced!")
+
+        self.execute()
+
+    # Get Name
+    def get_name(self):
+        return self.__name
+
+    # Create Memento
+    # Saves command information for persistence
+    def create_memento(self):
+        return Command.Memento(
+            command_type="ForceStateCommand",
+            data={
+                "entity_id": self.__entity_id,
+                "state_name": self.__state_name,
+                "old_state": (
+                    self.__old_state.state_name
+                    if self.__old_state is not None
+                    else None
+                ),
+                "executed": self.__executed,
+            },
+        )
+
+    # Restore
+    # Reconstructs the command from its Memento
+    def restore(
+        self, memento, game_state, game_state_manager=None, command_manager=None
+    ):
+        if not isinstance(memento, Command.Memento):
+            raise TypeError("Invalid Force State Command memento!")
+
+        if memento.command_type != "ForceStateCommand":
+            raise ValueError("Incorrect Force State Command memento!")
+
+        self.__game_state = game_state
+        self.__entity_id = memento.data["entity_id"]
+        self.__state_name = memento.data["state_name"]
+        self.__executed = memento.data["executed"]
+        self.__name = "Force State"
+
+        old_state_name = memento.data["old_state"]
+
+        self.__old_state = (
+            Entity.StateManagerMemento(old_state_name)
+            if old_state_name is not None
+            else None
+        )
+
+
+# Simulate Command extends Command
+# Evaluates an entity's AI behavior
+class SimulateCommand(Command):
+
+    # Initialize Simulate Command
+    def __init__(self, game_state, entity_id, command_manager, game_state_manager):
+        self.__game_state = game_state
+        self.__entity_id = int(entity_id)
+        self.__command_manager = command_manager
+        self.__game_state_manager = game_state_manager
+        self.__name = "Simulate"
+        self.__old_state = None
+        self.__executed = False
+
+    # Execute
+    # Evaluates the entity's behavioral state
+    def execute(self):
+        # Get entity
+        entity = self.__game_state.get_entity_from_list(self.__entity_id)
+
+        if entity is None:
+            raise ValueError("Entity does not exist!")
+
+        # Ensure entity has AI
+        if entity.get_entity_state_name() is None:
+            raise ValueError("Entity does not have a behavioral state!")
+
+        # Save game state for undo
+        if not self.__executed:
+            self.__old_state = self.__game_state.create_memento(self.__command_manager)
+
+        # Evaluate AI and execute current behavior
+        try:
+            result = entity.update_entity_state()
+        except Exception:
+            self.__game_state.restore(
+                self.__old_state, self.__command_manager, self.__game_state_manager
+            )
+            raise
+
+        # Mark game as modified
+        self.__game_state.mark_as_unsaved()
+        self.__executed = True
+
+        # Print result returned by AI
+        print(f"ok: simulated for {self.__entity_id} " f"command: {result}!")
+
+    # Undo
+    # Restores the game state before simulation
+    def undo(self):
+        if not self.__executed:
+            raise ValueError("Simulation has not been executed!")
+
+        self.__game_state.restore(
+            self.__old_state, self.__command_manager, self.__game_state_manager
+        )
+
+        self.__executed = False
+
+    # Redo
+    # Simulates the entity again
+    def redo(self):
+        if self.__executed:
+            raise ValueError("Simulation has already been executed!")
+
+        self.execute()
+
+    # Get Name
+    def get_name(self):
+        return self.__name
+
+    # Create Memento
+    def create_memento(self):
+        return Command.Memento(
+            command_type="SimulateCommand",
+            data={
+                "entity_id": self.__entity_id,
+                "old_state": deepcopy(self.__old_state),
+                "executed": self.__executed,
+            },
+        )
+
+    # Restore
+    def restore(
+        self, memento, game_state, game_state_manager=None, command_manager=None
+    ):
+        if not isinstance(memento, Command.Memento):
+            raise TypeError("Invalid Simulate Command memento!")
+
+        if memento.command_type != "SimulateCommand":
+            raise ValueError("Incorrect Simulate Command memento!")
+
+        self.__game_state = game_state
+        self.__entity_id = memento.data["entity_id"]
+        self.__old_state = deepcopy(memento.data["old_state"])
+        self.__executed = memento.data["executed"]
+        self.__game_state_manager = game_state_manager
+        self.__command_manager = command_manager
+        self.__name = "Simulate"
