@@ -621,13 +621,6 @@ class Entity:
         # Reconstruct state manager
         self.__state_manager = EntityStateManager(self, game_state, state)
 
-    """# Get Entity State Name
-    # Gets the current behavioral state of the entity
-    # Params: None
-    # Returns: state_name - String - current behavioral state name
-    def get_entity_state_name(self):
-        return self.__state_manager.get_current_state_name()"""
-
     # Initialize Entity State Manager
     # Creates a state manager for enemy entities
     # Params: game_state - GameState - current game state
@@ -815,14 +808,6 @@ class Entity:
 
         if self.__backpack is None:
             raise ValueError(f"Backpack was not restored for entity {self.__id}")
-
-    """# id
-    # Solves issues with accessing if of mage which inherits from Entity
-    # Params: None
-    # Returns: id of entity
-    @property
-    def id(self):
-        return self.__id"""
 
     # Restore State Manager After Entity Restore
     # Reconnects behavioral state after loading an entity

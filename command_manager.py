@@ -93,9 +93,6 @@ class CommandManager:
     # Params: command - Command - Command to execute
     # Returns: None
     def execute_command(self, command):
-        """print("DEBUG executing:", command.get_name())
-        print("DEBUG undoable:", command.is_undoable())
-        print("DEBUG history before:", self.get_history_info())"""
 
         command.execute()
         # print("DEBUG redo history cleared!")

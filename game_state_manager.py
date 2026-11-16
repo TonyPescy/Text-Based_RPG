@@ -581,53 +581,6 @@ class GameStateManager:
             data=self.command_data_to_data(command_data["data"]),
         )
 
-    """# Command Data to Data
-    # Converts JSON-compatible command data back into Python objects
-    # Params: data - dict/list/object
-    # Returns: reconstructed Python object
-    def command_data_to_data(self, data):
-
-        # Convert a GameState memento into a dictionary
-        if isinstance(data, GameState.Memento):
-            return self.memento_to_data(data)
-
-        # Convert a CommandManager memento into a dictionary
-        elif isinstance(data, CommandManager.Memento):
-            return self.command_manager_memento_to_data(data)
-
-        # Convert an individual Command memento into a dictionary
-        elif isinstance(data, Command.Memento):
-            return self.command_memento_to_data(data)
-
-        # Recursively convert dictionaries
-        elif isinstance(data, dict):
-            converted_data = {}
-
-            for key, value in data.items():
-                converted_data[key] = self.command_data_to_data(value)
-
-            return converted_data
-
-        # Recursively convert lists and tuples
-        elif isinstance(data, (list, tuple)):
-            converted_data = []
-
-            for value in data:
-                converted_data.append(self.command_data_to_data(value))
-
-            return converted_data
-
-        # Values JSON already supports
-        elif data is None or isinstance(data, (str, int, float, bool)):
-            return data
-
-        else:
-            raise TypeError(
-                f"Unsupported data type for JSON conversion: {type(data).__name__}"
-            )"""
-
-    # Command Manager Memento Conversion Tests
-
     # Create Command Memento
     # Creates a basic Command Memento for testing.
     # Params: None
