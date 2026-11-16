@@ -1,0 +1,594 @@
+tick
+state-info
+history
+undo
+redo
+inspect 1
+inventory 1
+tile 0 0
+move 1 1 1
+attack 1 2
+cast 1 2 fireball
+state 1
+simulate 1
+force 1 attacking
+save preinit_fuzz
+load nonexistent_fuzz_file
+spawn warrior 2 2
+spawn loot potion 2 2
+set tile 1 1 wall
+pickup 1 potion
+give 1 potion
+drop 1 potion
+swap 1 weapon sword
+use 1 potion
+
+nonsense
+help
+INIT MAP
+init
+init map
+init map x y
+init map 0 0
+init map 4 4
+init map 51 51
+init map -5 10
+init map 12 12
+state-info
+tile 0 0
+tile 11 11
+tile 12 12
+set tile 0 0 wall
+set tile 0 0 floor
+set tile 10 10 shallowwater
+set tile 9 9 wall
+set tile 9 9 floor
+spawn warrior 2 2
+spawn mage 2 4
+spawn goblin 6 2
+spawn skeleton 7 4
+spawn warrior 4 8
+spawn goblin 9 8
+inspect 1
+inspect 2
+inspect 3
+inspect 4
+inspect 5
+inspect 6
+inventory 1
+inventory 2
+state 3
+state 4
+state 6
+state 1
+history
+state-info
+spawn loot potion 2 2
+pickup 1 potion
+give 1 potion
+inventory 1
+use 1 potion
+swap 1 weapon potion
+drop 1 potion
+spawn loot healthpotion 2 2
+pickup 1 healthpotion
+give 1 healthpotion
+inventory 1
+use 1 healthpotion
+swap 1 weapon healthpotion
+drop 1 healthpotion
+spawn loot health_potion 2 2
+pickup 1 health_potion
+give 1 health_potion
+inventory 1
+use 1 health_potion
+swap 1 weapon health_potion
+drop 1 health_potion
+spawn loot sword 2 2
+pickup 1 sword
+give 1 sword
+inventory 1
+use 1 sword
+swap 1 weapon sword
+drop 1 sword
+spawn loot iron_sword 2 2
+pickup 1 iron_sword
+give 1 iron_sword
+inventory 1
+use 1 iron_sword
+swap 1 weapon iron_sword
+drop 1 iron_sword
+spawn loot shield 2 2
+pickup 1 shield
+give 1 shield
+inventory 1
+use 1 shield
+swap 1 weapon shield
+drop 1 shield
+spawn loot leatherarmor 2 2
+pickup 1 leatherarmor
+give 1 leatherarmor
+inventory 1
+use 1 leatherarmor
+swap 1 weapon leatherarmor
+drop 1 leatherarmor
+spawn loot staff 2 2
+pickup 1 staff
+give 1 staff
+inventory 1
+use 1 staff
+swap 1 weapon staff
+drop 1 staff
+spawn loot unknown_item 2 2
+pickup 1 unknown_item
+give 1 unknown_item
+inventory 1
+use 1 unknown_item
+swap 1 weapon unknown_item
+drop 1 unknown_item
+spawn loot potion 2 2
+pickup 1 potion
+inventory 1
+give 2 potion
+inventory 2
+swap 1 armor potion
+swap 1 accessory potion
+swap 1 badslot potion
+pickup 999 potion
+give 999 potion
+drop 999 potion
+use 999 potion
+drop 1 nonexistent
+pickup 1 nonexistent
+use 1 nonexistent
+inventory 999
+inventory -1
+move 1 3 2
+inspect 1
+tile 3 2
+move 1 3 2
+move 1 6 2
+move 1 12 2
+move 1 -1 2
+move 1 abc 2
+move 999 1 1
+set tile 4 2 wall
+move 1 4 2
+set tile 4 2 floor
+move 1 4 2
+inspect 1
+attack 1 3
+inspect 3
+attack 3 1
+inspect 1
+attack 1 1
+attack 1 999
+attack 999 1
+attack a b
+cast 2 3 fireball
+cast 2 3 heal
+cast 2 3 magicmissile
+cast 1 3 fireball
+cast 2 999 fireball
+cast 2 3 nonexistent
+cast 2 x heal
+inspect 2
+inspect 3
+history
+undo
+inspect 1
+redo
+inspect 1
+state 3
+simulate 3
+state 3
+simulate 3
+state 3
+force 3 fleeing
+state 3
+simulate 3
+state 3
+force 3 defending
+state 3
+force 3 attacking
+state 3
+force 3 invalid
+force 1 attacking
+force 999 attacking
+force x fleeing
+simulate 999
+simulate x
+state 999
+state x
+tick
+state 3
+tick
+state 3
+tick
+inspect 1
+inspect 3
+undo
+state 3
+redo
+state 3
+history
+save fuzz_checkpoint_a
+state-info
+history
+tick
+tick
+inspect 1
+inspect 3
+save fuzz_checkpoint_b
+undo
+history
+redo
+history
+load fuzz_checkpoint_a
+state-info
+inspect 1
+inspect 3
+history
+save fuzz_checkpoint_c
+load fuzz_checkpoint_b
+state-info
+load nonexistent_fuzz_file
+save
+load
+undo
+redo
+history
+set potion abc
+inspect
+init 2 wall
+state-info 2147483647 tile
+swap wall warrior mage fleeing 1.5 12
+state floor attacking
+use 0 map
+redo 0
+inspect map 1.5 floor goblin floor 999
+give 1
+attack
+pickup goblin map defending attacking 2 map
+save
+undo
+cast -1 attacking
+redo 2 none 2
+tile map 2147483647 12 floor goblin
+init 0 1.5 2147483647 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx map
+move 0
+force defending fleeing 0 warrior potion
+cast 1.5 abc 0 potion floor 1
+attack 0 0 1.5 floor mage
+give 1.5 fleeing abc 3 1.5
+drop 2 999 floor loot tile
+tick loot none loot warrior potion 999
+cast potion tile
+give defending loot 6 none attacking 2
+give attacking
+undo map 2 warrior none goblin
+attack mage floor
+state-info
+history
+init map fleeing 0
+inventory 1.5 potion fleeing defending goblin
+swap warrior none tile
+inventory 6 floor mage
+swap 3 wall 3
+history tile map
+save mage
+redo loot floor defending 1.5 wall attacking
+tick xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx attacking 2 6 tile
+history loot 3 loot
+history 0 12
+force
+set loot 1.5 defending warrior 2 loot
+history
+drop
+init
+drop 2147483647 999 warrior 1 3
+init loot map 1.5 999 2
+give xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+init 2147483647 2 defending
+cast -1 999
+simulate
+drop
+set attacking fleeing
+save none 1 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 0
+inspect -1 3 map 2
+force map 999 loot 999 defending
+tile
+state-info
+give fleeing 2147483647
+state-info
+history
+give goblin 1 none
+spawn none -1 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 1
+force loot -1 warrior fleeing
+init floor defending 999 1 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+move tile none tile
+state-info -1 -1
+set xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 1.5 attacking 6 goblin
+tile
+state-info
+inventory
+tile 6 abc
+state-info 2147483647 mage -1 floor
+state-info -1 0 loot
+simulate map attacking wall wall
+inspect floor loot -1
+undo 2147483647 wall 2
+force fleeing 2 warrior abc
+inventory potion 2 1.5
+use 999 map loot 1 -1
+load 6 wall
+swap 12 12 warrior fleeing 1
+inventory loot none -1 tile 2 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+swap 6 floor map xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx abc
+spawn defending defending attacking tile xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 12
+set 3 wall
+state-info warrior 3 6 defending
+save fleeing
+history 1 defending attacking
+inventory 0 goblin 999 tile warrior warrior
+simulate
+state-info
+history
+state
+set mage attacking 2147483647 tile 2147483647
+use 0 defending
+undo fleeing
+inventory wall xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx attacking
+init tile 6 1.5 999
+simulate 12
+use 6 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx goblin 2
+undo goblin 999 3
+load potion loot
+swap 999
+cast
+redo abc potion 999 defending goblin attacking
+load mage abc 999 warrior 6
+set abc defending warrior
+pickup
+redo loot
+set 1 wall attacking -1 potion warrior
+move 1.5 1 fleeing 1 1.5
+save 1.5
+swap 2147483647 0
+inspect attacking abc 2 attacking
+spawn map
+history tile 2 potion 1
+undo loot mage attacking goblin tile goblin
+drop 2
+save
+history potion 6
+load defending
+tick 2147483647 attacking map map 1 1
+state-info
+history
+attack goblin none 6
+redo
+tile fleeing -1 1
+simulate attacking tile
+give floor
+attack 12 none defending goblin loot 0
+set mage 3 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 6 map none
+drop loot
+save 12 999 floor goblin floor 1.5
+drop loot 3 6 warrior tile
+pickup
+undo mage goblin mage xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx potion
+drop xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx goblin warrior map fleeing
+inspect fleeing 1.5 attacking 999 tile warrior
+pickup abc fleeing map
+drop
+undo 6 attacking attacking warrior
+inventory wall 12 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+attack 2 12 3 6
+tile 3 1 999 12 wall
+history
+move loot 1 0 1
+history tile potion none
+init goblin potion none fleeing potion
+redo loot 999
+cast attacking
+swap tile goblin mage -1 6
+load 0
+give
+pickup 1.5 attacking defending 6 attacking potion
+state-info
+history
+state-info wall
+give attacking warrior
+use 1.5 none 1 1
+inspect
+set 1.5
+swap 1.5 1.5 tile 1
+load -1
+state-info
+load attacking 3 fleeing floor fleeing 3
+redo fleeing warrior 1
+swap 2 loot tile -1 1 3
+inspect defending wall mage abc
+tick map floor
+undo
+drop goblin 12 2
+state-info
+swap abc 999 attacking 1.5
+cast 12 mage warrior
+init goblin none xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx warrior defending 1
+undo fleeing 12 defending xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+inspect wall potion 1.5 floor 1
+inventory fleeing potion fleeing defending
+history 2 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx loot 2
+init 999 0 2147483647 fleeing xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx -1
+tick 1.5 0 12
+state 2 1 warrior 0
+save xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx fleeing abc
+save 0 loot mage fleeing
+give
+undo
+state-info
+history
+tile -1
+state-info defending
+drop -1 12 mage 1 wall
+load -1
+swap attacking 3 attacking
+drop 2147483647 0 1.5
+swap 0 999 attacking
+attack -1 999 goblin 6 2147483647
+pickup
+pickup 6 loot defending xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+tick goblin potion xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 2147483647
+tile attacking fleeing warrior xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx wall
+inspect tile potion warrior tile wall
+state
+drop 12 2147483647 6 12 2 999
+redo
+init wall attacking loot
+swap attacking 2147483647
+cast none 6
+state-info 2147483647
+force none attacking xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 2
+undo 2147483647 wall mage
+use 2
+tile 2147483647 abc
+pickup defending attacking 1.5 attacking none
+give 999
+use 12 fleeing floor fleeing map
+pickup 3 none
+spawn 2
+tile tile tile
+state-info
+history
+force warrior mage loot 6 12 1
+attack 6 abc map wall 0 -1
+redo
+history 12 potion attacking map warrior 999
+drop 0 defending
+attack 0
+load 6 mage warrior map
+move
+inspect potion 12
+simulate loot 12 wall 2
+pickup tile
+inventory map 12 tile
+set floor 1 warrior mage
+cast 2 2147483647 loot wall
+use
+attack 1.5 2 map 999 1 floor
+state
+tick -1 warrior potion
+give potion none abc 6 none
+spawn xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+redo none mage 1 defending 2
+state 2 wall 1.5 1.5
+init 1 floor loot potion
+set 1 mage 12
+give
+inspect none 2 warrior 1 12 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+simulate potion wall
+inspect 999
+load attacking potion tile defending 1 map
+state-info goblin floor mage tile wall
+state-info
+history
+undo potion none none
+drop map abc loot 0 potion
+history 0 12 goblin tile
+tick 0
+set
+swap 12 none 12 goblin 1 loot
+load floor
+set
+spawn
+use 1.5 1.5 0 potion
+pickup abc
+use potion abc warrior fleeing warrior map
+drop attacking 3 abc loot
+save
+give -1 floor 6 warrior loot
+tick 6 wall fleeing 0 none
+init 2 warrior tile 2147483647 none
+use 12 3 floor
+swap
+set attacking warrior potion 1 0
+history
+tile 11 11
+tile 0 0
+simulate 3
+tile 0 0
+inventory 1
+history
+inspect 2
+force 3 attacking
+force 3 attacking
+move 1 3 2
+move 1 2 2
+state 3
+state 3
+undo
+tile 0 0
+attack 3 1
+state 4
+state 4
+history
+inventory 1
+undo
+move 1 2 2
+tile 11 11
+state 3
+history
+simulate 3
+history
+attack 3 1
+attack 1 3
+force 3 attacking
+simulate 4
+history
+redo
+undo
+state-info
+state 3
+inspect 2
+inspect 1
+inspect 1
+move 1 3 2
+state-info
+state 3
+move 1 2 2
+state 3
+tile 0 0
+state 4
+inspect 2
+tile 11 11
+move 1 3 2
+inspect 2
+inspect 2
+force 3 defending
+state 3
+move 1 2 2
+init map 5 5
+state-info
+tile 4 4
+tile 5 5
+inspect 1
+state 3
+spawn warrior 0 0
+spawn goblin 4 4
+spawn mage 2 2
+state 2
+tick
+state 2
+simulate 2
+state 2
+history
+save fuzz_final
+load fuzz_final
+state-info
+undo
+redo
+history
+tick
+state-info

@@ -1361,9 +1361,11 @@ class TickCommand(Command):
             entities_to_remove = self.__game_state.process_tick_for_all_entities()
 
             # Remove entities that should leave the game
-            if len(entities_to_remove) > 0:
-                for entity_id in entities_to_remove:
-                    self.__game_state.remove_entity_from_game(entity_id)
+            for entity_id in entities_to_remove:
+                self.__game_state.remove_entity_from_game(entity_id)
+
+            # Process autonomous AI behavior
+            self.__game_state.process_ai_for_all_entities()
 
         # Mark game state as unsaved
         self.__game_state.mark_as_unsaved()

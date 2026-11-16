@@ -1942,6 +1942,9 @@ class TestCommand(unittest.TestCase):
         # Execute Command
         test_command.execute()
 
+        # Verify AI behavior was processed
+        test_game_state.process_ai_for_all_entities.assert_called_once_with()
+
         # Verify entity updates
         test_game_state.create_memento.assert_called_once_with(self.command_manager)
         test_game_state.entities_exists.assert_called_once_with()
@@ -1969,6 +1972,9 @@ class TestCommand(unittest.TestCase):
 
         # Execute Command
         test_command.execute()
+
+        # Verify AI was not processed
+        test_game_state.process_ai_for_all_entities.assert_not_called()
 
         # Verify entities were not updated
         test_game_state.process_tick_for_all_entities.assert_not_called()
@@ -4816,6 +4822,160 @@ class TestCommand(unittest.TestCase):
             command.execute()
 
         game_state.get_entity_from_list.assert_called_once_with(5)
+
+    # Test Tick Command Processes AI
+    # Verify that AI behavior is processed once per tick
+    # Returns: None
+    def test_tick_command_processes_ai(self):
+        test_game_state = MagicMock()
+
+        test_game_state.entities_exists.return_value = True
+        test_game_state.process_tick_for_all_entities.return_value = []
+
+        test_command = TickCommand(
+            test_game_state, self.command_manager, self.game_state_manager
+        )
+
+        test_command.execute()
+
+        test_game_state.process_ai_for_all_entities.assert_called_once_with()
+        test_game_state.advance_turn.assert_called_once_with()
+
+    # Test Tick Command Skips AI Without Entities
+    # Verify that AI is not processed when no entities exist
+    # Returns: None
+    def test_tick_command_skips_ai_without_entities(self):
+        test_game_state = MagicMock()
+
+        test_game_state.entities_exists.return_value = False
+
+        test_command = TickCommand(
+            test_game_state, self.command_manager, self.game_state_manager
+        )
+
+        test_command.execute()
+
+        test_game_state.process_ai_for_all_entities.assert_not_called()
+        test_game_state.process_tick_for_all_entities.assert_not_called()
+
+        test_game_state.advance_turn.assert_called_once_with()
+
+    # Test Tick Command AI After Entity Removal
+    # Verify that expired entities are removed before AI processing
+    # Returns: None
+    def test_tick_command_ai_after_entity_removal(self):
+        test_game_state = MagicMock()
+
+        test_game_state.entities_exists.return_value = True
+        test_game_state.process_tick_for_all_entities.return_value = [2, 3]
+
+        test_command = TickCommand(
+            test_game_state, self.command_manager, self.game_state_manager
+        )
+
+        test_command.execute()
+
+        # Verify expired entities were removed
+        test_game_state.remove_entity_from_game.assert_any_call(2)
+        test_game_state.remove_entity_from_game.assert_any_call(3)
+
+        self.assertEqual(test_game_state.remove_entity_from_game.call_count, 2)
+
+        # Verify AI was processed once
+        test_game_state.process_ai_for_all_entities.assert_called_once_with()
+
+        # Verify removal happened before AI processing
+        method_calls = test_game_state.mock_calls
+
+        remove_2_index = method_calls.index(
+            unittest.mock.call.remove_entity_from_game(2)
+        )
+
+        remove_3_index = method_calls.index(
+            unittest.mock.call.remove_entity_from_game(3)
+        )
+
+        ai_index = method_calls.index(unittest.mock.call.process_ai_for_all_entities())
+
+        self.assertLess(remove_2_index, ai_index)
+        self.assertLess(remove_3_index, ai_index)
+
+    # Test Tick Command AI Before Turn Advancement
+    # Verify that AI is processed before advancing the turn
+    # Returns: None
+    def test_tick_command_ai_before_turn_advance(self):
+        test_game_state = MagicMock()
+
+        test_game_state.entities_exists.return_value = True
+        test_game_state.process_tick_for_all_entities.return_value = []
+
+        test_command = TickCommand(
+            test_game_state, self.command_manager, self.game_state_manager
+        )
+
+        test_command.execute()
+
+        method_calls = test_game_state.mock_calls
+
+        ai_index = method_calls.index(unittest.mock.call.process_ai_for_all_entities())
+
+        advance_index = method_calls.index(unittest.mock.call.advance_turn())
+
+        self.assertLess(ai_index, advance_index)
+
+    # Test Tick Command AI Undo
+    # Verify that undo restores the state before AI processing
+    # Returns: None
+    def test_tick_command_ai_undo(self):
+        test_game_state = MagicMock()
+        old_state = MagicMock()
+
+        test_game_state.create_memento.return_value = old_state
+        test_game_state.entities_exists.return_value = True
+        test_game_state.process_tick_for_all_entities.return_value = []
+
+        test_command = TickCommand(
+            test_game_state, self.command_manager, self.game_state_manager
+        )
+
+        test_command.execute()
+        test_command.undo()
+
+        # Verify the original state was restored
+        test_game_state.restore.assert_called_once_with(
+            old_state,
+            self.command_manager,
+            self.game_state_manager,
+        )
+
+        # Verify AI was processed once during execution
+        test_game_state.process_ai_for_all_entities.assert_called_once_with()
+
+    # Test Tick Command AI Redo
+    # Verify that AI is processed again after undo and redo
+    # Returns: None
+    def test_tick_command_ai_redo(self):
+        test_game_state = MagicMock()
+
+        test_game_state.entities_exists.return_value = True
+        test_game_state.process_tick_for_all_entities.return_value = []
+
+        test_command = TickCommand(
+            test_game_state, self.command_manager, self.game_state_manager
+        )
+
+        test_command.execute()
+        test_command.undo()
+        test_command.redo()
+
+        # Verify AI ran once per execution
+        self.assertEqual(test_game_state.process_ai_for_all_entities.call_count, 2)
+
+        # Verify turn advanced once per execution
+        self.assertEqual(test_game_state.advance_turn.call_count, 2)
+
+        # Verify undo restored the previous state
+        test_game_state.restore.assert_called_once()
 
 
 if __name__ == "__main__":

@@ -1902,6 +1902,95 @@ class TestGameState(unittest.TestCase):
         # Saved status should remain unchanged
         self.assertTrue(self.game_state.get_game_state_info()[2])
 
+    # Test Process AI For All Entities
+    # Verify active AI entities update their behavioral state
+    def test_process_ai_for_all_entities(self):
+        self.create_test_grid()
+        self.game_state.spawn_entity(2, 2, "goblin")
+
+        goblin = self.game_state.get_entity_from_list(1)
+
+        with patch.object(goblin, "update_entity_state") as mock_update:
+            self.game_state.process_ai_for_all_entities()
+
+            mock_update.assert_called_once_with()
+
+    # Test Process AI For Multiple Entities
+    # Verify all active AI entities are updated
+    def test_process_ai_for_all_entities_multiple(self):
+        self.create_test_grid()
+        self.game_state.spawn_entity(1, 1, "goblin")
+        self.game_state.spawn_entity(3, 3, "skeleton")
+
+        goblin = self.game_state.get_entity_from_list(1)
+        skeleton = self.game_state.get_entity_from_list(2)
+
+        with patch.object(goblin, "update_entity_state") as mock_goblin:
+            with patch.object(skeleton, "update_entity_state") as mock_skeleton:
+                self.game_state.process_ai_for_all_entities()
+
+                mock_goblin.assert_called_once_with()
+                mock_skeleton.assert_called_once_with()
+
+    # Test Process AI Skips Non-AI Entities
+    # Verify entities without behavioral states are skipped
+    def test_process_ai_for_all_entities_no_state(self):
+        self.create_test_grid()
+        self.game_state.spawn_entity(1, 1, "warrior")
+        self.game_state.spawn_entity(3, 3, "goblin")
+
+        warrior = self.game_state.get_entity_from_list(1)
+        goblin = self.game_state.get_entity_from_list(2)
+
+        with patch.object(warrior, "update_entity_state") as mock_warrior:
+            with patch.object(goblin, "update_entity_state") as mock_goblin:
+                self.game_state.process_ai_for_all_entities()
+
+                mock_warrior.assert_not_called()
+                mock_goblin.assert_called_once_with()
+
+    # Test Process AI Skips Dead Entities
+    # Verify dead AI entities are not updated
+    def test_process_ai_for_all_entities_dead(self):
+        self.create_test_grid()
+        self.game_state.spawn_entity(2, 2, "goblin")
+
+        goblin = self.game_state.get_entity_from_list(1)
+
+        # Mock dead status in entity information
+        dead_info = MagicMock()
+        dead_info.temp_buffs = ((("Name", "Dead"), ("Turns", 0)),)
+
+        with patch.object(goblin, "get_info", return_value=dead_info):
+            with patch.object(goblin, "update_entity_state") as mock_update:
+                self.game_state.process_ai_for_all_entities()
+
+                mock_update.assert_not_called()
+
+    # Test Process AI Skips Missing Entities
+    # Verify removed entities are skipped during processing
+    def test_process_ai_for_all_entities_missing(self):
+        self.create_test_grid()
+        self.game_state.spawn_entity(2, 2, "goblin")
+
+        goblin = self.game_state.get_entity_from_list(1)
+
+        with patch.object(self.game_state, "get_entity_from_list", return_value=None):
+            with patch.object(goblin, "update_entity_state") as mock_update:
+                self.game_state.process_ai_for_all_entities()
+
+                mock_update.assert_not_called()
+
+    # Test Process AI With No Entities
+    # Verify processing an empty entity list does not raise an error
+    def test_process_ai_for_all_entities_empty(self):
+        self.create_test_grid()
+
+        with patch.object(self.game_state, "get_entity_from_list") as mock_get_entity:
+            self.game_state.process_ai_for_all_entities()
+
+            mock_get_entity.assert_not_called()
+
 
 # Run the tests
 if __name__ == "__main__":

@@ -1,0 +1,25 @@
+init map 10 10
+spawn Warrior 2 2
+spawn Goblin 4 2
+state 2
+tick
+state 2
+inspect 1
+inspect 2
+undo
+inspect 1
+inspect 2
+state 2
+tick
+state 2
+inspect 1
+inspect 2
+state 2
+tick
+state 2
+inspect 1
+inspect 2
+tick
+state 2
+inspect 1
+inspect 2

@@ -797,3 +797,38 @@ class GameState:
             entity_info.position,
             target_info.position,
         )
+
+    # Process AI For All Entities
+    # Updates the behavioral state of all active AI entities
+    # Params: None
+    # Returns: None
+    def process_ai_for_all_entities(self):
+        # Snapshot entities before processing
+        entity_ids = [entity.get_info().id for entity in self.__entity_list]
+
+        # Process each entity
+        for entity_id in entity_ids:
+            # Get entity
+            entity = self.get_entity_from_list(entity_id)
+
+            # Entity no longer exists
+            if entity is None:
+                continue
+
+            # Get entity information
+            entity_info = entity.get_info()
+
+            # Skip entities without behavioral states
+            if entity.get_entity_state_name() is None:
+                continue
+
+            # Skip dead entities
+            is_dead = any(
+                dict(buff).get("Name") == "Dead" for buff in entity_info.temp_buffs
+            )
+
+            if is_dead:
+                continue
+
+            # Update AI and execute behavior
+            entity.update_entity_state()

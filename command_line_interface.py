@@ -124,12 +124,8 @@ class CLI:
         else:
             print("error: map_init_failed due to invalid arguments.")
             return
-        # Map already created
-        if self.game_state.is_map_created():
-            # Reset map and continue
-            self.game_state.reset_map()
         # width and height are not valid ints
-        elif not dl.are_valid_ints(width, height):
+        if not dl.are_valid_ints(width, height):
             print("error: map_init_failed - Width and height are not valid integers!")
             return
         # width and heigth within bounds
@@ -138,6 +134,10 @@ class CLI:
                 "error: map_init_failed - Width and height exceed bound minimum and maximum!"
             )
             return
+        # Map already created
+        elif self.game_state.is_map_created():
+            # Reset map and continue
+            self.game_state.reset_map()
         # Valid inputs
         # Create Command
         command = InitCommand(
@@ -906,14 +906,15 @@ class CLI:
         elif not self.game_state.is_map_created():
             print("error: tick_failed - Map does not exist!")
             return
-        # Check to see if there are entities to update
+
+        """# Check to see if there are entities to update
         if self.game_state.entities_exists():
             entities_to_remove = self.game_state.process_tick_for_all_entities()
 
         # If there are entities to be removed from the game
         if len(entities_to_remove) > 0:
             for entity_id in entities_to_remove:
-                self.game_state.remove_entity_from_game(entity_id)
+                self.game_state.remove_entity_from_game(entity_id)"""
 
         # Create Tick Command
         command = TickCommand(

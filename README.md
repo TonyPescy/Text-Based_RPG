@@ -451,8 +451,13 @@ Exit the game by using the keyboard interrupt or by entering "quit" as a command
 - Houses all functions needed for entity state management.
 - Transistions to new entity states, updates current state, and gets current state.
 - Listens to the state to determine when to transition.
+- Tick will evaluate environment and trigger the transistions based on findings.
 
 
 ### Other
 - Values for entities, tiles, spells, equipment, grids, and game state are marked as private (__varname). To access this information x.getinfo() will return a immutable copy to prevent any of that private data from being public and able to be modified. When these do need to be changed, such as an entity losing health, it is handled within its own class.
 - Mementos are snapshots of the current game state and include the information that is necessary to rebuild the object in its current state. These are immutable and do not expose the private fields as they use a dataclass that will then have the information copied into its fields.
+
+### Known Issues
+- Game saves can become extremely large, especially if many commands are performed and the UNDO history is never reset. Could be recursion issue somewhere in the save/memento logic.
+    - Largest game save with fuzz based testing was ~2.35 GB
