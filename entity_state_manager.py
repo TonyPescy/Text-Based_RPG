@@ -12,6 +12,7 @@ Purpose: Houses all functions necessary for proper entity state management in th
 
 # Imports
 from domain_library import AttackTypes
+from entity_state import RagingState
 
 
 # Entity State Manager
@@ -32,9 +33,6 @@ class EntityStateManager:
         if not restoring:
             self.__current_state.enter(self)
 
-        # Enter initial state
-        self.__current_state.enter(self)
-
     # Transition To
     # Transitions the entity from its current state to a new state
     # Params: new_state - EntityState - state to transition into
@@ -43,13 +41,19 @@ class EntityStateManager:
         # Check if transition is valid
         if not self.is_valid_transition(new_state):
             raise ValueError("Invalid state transition!")
-
+        entity_info = self.__entity.get_info()
         # Prevent Ogres from entering Fleeing
         if (
-            self.get_entity_info().e_type.lower() == "ogre"
+            entity_info.e_type.lower() == "ogre"
             and new_state.get_name().lower() == "fleeing"
         ):
             raise ValueError("Ogres cannot enter the Fleeing state!")
+
+        # Only Ogres can enter the Raging state
+        if isinstance(new_state, RagingState):
+
+            if entity_info.e_type.lower() != "ogre":
+                raise ValueError("Only Ogres can enter the Raging state!")
 
         # Exit current state
         self.__current_state.exit(self)
@@ -66,7 +70,7 @@ class EntityStateManager:
     # Returns: is_valid - Bool - whether the transition is allowed
     def is_valid_transition(self, new_state):
         valid_transitions = {
-            "Defending": ["Attacking", "Raging"],
+            "Defending": ["Attacking", "Raging", "Fleeing"],
             "Attacking": ["Defending", "Fleeing", "Raging"],
             "Fleeing": ["Defending"],
             "Raging": ["Attacking", "Defending"],

@@ -164,6 +164,12 @@ class TestDomainLibrary(unittest.TestCase):
             dl.is_valid_entity("invalid"),
         )
 
+        # Test is_valid_entity with ogre
+        def test_is_valid_entity_invalid(self):
+            self.assertFalse(
+                dl.is_valid_entity("ogre"),
+            )
+
     # Attack Type and Range Tests
 
     # Test valid attack types

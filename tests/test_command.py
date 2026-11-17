@@ -12,11 +12,11 @@ Purpose: Tests the Command methods and classes.
 
 # Imports
 import unittest
-from types import SimpleNamespace
 from unittest.mock import MagicMock, Mock, patch
 from types import SimpleNamespace
 from entity import Entity
 from io import StringIO
+from entity_state import FleeingState, AttackingState, DefendingState, RagingState
 from command import (
     Command,
     MoveCommand,
@@ -49,6 +49,32 @@ from command import (
 
 # Test Command
 class TestCommand(unittest.TestCase):
+
+    def setUp(self):
+        self.game_state = MagicMock()
+        self.game_state.is_map_created.return_value = False
+
+        self.command_manager = MagicMock()
+        self.game_state_manager = MagicMock()
+
+        # Shared fixtures for all command tests.
+        self.game = self.game_state
+        self.manager = self.command_manager
+        self.state_manager = self.game_state_manager
+        self.entity = MagicMock()
+        self.entity.get_entity_state_name.return_value = "Defending"
+        self.entity.create_state_manager_memento.return_value = (
+            Entity.StateManagerMemento("Defending")
+        )
+        self.game_state.get_entity_from_list.return_value = self.entity
+
+        self.command = InitCommand(
+            self.game_state,
+            25,
+            25,
+            self.command_manager,
+            self.game_state_manager,
+        )
 
     # Test Abstract Command
     # Verify that Command cannot be instantiated directly
@@ -2164,24 +2190,6 @@ class TestCommand(unittest.TestCase):
         # Verify command name
         self.assertEqual(test_command.get_name(), "Tick")
 
-    # Set Up
-    # Creates a mock GameState and InitMapCommand for testing
-    # Params: None
-    # Returns: None
-    def setUp(self):
-        # Create mock game state
-        self.game_state = MagicMock()
-        self.command_manager = MagicMock()
-        self.game_state_manager = MagicMock()
-
-        # Mock map does not exist
-        self.game_state.is_map_created.return_value = False
-
-        # Create command
-        self.command = InitCommand(
-            self.game_state, 25, 25, self.command_manager, self.game_state_manager
-        )
-
     # Execute Tests
 
     # Success
@@ -4266,8 +4274,9 @@ class TestCommand(unittest.TestCase):
         with patch("sys.stdout", new_callable=StringIO) as output:
             command.execute()
 
-        entity.restore_state_manager.assert_called_once_with(
-            Entity.StateManagerMemento("Attacking"), game_state
+        entity.transition_entity_state.assert_called_once()
+        self.assertIsInstance(
+            entity.transition_entity_state.call_args.args[0], AttackingState
         )
         entity.create_state_manager_memento.assert_called_once()
         game_state.mark_as_unsaved.assert_called_once()
@@ -4295,8 +4304,14 @@ class TestCommand(unittest.TestCase):
                 with patch("sys.stdout", new_callable=StringIO):
                     command.execute()
 
-                entity.restore_state_manager.assert_called_once_with(
-                    Entity.StateManagerMemento(state_name), game_state
+                entity.transition_entity_state.assert_called_once()
+                self.assertIsInstance(
+                    entity.transition_entity_state.call_args.args[0],
+                    {
+                        "Defending": DefendingState,
+                        "Attacking": AttackingState,
+                        "Fleeing": FleeingState,
+                    }[state_name],
                 )
 
     # Test Force State Command Invalid Entity
@@ -4328,7 +4343,7 @@ class TestCommand(unittest.TestCase):
         ):
             command.execute()
 
-        entity.restore_state_manager.assert_not_called()
+        entity.transition_entity_state.assert_not_called()
         game_state.mark_as_unsaved.assert_not_called()
 
     # Test Force State Command Undo
@@ -4347,12 +4362,15 @@ class TestCommand(unittest.TestCase):
         with patch("sys.stdout", new_callable=StringIO):
             command.execute()
 
-        entity.restore_state_manager.reset_mock()
+        entity.transition_entity_state.reset_mock()
         game_state.mark_as_unsaved.reset_mock()
 
         command.undo()
 
-        entity.restore_state_manager.assert_called_once_with(old_memento, game_state)
+        entity.transition_entity_state.assert_called()
+        self.assertIsInstance(
+            entity.transition_entity_state.call_args.args[0], DefendingState
+        )
         game_state.mark_as_unsaved.assert_called_once()
 
     # Test Force State Command Undo Before Execute
@@ -4404,13 +4422,14 @@ class TestCommand(unittest.TestCase):
             command.execute()
 
         command.undo()
-        entity.restore_state_manager.reset_mock()
+        entity.transition_entity_state.reset_mock()
 
         with patch("sys.stdout", new_callable=StringIO):
             command.redo()
 
-        entity.restore_state_manager.assert_called_once_with(
-            Entity.StateManagerMemento("Attacking"), game_state
+        entity.transition_entity_state.assert_called_once()
+        self.assertIsInstance(
+            entity.transition_entity_state.call_args.args[0], AttackingState
         )
 
     # Test Force State Command Redo Before Undo
@@ -4508,8 +4527,8 @@ class TestCommand(unittest.TestCase):
         restored.restore(memento, game_state)
         restored.undo()
 
-        entity.restore_state_manager.assert_called_with(
-            Entity.StateManagerMemento("Defending"), game_state
+        self.assertIsInstance(
+            entity.transition_entity_state.call_args.args[0], DefendingState
         )
 
     # Test Force State Command Restore Invalid Memento
@@ -4976,6 +4995,126 @@ class TestCommand(unittest.TestCase):
 
         # Verify undo restored the previous state
         test_game_state.restore.assert_called_once()
+
+    def force(self, state="Raging"):
+        return ForceStateCommand(self.game, 1, state)
+
+    def simulate(self):
+        return SimulateCommand(self.game, 1, self.manager, self.state_manager)
+
+    def test_force_undo_transitions_back_to_original_state(self):
+        command = self.force()
+        command.execute()
+        command.undo()
+        self.assertEqual(self.entity.transition_entity_state.call_count, 2)
+        self.assertIsInstance(
+            self.entity.transition_entity_state.call_args.args[0], DefendingState
+        )
+        self.assertEqual(command.create_memento().data["old_state"], "Defending")
+
+    def test_force_redo_preserves_first_state_snapshot(self):
+        command = self.force()
+        command.execute()
+        command.undo()
+        self.entity.create_state_manager_memento.return_value = SimpleNamespace(
+            state_name="Attacking"
+        )
+        command.redo()
+        self.assertEqual(self.entity.create_state_manager_memento.call_count, 1)
+        self.assertEqual(command.create_memento().data["old_state"], "Defending")
+
+    def test_force_all_states_transition_to_correct_class(self):
+        for name, state_class in (
+            ("Defending", DefendingState),
+            ("Attacking", AttackingState),
+            ("Fleeing", FleeingState),
+            ("Raging", RagingState),
+        ):
+            with self.subTest(state=name):
+                self.entity.reset_mock()
+                self.entity.get_entity_state_name.return_value = "Defending"
+                self.force(name).execute()
+                self.assertIsInstance(
+                    self.entity.transition_entity_state.call_args.args[0], state_class
+                )
+
+    def test_force_invalid_state_does_not_transition(self):
+        with self.assertRaisesRegex(ValueError, "Invalid entity state"):
+            self.force("Unknown").execute()
+        self.entity.transition_entity_state.assert_not_called()
+        self.game.mark_as_unsaved.assert_not_called()
+
+    def test_force_transition_failure_does_not_mark_unsaved(self):
+        self.entity.transition_entity_state.side_effect = ValueError("Blocked")
+        with self.assertRaisesRegex(ValueError, "Blocked"):
+            self.force().execute()
+        self.game.mark_as_unsaved.assert_not_called()
+
+    def test_force_undo_uses_original_raging_state(self):
+        self.entity.create_state_manager_memento.return_value = SimpleNamespace(
+            state_name="Raging"
+        )
+        command = self.force("Defending")
+        command.execute()
+        command.undo()
+        self.assertIsInstance(
+            self.entity.transition_entity_state.call_args.args[0], RagingState
+        )
+
+    def test_simulate_saves_snapshot_before_ai_update(self):
+        snapshot = SimpleNamespace(turn_number=3)
+        self.game.create_memento.return_value = snapshot
+        command = self.simulate()
+        command.execute()
+        self.game.create_memento.assert_called_once_with(self.manager)
+        self.entity.update_entity_state.assert_called_once_with()
+        saved_snapshot = command.create_memento().data["old_state"]
+        self.assertEqual(saved_snapshot, snapshot)
+        self.assertIsNot(saved_snapshot, snapshot)
+
+    def test_simulate_undo_restores_full_game_snapshot(self):
+        snapshot = SimpleNamespace(turn_number=3)
+        self.game.create_memento.return_value = snapshot
+        command = self.simulate()
+        command.execute()
+        command.undo()
+        self.game.restore.assert_called_once_with(
+            snapshot, self.manager, self.state_manager
+        )
+        self.assertFalse(command.create_memento().data["executed"])
+
+    def test_simulate_failure_rolls_back_snapshot(self):
+        snapshot = SimpleNamespace(turn_number=3)
+        self.game.create_memento.return_value = snapshot
+        self.entity.update_entity_state.side_effect = RuntimeError("AI error")
+        with self.assertRaisesRegex(RuntimeError, "AI error"):
+            self.simulate().execute()
+        self.game.restore.assert_called_once_with(
+            snapshot, self.manager, self.state_manager
+        )
+        self.game.mark_as_unsaved.assert_not_called()
+
+    def test_simulate_redo_after_undo(self):
+        snapshot = SimpleNamespace(turn_number=3)
+        self.game.create_memento.return_value = snapshot
+        command = self.simulate()
+        command.execute()
+        command.undo()
+        command.redo()
+        self.assertEqual(self.entity.update_entity_state.call_count, 2)
+        self.assertTrue(command.create_memento().data["executed"])
+
+    def test_simulate_undo_without_execution_rejected(self):
+        with self.assertRaises(ValueError):
+            self.simulate().undo()
+        self.game.restore.assert_not_called()
+
+    def test_simulate_redo_without_undo_rejected(self):
+        command = self.simulate()
+        command.execute()
+        with self.assertRaises(ValueError):
+            command.redo()
+        self.assertEqual(self.entity.update_entity_state.call_count, 1)
 
 
 if __name__ == "__main__":

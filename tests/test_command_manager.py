@@ -12,7 +12,8 @@ Purpose: Tests the Command manager methods and classes.
 
 # Imports
 import unittest
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, patch, call
+from dataclasses import FrozenInstanceError
 from game_state_manager import GameStateManager
 from command_manager import CommandManager, create_command_from_memento
 from command import (
@@ -680,6 +681,224 @@ class TestCommandManager(unittest.TestCase):
 
         self.assertEqual(undo_command.get_name(), "Force State")
         self.assertEqual(redo_command.get_name(), "Simulate")
+
+    def setUp(self):
+        self.manager = CommandManager()
+        self.game_state = object()
+        self.game_state_manager = object()
+
+    def make_command(self, undoable=True, name="MockCommand"):
+        command = MagicMock()
+        command.is_undoable.return_value = undoable
+        command.create_memento.return_value = Command.Memento(
+            command_type=name, data={"name": name}
+        )
+        return command
+
+    def test_nonundoable_command_does_not_enter_history(self):
+        command = self.make_command(False)
+        self.manager.execute_command(command)
+        command.execute.assert_called_once_with()
+        self.assertEqual(self.manager.get_history_info(), (0, 0))
+        self.assertEqual(self.manager.undo_last_command(), (False, None))
+
+    def test_nonundoable_command_preserves_redo_history(self):
+        first = self.make_command()
+        self.manager.execute_command(first)
+        self.manager.undo_last_command()
+        self.manager.execute_command(self.make_command(False))
+        self.assertEqual(self.manager.get_history_info(), (0, 1))
+        self.assertEqual(self.manager.redo_last_command(), (True, first))
+
+    def test_failed_execute_preserves_existing_undo_and_redo(self):
+        first, second = self.make_command(), self.make_command()
+        self.manager.execute_command(first)
+        self.manager.execute_command(second)
+        self.manager.undo_last_command()
+        failing = self.make_command()
+        failing.execute.side_effect = RuntimeError("execute failed")
+        with self.assertRaisesRegex(RuntimeError, "execute failed"):
+            self.manager.execute_command(failing)
+        self.assertEqual(self.manager.get_history_info(), (1, 1))
+        self.assertEqual(self.manager.redo_last_command(), (True, second))
+
+    def test_new_undoable_command_clears_only_redo(self):
+        a, b, c = (self.make_command() for _ in range(3))
+        self.manager.execute_command(a)
+        self.manager.execute_command(b)
+        self.manager.undo_last_command()
+        self.manager.execute_command(c)
+        self.assertEqual(self.manager.get_history_info(), (2, 0))
+        self.assertEqual(self.manager.undo_last_command(), (True, c))
+        self.assertEqual(self.manager.undo_last_command(), (True, a))
+
+    def test_undo_redo_roundtrip_history_counts(self):
+        command = self.make_command()
+        self.manager.execute_command(command)
+        self.assertEqual(self.manager.get_history_info(), (1, 0))
+        self.assertEqual(self.manager.undo_last_command(), (True, command))
+        self.assertEqual(self.manager.get_history_info(), (0, 1))
+        self.assertEqual(self.manager.redo_last_command(), (True, command))
+        self.assertEqual(self.manager.get_history_info(), (1, 0))
+        command.execute.assert_called_once()
+        command.undo.assert_called_once()
+        command.redo.assert_called_once()
+
+    def test_clear_history_from_both_populated_stacks(self):
+        a, b = self.make_command(), self.make_command()
+        self.manager.execute_command(a)
+        self.manager.execute_command(b)
+        self.manager.undo_last_command()
+        self.assertEqual(self.manager.get_history_info(), (1, 1))
+        self.manager.clear_history()
+        self.assertEqual(self.manager.get_history_info(), (0, 0))
+        self.assertEqual(self.manager.undo_last_command(), (False, None))
+        self.assertEqual(self.manager.redo_last_command(), (False, None))
+
+    def test_memento_captures_both_stacks_in_order(self):
+        a, b, c = [self.make_command(name=name) for name in ("A", "B", "C")]
+        for command in (a, b, c):
+            self.manager.execute_command(command)
+        self.manager.undo_last_command()  # C is now on redo stack
+        self.manager.undo_last_command()  # B is now on redo stack
+        memento = self.manager.create_memento()
+        self.assertIsInstance(memento, CommandManager.Memento)
+        self.assertIsInstance(memento.undo_history, tuple)
+        self.assertIsInstance(memento.redo_history, tuple)
+        self.assertEqual([m.data["name"] for m in memento.undo_history], ["A"])
+        self.assertEqual([m.data["name"] for m in memento.redo_history], ["C", "B"])
+        for command in (a, b, c):
+            command.create_memento.assert_called_once_with()
+
+    def test_empty_memento(self):
+        self.assertEqual(self.manager.create_memento(), CommandManager.Memento((), ()))
+
+    def test_memento_dataclass_is_frozen(self):
+        memento = self.manager.create_memento()
+        with self.assertRaises(FrozenInstanceError):
+            memento.undo_history = ()
+
+    def test_restore_rejects_invalid_memento_with_all_arguments(self):
+        with self.assertRaisesRegex(TypeError, "Invalid Command Manager memento"):
+            self.manager.restore(
+                None, self.game_state, self.game_state_manager, self.manager
+            )
+
+    def test_restore_replaces_previous_history(self):
+        self.manager.execute_command(self.make_command("Old"))
+        saved = CommandManager.Memento(
+            undo_history=(Command.Memento("MoveCommand", {"id": 1}),),
+            redo_history=(Command.Memento("AttackCommand", {"id": 2}),),
+        )
+        restored_undo, restored_redo = self.make_command(), self.make_command()
+        with patch(
+            "command_manager.create_command_from_memento",
+            side_effect=[restored_undo, restored_redo],
+        ) as factory:
+            self.manager.restore(
+                saved, self.game_state, self.game_state_manager, self.manager
+            )
+        self.assertEqual(self.manager.get_history_info(), (1, 1))
+        self.assertEqual(
+            factory.call_args_list,
+            [
+                call(
+                    saved.undo_history[0],
+                    self.game_state,
+                    self.game_state_manager,
+                    self.manager,
+                ),
+                call(
+                    saved.redo_history[0],
+                    self.game_state,
+                    self.game_state_manager,
+                    self.manager,
+                ),
+            ],
+        )
+        # Verify restored history
+        self.assertEqual(self.manager.get_history_info(), (1, 1))
+
+        # Redo the restored redo command
+        self.assertEqual(self.manager.redo_last_command(), (True, restored_redo))
+
+        # Undo the command that was just redone
+        self.assertEqual(self.manager.undo_last_command(), (True, restored_redo))
+
+        # Undo the original restored undo command
+        self.assertEqual(self.manager.undo_last_command(), (True, restored_undo))
+
+    def test_restore_empty_memento_clears_previous_history(self):
+        self.manager.execute_command(self.make_command())
+        self.manager.restore(
+            CommandManager.Memento((), ()),
+            self.game_state,
+            self.game_state_manager,
+            self.manager,
+        )
+        self.assertEqual(self.manager.get_history_info(), (0, 0))
+
+    def test_restore_failure_does_not_replace_existing_history(self):
+        original = self.make_command()
+        self.manager.execute_command(original)
+        saved = CommandManager.Memento(
+            undo_history=(
+                Command.Memento("MoveCommand", {}),
+                Command.Memento("AttackCommand", {}),
+            ),
+            redo_history=(),
+        )
+        with patch(
+            "command_manager.create_command_from_memento",
+            side_effect=[self.make_command(), ValueError("bad memento")],
+        ):
+            with self.assertRaisesRegex(ValueError, "bad memento"):
+                self.manager.restore(
+                    saved, self.game_state, self.game_state_manager, self.manager
+                )
+        self.assertEqual(self.manager.get_history_info(), (1, 0))
+        self.assertEqual(self.manager.undo_last_command(), (True, original))
+
+    def test_factory_propagates_restore_failure(self):
+        memento = Command.Memento("MoveCommand", {})
+        with patch(
+            "command_manager.MoveCommand.restore",
+            side_effect=ValueError("invalid data"),
+        ):
+            with self.assertRaisesRegex(ValueError, "invalid data"):
+                create_command_from_memento(
+                    memento, self.game_state, self.game_state_manager, self.manager
+                )
+
+    def test_factory_rejects_unknown_command_type(self):
+        with self.assertRaisesRegex(ValueError, "Invalid command type"):
+            create_command_from_memento(
+                Command.Memento("UnknownCommand", {}),
+                self.game_state,
+                self.game_state_manager,
+                self.manager,
+            )
+
+    def test_failure_undo_preserves_command_in_undo_stack(self):
+        command = self.make_command()
+        self.manager.execute_command(command)
+        command.undo.side_effect = RuntimeError("undo failed")
+        with self.assertRaisesRegex(RuntimeError, "undo failed"):
+            self.manager.undo_last_command()
+        self.assertEqual(self.manager.get_history_info(), (1, 0))
+        command.undo.side_effect = None
+        self.assertEqual(self.manager.undo_last_command(), (True, command))
+
+    def test_failure_redo_preserves_command_in_redo_stack(self):
+        command = self.make_command()
+        self.manager.execute_command(command)
+        self.manager.undo_last_command()
+        command.redo.side_effect = RuntimeError("redo failed")
+        with self.assertRaisesRegex(RuntimeError, "redo failed"):
+            self.manager.redo_last_command()
+        self.assertEqual(self.manager.get_history_info(), (0, 1))
+        command.redo.side_effect = None
+        self.assertEqual(self.manager.redo_last_command(), (True, command))
 
 
 if __name__ == "__main__":

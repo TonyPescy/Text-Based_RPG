@@ -27,15 +27,25 @@ from dataclasses import replace
 import unittest
 from dataclasses import FrozenInstanceError
 from unittest.mock import patch
-from entity_state import DefendingState, AttackingState, FleeingState
+from entity_state import DefendingState, AttackingState, FleeingState, RagingState
 import domain_library as dl
-from entity import Warrior, Mage, Goblin, Skeleton, create_entity, Entity
+from entity import Warrior, Mage, Goblin, Skeleton, Ogre, create_entity, Entity
 import equipment
 from game_state import GameState
 
 
 # Class for testing entities
 class TestEntity(unittest.TestCase):
+
+    # Create Enemy With State Manager
+    # Initializes an enemy entity with a game state
+    def create_test_enemy(self, entity_class, entity_id=1, position=None):
+        entity = self.create_test_entity(entity_class, entity_id, position)
+        game_state = self.create_test_game_state()
+
+        entity.initialize_state_manager(game_state)
+
+        return entity, game_state
 
     # Set Up Test
     # Resets the shared default inventory before each test.
@@ -1291,6 +1301,109 @@ class TestEntity(unittest.TestCase):
         entity.restore(memento)
 
         self.assertEqual(entity.get_entity_state_name(), "Attacking")
+
+    # Ogre and State Manager Tests
+
+    def test_ogre_init(self):
+        entity = self.create_test_entity(Ogre, 0)
+        entity_info = entity.get_info()
+
+        self.assertEqual(entity_info.e_type, "ogre")
+        self.assertEqual(entity.get_entity_state_name(), None)
+
+        game_state = self.create_test_game_state()
+        entity.initialize_state_manager(game_state)
+
+        self.assertEqual(entity.get_entity_state_name(), "Defending")
+
+    def test_create_entity_ogre(self):
+        entity = create_entity("ogre", 2, 3, 7)
+        self.assertIsInstance(entity, Ogre)
+        self.assertEqual(entity.get_info().position, [2, 3])
+        self.assertEqual(entity.get_info().id, 7)
+
+    def test_create_entity_ogre_case_insensitive(self):
+        entity = create_entity("OGRE", 2, 3, 7)
+        self.assertIsInstance(entity, Ogre)
+
+    def test_ogre_state_manager_memento(self):
+        entity, game_state = self.create_test_enemy(Ogre)
+        memento = entity.create_state_manager_memento()
+        self.assertEqual(memento.state_name, "Defending")
+
+    def test_ogre_restore_raging_state(self):
+        entity = self.create_test_entity(Ogre)
+        entity.restore_state_manager(Entity.StateManagerMemento("Raging"), None)
+        self.assertEqual(entity.get_entity_state_name(), "Raging")
+        self.assertEqual(entity.get_info().state_manager, "Raging")
+
+    def test_goblin_cannot_restore_raging_state(self):
+        entity = self.create_test_entity(Goblin)
+        with self.assertRaises(ValueError):
+            entity.restore_state_manager(Entity.StateManagerMemento("Raging"), None)
+
+    def test_skeleton_cannot_restore_raging_state(self):
+        entity = self.create_test_entity(Skeleton)
+        with self.assertRaises(ValueError):
+            entity.restore_state_manager(Entity.StateManagerMemento("Raging"), None)
+
+    def test_ogre_cannot_restore_missing_state(self):
+        entity = self.create_test_entity(Ogre)
+        with self.assertRaises(ValueError):
+            entity.restore_state_manager(Entity.StateManagerMemento(None), None)
+
+    def test_ogre_memento_preserves_raging_state(self):
+        entity = self.create_test_entity(Ogre)
+        entity.restore_state_manager(Entity.StateManagerMemento("Raging"), None)
+        memento = entity.create_memento()
+        self.assertEqual(memento.state_manager.state_name, "Raging")
+        entity.restore_state_manager(Entity.StateManagerMemento("Defending"), None)
+        entity.restore(memento)
+        self.assertEqual(entity.get_entity_state_name(), "Raging")
+
+    def test_transition_entity_state_without_manager(self):
+        entity = self.create_test_entity(Warrior)
+        with self.assertRaises(ValueError):
+            entity.transition_entity_state(AttackingState())
+
+    def test_transition_entity_state_goblin(self):
+        entity, game_state = self.create_test_enemy(Goblin)
+        entity.transition_entity_state(AttackingState())
+        self.assertEqual(entity.get_entity_state_name(), "Attacking")
+
+    def test_transition_entity_state_invalid(self):
+        entity, game_state = self.create_test_enemy(Goblin)
+
+        with self.assertRaises(ValueError):
+            entity.transition_entity_state(RagingState())
+
+        self.assertEqual(entity.get_entity_state_name(), "Defending")
+
+    def test_transition_entity_state_ogre_cannot_flee(self):
+        entity, game_state = self.create_test_enemy(Ogre)
+
+        with self.assertRaises(ValueError):
+            entity.transition_entity_state(FleeingState())
+
+        self.assertEqual(entity.get_entity_state_name(), "Defending")
+
+    def test_reconnect_state_manager_keeps_existing_state(self):
+        entity, game_state = self.create_test_enemy(Goblin)
+        entity.transition_entity_state(AttackingState())
+        game_state = self.create_test_game_state()
+        entity.reconnect_state_manager(game_state)
+        self.assertEqual(entity.get_entity_state_name(), "Attacking")
+
+    def test_reconnect_state_manager_does_not_add_player_state(self):
+        entity = self.create_test_entity(Warrior)
+        entity.reconnect_state_manager(self.create_test_game_state())
+        self.assertIsNone(entity.get_entity_state_name())
+
+    def test_ogre_get_info_exposes_state(self):
+        entity, game_state = self.create_test_enemy(Ogre)
+        self.assertEqual(entity.get_info().state_manager, "Defending")
+        entity.transition_entity_state(AttackingState())
+        self.assertEqual(entity.get_info().state_manager, "Attacking")
 
 
 if __name__ == "__main__":

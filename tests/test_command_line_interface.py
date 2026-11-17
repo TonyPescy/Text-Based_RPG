@@ -18,6 +18,8 @@ from command_line_interface import CLI
 from entity import Entity
 from unittest.mock import MagicMock
 from io import StringIO
+import uuid
+from contextlib import redirect_stdout
 
 
 class TestCLI(unittest.TestCase):
@@ -2709,6 +2711,176 @@ class TestCLI(unittest.TestCase):
         output = self.process_command_and_get_output(test_cli, "force  nope Attacking")
 
         self.assertIn("force_state_failed", output)
+
+    def setUp(self):
+        self.cli = CLI()
+
+    def cmd(self, command):
+        with redirect_stdout(io.StringIO()) as output:
+            self.cli.process_command(command)
+        return output.getvalue()
+
+    def setup_ogre(self):
+        self.assertIn("map_initialized", self.cmd("init map 10 10"))
+        self.assertIn("Spawned warrior", self.cmd("spawn warrior 2 2"))
+        self.assertIn("Spawned ogre", self.cmd("spawn ogre 3 2"))
+
+    def ogre(self):
+        return self.cli.game_state.get_entity_info_from_list(2)
+
+    def check_ogre(self, state, attack):
+        self.assertEqual(self.ogre().attack, attack)
+        self.assertIn(f"state: {state}!", self.cmd("state 2"))
+        percent = dict(dict(self.ogre().active_modifiers)["Percent_modifiers"])
+        self.assertEqual(percent.get("Attack", 0), 25 if state == "Raging" else 0)
+
+    def test_ogre_base_stats(self):
+        self.setup_ogre()
+        info = self.ogre()
+        self.assertEqual(
+            (info.health, info.max_health, info.attack, info.defence, info.speed),
+            (150, 150, 20, 1, 2),
+        )
+        self.check_ogre("Defending", 20)
+
+    def test_ogre_buff_enter_exit_and_reentry(self):
+        self.setup_ogre()
+        for state, attack in [
+            ("raging", 25),
+            ("defending", 20),
+            ("raging", 25),
+            ("attacking", 20),
+            ("raging", 25),
+            ("defending", 20),
+        ]:
+            with self.subTest(state=state, attack=attack):
+                self.assertIn("transitioned", self.cmd(f"force 2 {state}"))
+                self.check_ogre(state.capitalize(), attack)
+
+    def test_ogre_cannot_flee_and_keeps_buff(self):
+        self.setup_ogre()
+        self.cmd("force 2 raging")
+        self.assertIn("Ogres cannot enter Fleeing", self.cmd("force 2 fleeing"))
+        self.check_ogre("Raging", 25)
+
+    def test_non_ogres_cannot_rage(self):
+        self.setup_ogre()
+        self.assertIn("Only Ogres", self.cmd("force 1 raging"))
+        self.assertIn("does not have a behavioral state", self.cmd("state 1"))
+
+    def test_ogre_auto_rages_below_half_hp(self):
+        self.setup_ogre()
+        self.cmd("force 2 attacking")
+        for _ in range(5):
+            self.assertIn("dealt 14", self.cmd("attack 1 2"))
+        self.assertEqual(self.ogre().health, 80)
+        self.check_ogre("Attacking", 20)
+        self.assertIn("dealt 14", self.cmd("attack 1 2"))
+        self.assertEqual(self.ogre().health, 66)
+        self.check_ogre("Attacking", 20)
+        self.assertIn("advanced to turn 2", self.cmd("tick"))
+        self.check_ogre("Raging", 25)
+
+    def test_ogre_rage_does_not_stack_across_ticks(self):
+        self.setup_ogre()
+        for _ in range(6):
+            self.cmd("attack 1 2")
+        self.cmd("tick")
+        self.check_ogre("Raging", 25)
+        self.cmd("tick")
+        self.check_ogre("Raging", 25)
+
+    def test_ogre_exact_half_health_does_not_rage(self):
+        self.setup_ogre()
+        self.cmd("force 2 attacking")
+        entity = self.cli.game_state.get_entity_from_list(2)
+        entity.update_single_stat("Health", 75)
+        self.cli.game_state.update_entity(2)
+        self.assertEqual(self.ogre().health, 75)
+        self.cmd("simulate 2")
+        self.assertNotIn("state: Raging!", self.cmd("state 2"))
+        self.assertEqual(self.ogre().attack, 20)
+
+    def test_ogre_one_below_half_health_rages(self):
+        self.setup_ogre()
+        self.cmd("force 2 attacking")
+        entity = self.cli.game_state.get_entity_from_list(2)
+        entity.update_single_stat("Health", 74)
+        self.cli.game_state.update_entity(2)
+        self.cmd("simulate 2")
+        self.check_ogre("Raging", 25)
+
+    def test_ogre_healed_above_half_exits_rage(self):
+        self.setup_ogre()
+        self.cmd("force 2 raging")
+        entity = self.cli.game_state.get_entity_from_list(2)
+        entity.update_single_stat("Health", 100)
+        self.cli.game_state.update_entity(2)
+        self.cmd("simulate 2")
+        self.check_ogre("Attacking", 20)
+
+    def test_rage_save_load_into_fresh_cli(self):
+        self.setup_ogre()
+        self.cmd("force 2 raging")
+        filename = "cli_rage_" + uuid.uuid4().hex
+        try:
+            self.assertIn("game saved", self.cmd(f"save {filename}"))
+            fresh = CLI()
+            with redirect_stdout(io.StringIO()) as output:
+                fresh.process_command(f"load {filename}")
+                fresh.process_command("state 2")
+            self.assertIn("game loaded", output.getvalue())
+            self.assertIn("state: Raging!", output.getvalue())
+            self.assertEqual(fresh.game_state.get_entity_info_from_list(2).attack, 25)
+            with redirect_stdout(io.StringIO()):
+                fresh.process_command("force 2 attacking")
+            self.assertEqual(fresh.game_state.get_entity_info_from_list(2).attack, 20)
+        finally:
+            self.cli.game_state_manager.delete_save(filename)
+
+    def test_undo_redo_raging_transition(self):
+        self.setup_ogre()
+        self.assertIn("transitioned", self.cmd("force 2 raging"))
+        self.check_ogre("Raging", 25)
+        self.assertIn("ok:", self.cmd("undo"))
+        self.check_ogre("Defending", 20)
+        self.assertIn("ok:", self.cmd("redo"))
+        self.check_ogre("Raging", 25)
+
+    def test_invalid_map_init_does_not_erase_game(self):
+        self.setup_ogre()
+        for command in ("init map 4 10", "init map nope 10", "init map 51 10"):
+            with self.subTest(command=command):
+                self.assertIn("error:", self.cmd(command))
+                self.assertEqual(tuple(self.ogre().position), (3, 2))
+
+    def test_state_info_rejects_extra_arguments(self):
+        self.setup_ogre()
+        self.assertIn("error:", self.cmd("state-info unexpected"))
+
+    def test_force_state_raging_undo_redo(self):
+        test_cli = self.create_test_cli()
+        self.create_test_map(test_cli, 10, 10)
+        self.create_test_entity(test_cli, "Ogre", 2, 2)
+
+        # Initial state
+        self.assertEqual(test_cli.game_state.get_entity_info_from_list(1).attack, 20)
+
+        # Force Raging
+        test_cli.process_command("force 1 raging")
+        self.assertEqual(test_cli.game_state.get_entity_info_from_list(1).attack, 25)
+
+        # Undo Raging
+        test_cli.process_command("undo")
+        self.assertEqual(test_cli.game_state.get_entity_info_from_list(1).attack, 20)
+
+        # Redo Raging
+        test_cli.process_command("redo")
+        self.assertEqual(test_cli.game_state.get_entity_info_from_list(1).attack, 25)
+
+        # Undo again
+        test_cli.process_command("undo")
+        self.assertEqual(test_cli.game_state.get_entity_info_from_list(1).attack, 20)
 
 
 if __name__ == "__main__":

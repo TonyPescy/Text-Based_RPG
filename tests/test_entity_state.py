@@ -33,6 +33,9 @@ from entity_state import (
     DefendingState,
     AttackingState,
     FleeingState,
+    RagingState,
+    RAGING_BUFF,
+    RAGE_HEALTH_THRESHOLD,
     DETECTION_RANGE,
     FLEE_HEALTH_THRESHOLD,
     RECOVERED_HEALTH_THRESHOLD,
@@ -64,11 +67,14 @@ class TestDefendingState(unittest.TestCase):
         self.state = DefendingState()
         self.context = MagicMock()
 
-        self.context.get_entity_info.return_value = SimpleNamespace(
+        self.entity_info = SimpleNamespace(
+            e_type="Goblin",
             health=100,
             max_health=100,
             position=[2, 2],
         )
+
+        self.context.get_entity_info.return_value = self.entity_info
 
         self.player = SimpleNamespace(
             id=1,
@@ -77,6 +83,42 @@ class TestDefendingState(unittest.TestCase):
 
         self.context.get_nearest_player.return_value = self.player
         self.context.get_distance_to_player.return_value = 2
+
+    # Test Ogre Raging Trigger
+    def test_ogre_low_health_enters_raging(self):
+        self.context.get_entity_info.return_value.e_type = "Ogre"
+        self.context.get_entity_info.return_value.health = 49
+        self.assertEqual(self.state.update(self.context), "Defending -> Raging")
+        self.assertIsInstance(self.context.transition_to.call_args.args[0], RagingState)
+
+    # Test Ogre Rage Threshold
+    def test_ogre_at_rage_threshold_does_not_rage(self):
+        self.context.get_entity_info.return_value.e_type = "Ogre"
+        self.context.get_entity_info.return_value.health = 50
+        self.assertEqual(self.state.update(self.context), "Defending -> Attacking")
+        self.assertIsInstance(
+            self.context.transition_to.call_args.args[0], AttackingState
+        )
+
+    # Test Ogre Raging Trigger
+    def test_ogre_low_health_enters_raging(self):
+        self.entity_info.e_type = "Ogre"
+        self.entity_info.health = 49
+        self.assertEqual(self.state.update(self.context), "Defending -> Raging")
+        self.assertIsInstance(self.context.transition_to.call_args.args[0], RagingState)
+
+    # Test Ogre Does Not Flee
+    def test_ogre_does_not_flee_at_low_health(self):
+        self.entity_info.e_type = "Ogre"
+        self.entity_info.health = 20
+        self.assertEqual(self.state.update(self.context), "Defending -> Raging")
+        self.assertIsInstance(self.context.transition_to.call_args.args[0], RagingState)
+
+    # Test Ogre At Rage Threshold
+    def test_ogre_at_rage_threshold_keeps_attacking(self):
+        self.entity_info.e_type = "Ogre"
+        self.entity_info.health = 50
+        self.assertEqual(self.state.update(self.context), "Defending -> Attacking")
 
     # Test State Name
     def test_get_name(self):
@@ -144,6 +186,7 @@ class TestAttackingState(unittest.TestCase):
         self.context = MagicMock()
 
         self.entity_info = SimpleNamespace(
+            e_type="Goblin",
             health=100,
             max_health=100,
             position=[2, 2],
@@ -444,6 +487,107 @@ class TestFleeingState(unittest.TestCase):
 
         self.assertEqual(result, "Fleeing")
         self.context.transition_to.assert_not_called()
+
+
+# Test Raging State
+class TestRagingState(unittest.TestCase):
+
+    def setUp(self):
+        self.state = RagingState()
+        self.context = MagicMock()
+        self.entity = MagicMock()
+        self.entity_info = SimpleNamespace(
+            e_type="Ogre", health=20, max_health=100, position=[2, 2], temp_buffs=[]
+        )
+        self.entity.get_info.return_value = self.entity_info
+        self.context.get_entity.return_value = self.entity
+        self.context.get_entity_info.return_value = self.entity_info
+        self.context.get_game_state.return_value = MagicMock()
+        self.player = SimpleNamespace(id=7, position=[4, 2])
+        self.context.get_nearest_player.return_value = self.player
+        self.context.get_distance_to_player.return_value = 2
+        self.context.move_toward_target.return_value = True
+
+    def test_get_name(self):
+        self.assertEqual(self.state.get_name(), "Raging")
+
+    def test_enter_adds_raging_buff(self):
+        self.state.enter(self.context)
+        self.entity.add_temp_buff.assert_called_once()
+        buff = self.entity.add_temp_buff.call_args.args[0]
+        self.assertEqual(buff, RAGING_BUFF)
+        self.assertIsNot(buff, RAGING_BUFF)
+        self.entity.update_stats.assert_called_once_with(self.context.get_game_state())
+
+    def test_enter_does_not_duplicate_buff(self):
+        self.entity_info.temp_buffs = [{"Name": "Raging"}]
+        self.state.enter(self.context)
+        self.entity.add_temp_buff.assert_not_called()
+        self.entity.update_stats.assert_called_once()
+
+    def test_enter_without_game_state_skips_stats(self):
+        self.context.get_game_state.return_value = None
+        self.state.enter(self.context)
+        self.entity.add_temp_buff.assert_called_once()
+        self.entity.update_stats.assert_not_called()
+
+    def test_exit_removes_buff_and_recalculates_stats(self):
+        self.state.exit(self.context)
+        self.entity.remove_temp_buffs.assert_called_once_with(["Raging"])
+        self.entity.update_stats.assert_called_once_with(self.context.get_game_state())
+
+    def test_non_ogre_returns_to_defending(self):
+        self.entity_info.e_type = "Goblin"
+        self.assertEqual(self.state.update(self.context), "Raging -> Defending")
+        self.assertIsInstance(
+            self.context.transition_to.call_args.args[0], DefendingState
+        )
+
+    def test_recovered_ogre_returns_to_attacking(self):
+        self.entity_info.health = 50
+        self.assertEqual(self.state.update(self.context), "Raging -> Attacking")
+        self.assertIsInstance(
+            self.context.transition_to.call_args.args[0], AttackingState
+        )
+
+    def test_ogre_below_recovery_threshold_stays_raging(self):
+        self.entity_info.health = 49
+        self.context.get_nearest_player.return_value = None
+        self.assertEqual(self.state.update(self.context), "Raging")
+        self.context.transition_to.assert_not_called()
+
+    def test_no_player_stays_raging(self):
+        self.context.get_nearest_player.return_value = None
+        self.assertEqual(self.state.update(self.context), "Raging")
+        self.context.attack_target.assert_not_called()
+        self.context.move_toward_target.assert_not_called()
+
+    def test_melee_attack(self):
+        self.player.position = [2 + MELEE_RANGE, 2]
+        self.assertEqual(self.state.update(self.context), "Raging -> Attack Made")
+        self.context.attack_target.assert_called_once_with(7)
+        self.context.move_toward_target.assert_not_called()
+
+    def test_move_toward_player(self):
+        self.assertEqual(
+            self.state.update(self.context), "Raging -> Moving Towards Player"
+        )
+        self.context.move_toward_target.assert_called_once_with(self.player)
+
+    def test_unreachable_player_stays_raging(self):
+        self.context.get_distance_to_player.return_value = None
+        self.assertEqual(self.state.update(self.context), "Raging")
+        self.context.move_toward_target.assert_not_called()
+
+    def test_failed_movement_stays_raging(self):
+        self.context.move_toward_target.return_value = False
+        self.assertEqual(self.state.update(self.context), "Raging")
+        self.context.move_toward_target.assert_called_once_with(self.player)
+
+    def test_zero_max_health_does_not_crash(self):
+        self.entity_info.max_health = 0
+        self.context.get_nearest_player.return_value = None
+        self.assertEqual(self.state.update(self.context), "Raging")
 
 
 if __name__ == "__main__":

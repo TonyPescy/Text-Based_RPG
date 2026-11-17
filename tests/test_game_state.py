@@ -1991,6 +1991,80 @@ class TestGameState(unittest.TestCase):
 
             mock_get_entity.assert_not_called()
 
+    # Test Spawn Entity - Ogre State Manager
+    # Checks that spawning an Ogre initializes DefendingState
+    def test_spawn_entity_ogre_state_manager(self):
+        self.create_test_grid()
+        entity_id = self.game_state.spawn_entity(2, 2, "ogre")
+        entity = self.game_state.get_entity_from_list(entity_id)
+
+        self.assertIsNotNone(entity)
+        self.assertEqual(entity.get_entity_state_name(), "Defending")
+
+    # Test Spawn Entity - Ogre State Manager Initialization
+    # Checks that the Ogre receives the current GameState
+    def test_spawn_entity_ogre_initializes_state_manager(self):
+        self.create_test_grid()
+
+        with patch.object(
+            ent.Ogre, "initialize_state_manager", autospec=True
+        ) as mock_initialize:
+            entity_id = self.game_state.spawn_entity(2, 2, "ogre")
+
+        entity = self.game_state.get_entity_from_list(entity_id)
+        mock_initialize.assert_called_once_with(entity, self.game_state)
+
+    # Test Process AI - Ogre
+    # Checks that an active Ogre receives an AI update
+    def test_process_ai_for_all_entities_ogre(self):
+        self.create_test_grid()
+        entity_id = self.game_state.spawn_entity(2, 2, "ogre")
+        ogre = self.game_state.get_entity_from_list(entity_id)
+
+        with patch.object(ogre, "update_entity_state") as mock_update:
+            self.game_state.process_ai_for_all_entities()
+
+        mock_update.assert_called_once_with()
+
+    # Test Process AI - Multiple Enemy Types
+    # Checks that Goblins, Skeletons, and Ogres all receive updates
+    def test_process_ai_for_all_enemy_types(self):
+        self.create_test_grid()
+        self.game_state.spawn_entity(0, 0, "goblin")
+        self.game_state.spawn_entity(1, 1, "skeleton")
+        self.game_state.spawn_entity(2, 2, "ogre")
+
+        enemies = [self.game_state.get_entity_from_list(i) for i in (1, 2, 3)]
+        with patch.object(
+            enemies[0], "update_entity_state"
+        ) as goblin_update, patch.object(
+            enemies[1], "update_entity_state"
+        ) as skeleton_update, patch.object(
+            enemies[2], "update_entity_state"
+        ) as ogre_update:
+            self.game_state.process_ai_for_all_entities()
+
+        goblin_update.assert_called_once_with()
+        skeleton_update.assert_called_once_with()
+        ogre_update.assert_called_once_with()
+
+    # Test Restore Memento - Ogre State
+    # Checks that restoring a game preserves an Ogre's behavioral state
+    def test_restore_memento_ogre_state(self):
+        self.create_test_grid()
+        entity_id = self.game_state.spawn_entity(2, 2, "ogre")
+        original = self.game_state.get_entity_from_list(entity_id)
+        self.assertEqual(original.get_entity_state_name(), "Defending")
+
+        command_manager = CommandManager()
+        game_state_manager = GameStateManager()
+        memento = self.game_state.create_memento(command_manager)
+        self.game_state.restore(memento, command_manager, game_state_manager)
+
+        restored = self.game_state.get_entity_from_list(entity_id)
+        self.assertIsNot(restored, original)
+        self.assertEqual(restored.get_entity_state_name(), "Defending")
+
 
 # Run the tests
 if __name__ == "__main__":

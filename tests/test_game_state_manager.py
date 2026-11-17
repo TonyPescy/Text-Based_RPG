@@ -33,6 +33,7 @@ import unittest
 from entity import Entity
 from unittest.mock import patch
 from command_manager import CommandManager
+from command import Command
 
 
 # Game state manager tests
@@ -642,6 +643,61 @@ class TestGameStateManager(unittest.TestCase):
             restored_states.append(entity_memento.state_manager.state_name)
 
         self.assertEqual(restored_states, ["Attacking", "Fleeing", None, None])
+
+    # Ogre Raging State Serialization
+    def test_memento_to_data_ogre_raging(self):
+        memento = self.create_entity_memento("ogre", "Raging")
+        save_data = self.manager.memento_to_data(memento)
+        self.assertEqual(
+            save_data["entities"][0]["state_manager"]["state_name"], "Raging"
+        )
+
+    # Ogre Defending State Serialization
+    def test_memento_to_data_ogre_defending(self):
+        memento = self.create_entity_memento("ogre", "Defending")
+        save_data = self.manager.memento_to_data(memento)
+        self.assertEqual(
+            save_data["entities"][0]["state_manager"]["state_name"], "Defending"
+        )
+
+    # Ogre Raging State Deserialization
+    def test_data_to_memento_ogre_raging(self):
+        memento = self.create_entity_memento("ogre", "Raging")
+        save_data = self.manager.memento_to_data(memento)
+        restored = self.manager.data_to_memento(save_data)
+        self.assertEqual(restored.entity_mementos[0].state_manager.state_name, "Raging")
+
+    # Ogre Raging State JSON Round Trip
+    def test_ogre_raging_json_round_trip(self):
+        memento = self.create_entity_memento("ogre", "Raging")
+        data = json.loads(json.dumps(self.manager.memento_to_data(memento)))
+        restored = self.manager.data_to_memento(data)
+        self.assertEqual(restored.entity_mementos[0].state_manager.state_name, "Raging")
+
+    # Ogre Missing State Defaults To Defending
+    def test_data_to_memento_missing_ogre_state(self):
+        memento = self.create_entity_memento("ogre", "Defending")
+        data = self.manager.memento_to_data(memento)
+        del data["entities"][0]["state_manager"]
+        restored = self.manager.data_to_memento(data)
+        self.assertEqual(
+            restored.entity_mementos[0].state_manager.state_name, "Defending"
+        )
+
+    # Ogre Raging State Persists To File
+    def test_save_load_ogre_raging(self):
+        game_state = GameState()
+        game_state.create_grid(5, 5)
+        entity_id = game_state.spawn_entity(2, 2, "ogre")
+        ogre = game_state.get_entity_from_list(entity_id)
+        ogre.restore_state_manager(Entity.StateManagerMemento("Raging"), game_state)
+        with patch.object(self.manager, "create_filepath", return_value=self.file_path):
+            self.manager.save_game(game_state, "test_save", self.command_manager)
+            restored_game = GameState()
+            restored_commands = CommandManager()
+            self.manager.load_game(restored_game, "test_save", restored_commands)
+        restored_ogre = restored_game.get_entity_from_list(entity_id)
+        self.assertEqual(restored_ogre.get_entity_state_name(), "Raging")
 
 
 if __name__ == "main":

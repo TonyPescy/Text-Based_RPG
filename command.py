@@ -2254,7 +2254,7 @@ class ForceStateCommand(Command):
             raise ValueError("Entity does not have a behavioral state!")
 
         # Save original behavioral state for undo
-        if not self.__executed:
+        if self.__old_state is None:
             self.__old_state = entity.create_state_manager_memento()
 
         match self.__state_name:
@@ -2284,13 +2284,32 @@ class ForceStateCommand(Command):
         if not self.__executed:
             raise ValueError("State has not been forced!")
 
+        # Get entity
         entity = self.__game_state.get_entity_from_list(self.__entity_id)
 
         if entity is None:
             raise ValueError("Entity does not exist!")
 
-        entity.restore_state_manager(self.__old_state, self.__game_state)
+        # Get previous state name
+        old_state_name = self.__old_state.state_name
 
+        # Create previous state
+        match old_state_name:
+            case "Defending":
+                old_state = DefendingState()
+            case "Attacking":
+                old_state = AttackingState()
+            case "Fleeing":
+                old_state = FleeingState()
+            case "Raging":
+                old_state = RagingState()
+            case _:
+                raise ValueError("Invalid previous entity state!")
+
+        # Transition back to previous state
+        entity.transition_entity_state(old_state)
+
+        # Mark game as modified
         self.__game_state.mark_as_unsaved()
         self.__executed = False
 
@@ -2403,9 +2422,12 @@ class SimulateCommand(Command):
             raise ValueError("Simulation has not been executed!")
 
         self.__game_state.restore(
-            self.__old_state, self.__command_manager, self.__game_state_manager
+            self.__old_state,
+            self.__command_manager,
+            self.__game_state_manager,
         )
 
+        self.__game_state.mark_as_unsaved()
         self.__executed = False
 
     # Redo

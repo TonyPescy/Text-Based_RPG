@@ -75,6 +75,14 @@ Exit the game by using the keyboard interrupt or by entering "quit" as a command
 | Defence      | 8 |
 | Speed        | 4 |
 | Attack Type | Ranged |
+- **Ogre**
+| Stat         | Base Value |
+| ------------- |:-------------:|
+| Health         | 150 |
+| Attack      |  20    |
+| Defence      | 1 |
+| Speed        | 2 |
+| Attack Type | Melee |
 
 ## Equipment
 [Table of Contents](#table-of-contents)
@@ -436,16 +444,20 @@ Exit the game by using the keyboard interrupt or by entering "quit" as a command
 ### Entity State
 - Houses all state classes and methods.
 - Currently three states for entities:
-    - **Defending** Entity is waiting for player to come into range.
-    - **Attacking** Entity is attempting to chase and attack player.
-    - **Fleeing** Entity is attempting to run away and escape player.
+    - **Defending** - Entity is waiting for player to come into range.
+    - **Attacking** - Entity is attempting to chase and attack player.
+    - **Fleeing** - Entity is attempting to run away and escape player.
+    - **Raging** - Entity will gain an attack buff and keeping attacking the player.
 - Triggers for the states are:
-    - **Defending** Player out of speed range of entity.
-    - **Attacking** Player is within speed range of entity.
-    - **Fleeing** Entity has less than 25% of their max health remaining.
+    - **Defending** - Player out of speed range of entity.
+    - **Attacking** - Player is within speed range of entity.
+    - **Fleeing** - Entity has less than 25% of their max health remaining.
+    - **Raging** - Entity has less than 50% and can become enraged.
 - Each state is responsible to tell the manager when it is time to transition.
 - Attacking and Fleeing AI movement use A* pathfinding.
 - Currently moving and attacking are considered seperate actions, therefore an entity cannot move towards the player and attack on the same tick/turn.
+- Entities that can become enraged:
+    - Ogre
 
 ### Entity State Manager
 - Houses all functions needed for entity state management.

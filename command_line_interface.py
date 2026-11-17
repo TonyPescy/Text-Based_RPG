@@ -991,6 +991,9 @@ class CLI:
     # Params: command_pieces - list - list of strings that make up the command
     # Returns: None
     def process_state_info_command(self, command_pieces):
+        if len(command_pieces) != 1:
+            print("error: state_info_failed - Invalid arguments!")
+            return
         try:
             command = StateInfoCommand(self.game_state)
             self.command_manager.execute_command(command)

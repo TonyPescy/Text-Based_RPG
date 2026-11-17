@@ -34,7 +34,14 @@ from domain_library import AttackTypes
 class TestEntityStateManager(unittest.TestCase):
 
     def setUp(self):
-        self.manager = EntityStateManager(None, None, DefendingState())
+        self.entity = MagicMock()
+        self.entity.get_info.return_value.e_type = "Goblin"
+
+        self.game_state = MagicMock()
+
+        self.manager = EntityStateManager(
+            self.entity, self.game_state, DefendingState()
+        )
 
     def test_initial_state(self):
         self.assertEqual(self.manager.get_current_state_name(), "Defending")
@@ -59,18 +66,18 @@ class TestEntityStateManager(unittest.TestCase):
 
     def test_invalid_transition(self):
         with self.assertRaises(ValueError):
-            self.manager.transition_to(FleeingState())
+            self.manager.transition_to(DefendingState())
 
     def test_invalid_transition_preserves_state(self):
         with self.assertRaises(ValueError):
-            self.manager.transition_to(FleeingState())
+            self.manager.transition_to(DefendingState())
 
         self.assertEqual(self.manager.get_current_state_name(), "Defending")
 
     def test_is_valid_transition(self):
         self.assertTrue(self.manager.is_valid_transition(AttackingState()))
 
-        self.assertFalse(self.manager.is_valid_transition(FleeingState()))
+        self.assertTrue(self.manager.is_valid_transition(FleeingState()))
 
     def test_get_current_state(self):
         self.assertIsInstance(self.manager.get_current_state(), DefendingState)
@@ -93,6 +100,8 @@ class TestEntityStateManager(unittest.TestCase):
 
         mock_state.update.assert_called_once_with(manager)
 
+    # Test State Lifecycle
+    # Verifies that enter and exit are called during state transitions
     def test_state_lifecycle(self):
         old_state = MagicMock()
         old_state.get_name.return_value = "Defending"
@@ -100,21 +109,22 @@ class TestEntityStateManager(unittest.TestCase):
         new_state = MagicMock()
         new_state.get_name.return_value = "Attacking"
 
-        manager = EntityStateManager(None, None, old_state)
+        # Create manager using the entity and game state from setUp
+        manager = EntityStateManager(self.entity, self.game_state, old_state)
 
+        # Verify initial state was entered
         old_state.enter.assert_called_once_with(manager)
 
+        # Transition to new state
         manager.transition_to(new_state)
 
+        # Verify lifecycle methods
         old_state.exit.assert_called_once_with(manager)
         new_state.enter.assert_called_once_with(manager)
 
-    # Create Test Entity State Manager
-    # Creates a manager with mocked GameState and entity information
-    # Params: position - list - entity coordinates
-    #         speed - int - movement speed
-    #         attack_type - AttackTypes - entity attack type
-    # Returns: tuple - manager, game_state, entity_info
+        # Verify current state
+        self.assertIs(manager.get_current_state(), new_state)
+
     def create_test_manager(
         self, position=None, speed=4, attack_type=AttackTypes.MELEE
     ):
@@ -809,6 +819,196 @@ class TestEntityStateManager(unittest.TestCase):
 
         game_state.get_flee_position.assert_called_once_with(entity_info, target_info)
 
+    # Verify normal initialization enters the state once
+    def test_initialization_enters_state_once(self):
+        state = MagicMock()
+        manager = EntityStateManager(MagicMock(), MagicMock(), state)
+        state.enter.assert_called_once_with(manager)
 
-if __name__ == "__main__":
-    unittest.main()
+    # Verify restoration does not reapply state entry effects
+    def test_restoring_skips_state_enter(self):
+        state = MagicMock()
+        manager = EntityStateManager(MagicMock(), MagicMock(), state, restoring=True)
+        state.enter.assert_not_called()
+        self.assertIs(manager.get_current_state(), state)
+
+    # Verify manager exposes the same entity and game state
+    def test_get_entity_and_game_state(self):
+        entity = MagicMock()
+        game_state = MagicMock()
+        manager = EntityStateManager(entity, game_state, MagicMock(), restoring=True)
+        self.assertIs(manager.get_entity(), entity)
+        self.assertIs(manager.get_game_state(), game_state)
+
+    # Verify get_entity_info delegates to the entity
+    def test_get_entity_info(self):
+        entity = MagicMock()
+        info = object()
+        entity.get_info.return_value = info
+        manager = EntityStateManager(entity, MagicMock(), MagicMock(), restoring=True)
+        self.assertIs(manager.get_entity_info(), info)
+        entity.get_info.assert_called_once_with()
+
+    # Verify nearest-player lookup uses the managed entity's info
+    def test_get_nearest_player(self):
+        entity = MagicMock()
+        game_state = MagicMock()
+        info = entity.get_info.return_value
+        player = object()
+        game_state.get_nearest_player.return_value = player
+        manager = EntityStateManager(entity, game_state, MagicMock(), restoring=True)
+        self.assertIs(manager.get_nearest_player(), player)
+        game_state.get_nearest_player.assert_called_once_with(info)
+
+    # Verify update returns the current state's result
+    def test_update_returns_state_result(self):
+        state = MagicMock()
+        state.update.return_value = "attacked"
+        manager = EntityStateManager(MagicMock(), MagicMock(), state, restoring=True)
+        self.assertEqual(manager.update(), "attacked")
+        state.update.assert_called_once_with(manager)
+
+    # Verify every allowed transition in the transition table
+    def test_all_allowed_transitions(self):
+        allowed = {
+            "Defending": ("Attacking", "Raging", "Fleeing"),
+            "Attacking": ("Defending", "Fleeing", "Raging"),
+            "Fleeing": ("Defending",),
+            "Raging": ("Attacking", "Defending"),
+        }
+        for start, destinations in allowed.items():
+            for destination in destinations:
+                with self.subTest(start=start, destination=destination):
+                    current = MagicMock()
+                    current.get_name.return_value = start
+                    next_state = MagicMock()
+                    next_state.get_name.return_value = destination
+                    manager = EntityStateManager(
+                        MagicMock(), MagicMock(), current, restoring=True
+                    )
+                    self.assertTrue(manager.is_valid_transition(next_state))
+
+    # Verify disallowed and same-state transitions
+    def test_disallowed_and_same_state_transitions(self):
+        all_states = ("Defending", "Attacking", "Fleeing", "Raging")
+        allowed = {
+            "Defending": {"Attacking", "Raging", "Fleeing"},
+            "Attacking": {"Defending", "Fleeing", "Raging"},
+            "Fleeing": {"Defending"},
+            "Raging": {"Attacking", "Defending"},
+        }
+        for start in all_states:
+            for destination in all_states:
+                if destination in allowed[start]:
+                    continue
+                with self.subTest(start=start, destination=destination):
+                    current = MagicMock()
+                    current.get_name.return_value = start
+                    next_state = MagicMock()
+                    next_state.get_name.return_value = destination
+                    manager = EntityStateManager(
+                        MagicMock(), MagicMock(), current, restoring=True
+                    )
+                    self.assertFalse(manager.is_valid_transition(next_state))
+                    with self.assertRaisesRegex(ValueError, "Invalid state transition"):
+                        manager.transition_to(next_state)
+                    current.exit.assert_not_called()
+                    next_state.enter.assert_not_called()
+                    self.assertIs(manager.get_current_state(), current)
+
+    # Verify valid transitions invoke exit before enter
+    def test_transition_lifecycle_order(self):
+        from unittest.mock import Mock, call
+
+        events = Mock()
+        current = MagicMock()
+        current.get_name.return_value = "Defending"
+        current.exit.side_effect = lambda manager: events.exit(manager)
+        next_state = MagicMock()
+        next_state.get_name.return_value = "Attacking"
+        next_state.enter.side_effect = lambda manager: events.enter(manager)
+        manager = EntityStateManager(MagicMock(), MagicMock(), current, restoring=True)
+        manager.transition_to(next_state)
+        self.assertEqual(events.mock_calls, [call.exit(manager), call.enter(manager)])
+        self.assertIs(manager.get_current_state(), next_state)
+
+    # Verify Ogre entities cannot flee even from an otherwise valid state
+    def test_ogre_cannot_transition_to_fleeing(self):
+        entity = MagicMock()
+        entity.get_info.return_value.e_type = "OgRe"
+        current = MagicMock()
+        current.get_name.return_value = "Attacking"
+        fleeing = MagicMock()
+        fleeing.get_name.return_value = "Fleeing"
+        manager = EntityStateManager(entity, MagicMock(), current, restoring=True)
+        self.assertTrue(manager.is_valid_transition(fleeing))
+        with self.assertRaisesRegex(ValueError, "Ogres cannot enter the Fleeing state"):
+            manager.transition_to(fleeing)
+        current.exit.assert_not_called()
+        fleeing.enter.assert_not_called()
+        self.assertIs(manager.get_current_state(), current)
+
+    # Verify non-Ogres can flee from Attacking
+    def test_non_ogre_can_transition_to_fleeing(self):
+        entity = MagicMock()
+        entity.get_info.return_value.e_type = "Goblin"
+        current = MagicMock()
+        current.get_name.return_value = "Attacking"
+        fleeing = MagicMock()
+        fleeing.get_name.return_value = "Fleeing"
+        manager = EntityStateManager(entity, MagicMock(), current, restoring=True)
+        manager.transition_to(fleeing)
+        current.exit.assert_called_once_with(manager)
+        fleeing.enter.assert_called_once_with(manager)
+
+    # Verify a zero-length path does not move an entity
+    def test_move_toward_target_empty_path(self):
+        manager, game_state, _ = self.create_test_manager()
+        game_state.get_shortest_path_between_entities.return_value = []
+        self.assertFalse(manager.move_toward_target(MagicMock()))
+        game_state.move_entity.assert_not_called()
+
+    # Verify movement speed is converted to an integer
+    def test_move_toward_target_fractional_speed(self):
+        manager, game_state, _ = self.create_test_manager(speed=1.9)
+        target = MagicMock()
+        target.position = [6, 2]
+        game_state.get_shortest_path_between_entities.return_value = [
+            (1, 2),
+            (2, 2),
+            (3, 2),
+            (4, 2),
+            (5, 2),
+            (6, 2),
+        ]
+        game_state.is_grid_tile_occupied.return_value = False
+        self.assertTrue(manager.move_toward_target(target))
+        game_state.move_entity.assert_called_once_with(1, 2, 2)
+
+    # Verify moving toward a target does not use the previous game state
+    def test_move_toward_target_after_game_state_replacement(self):
+        manager, old_game_state, _ = self.create_test_manager(speed=1)
+        new_game_state = MagicMock()
+        new_game_state.get_shortest_path_between_entities.return_value = [
+            (1, 2),
+            (2, 2),
+            (3, 2),
+            (4, 2),
+            (5, 2),
+        ]
+        new_game_state.is_grid_tile_occupied.return_value = False
+        manager.set_game_state(new_game_state)
+        target = MagicMock()
+        target.position = [5, 2]
+        self.assertTrue(manager.move_toward_target(target))
+        new_game_state.move_entity.assert_called_once_with(1, 2, 2)
+        old_game_state.move_entity.assert_not_called()
+
+    # Verify a failed escape does not move the entity
+    def test_move_away_from_target_no_escape_does_not_move(self):
+        manager, game_state, info = self.create_test_manager()
+        target = MagicMock()
+        game_state.get_flee_position.return_value = None
+        self.assertFalse(manager.move_away_from_target(target))
+        game_state.get_flee_position.assert_called_once_with(info, target)
+        game_state.move_entity.assert_not_called()

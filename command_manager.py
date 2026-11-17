@@ -114,19 +114,11 @@ class CommandManager:
         if len(self.__undo_history) == 0:
             return False, None
 
-        command = self.__undo_history.pop()
-
-        # print("DEBUG before undo:", self.get_history_info())
-
-        # Undo command
+        command = self.__undo_history[-1]
         command.undo()
 
-        # print("DEBUG after undo:", self.get_history_info())
-
-        # Add command to redo history AFTER undoing
+        self.__undo_history.pop()
         self.__redo_history.append(command)
-
-        # print("DEBUG after append:", self.get_history_info())
 
         return True, command
 
@@ -139,13 +131,10 @@ class CommandManager:
         if len(self.__redo_history) == 0:
             return False, None
 
-        # Get last undone command
-        command = self.__redo_history.pop()
-
-        # Redo command
+        command = self.__redo_history[-1]
         command.redo()
 
-        # Add command to undo history AFTER redoing
+        self.__redo_history.pop()
         self.__undo_history.append(command)
 
         return True, command
