@@ -16,7 +16,7 @@ import domain_library as dl
 from equipment import Equipment, create_equipment
 from dataclasses import dataclass
 from entity_state_manager import EntityStateManager
-from entity_state import DefendingState, AttackingState, FleeingState
+from entity_state import DefendingState, AttackingState, FleeingState, RagingState
 
 
 # Data class for entity stats
@@ -598,13 +598,13 @@ class Entity:
 
         # No behavioral state for player entities
         if memento.state_name is None:
-            if self.__e_type.lower() in ("goblin", "skeleton"):
+            if self.__e_type.lower() in ("goblin", "skeleton", "ogre"):
                 raise ValueError("Enemy entity is missing behavioral state")
             self.__state_manager = None
             return
 
         # Only enemies should have behavioral states
-        if self.__e_type.lower() not in ("goblin", "skeleton"):
+        if self.__e_type.lower() not in ("goblin", "skeleton", "ogre"):
             raise ValueError("Player entity cannot have behavioral state")
 
         # Determine state class
@@ -615,6 +615,10 @@ class Entity:
                 state = AttackingState()
             case "Fleeing":
                 state = FleeingState()
+            case "Raging":
+                if self.__e_type.lower() != "ogre":
+                    raise ValueError("Only Ogres can enter the Raging state!")
+                state = RagingState()
             case _:
                 raise ValueError(f"Invalid entity state: {memento.state_name}")
 
@@ -627,7 +631,7 @@ class Entity:
     # Returns: None
     def initialize_state_manager(self, game_state):
         # Only enemies have behavioral states
-        if self.__e_type.lower() not in ("goblin", "skeleton"):
+        if self.__e_type.lower() not in ("goblin", "skeleton", "ogre"):
             return
 
         # Create state manager if one does not exist
@@ -816,6 +820,16 @@ class Entity:
     def reconnect_state_manager(self, game_state):
         self.initialize_state_manager(game_state)
 
+    # Transition Entity State
+    # Changes entity state using its existing state manager
+    # Params: new_state - EntityState - state to transition into
+    # Returns: None
+    def transition_entity_state(self, new_state):
+        if self.__state_manager is None:
+            raise ValueError("Entity has no state manager!")
+
+        self.__state_manager.transition_to(new_state)
+
 
 # Warrior Class extend from Entity class
 # Uses all functions without any changes
@@ -929,6 +943,47 @@ class Goblin(Entity):
             backpack,
             dl.AttackTypes.MELEE,
         )
+        # Initialize entity state manager
+        self.__state_manager = EntityStateManager(self, None, DefendingState())
+
+
+# Ogre Class extends Entity class
+# High health and attack, low defence and speed
+# Uses all functions without any changes
+class Ogre(Entity):
+
+    # Ogre Constants
+    BASE_STATS = {
+        "Health": 150,
+        "Attack": 20,
+        "Defence": 1,
+        "Speed": 2,
+    }
+
+    # Initialize Ogre class with entity class attributes
+    def __init__(self, id, position, active_modifiers=None, backpack=None):
+        if active_modifiers is None:
+            active_modifiers = {"Flat_modifiers": {}, "Percent_modifiers": {}}
+
+        if backpack is None:
+            backpack = []
+
+        # Inherit init from Entity super class
+        super().__init__(
+            id,
+            "ogre",
+            position,
+            self.BASE_STATS["Health"],
+            self.BASE_STATS["Health"],
+            self.BASE_STATS["Attack"],
+            self.BASE_STATS["Defence"],
+            self.BASE_STATS["Speed"],
+            dl.BASE_INVENTORY,
+            active_modifiers,
+            backpack,
+            dl.AttackTypes.MELEE,
+        )
+
         # Initialize entity state manager
         self.__state_manager = EntityStateManager(self, None, DefendingState())
 
@@ -1214,6 +1269,9 @@ def create_entity(e_type, x, y, e_id):
 
         case "goblin":
             entity = Goblin(e_id, [x, y])
+
+        case "ogre":
+            entity = Ogre(e_id, [x, y])
 
         case _:
             # Invalid entity type

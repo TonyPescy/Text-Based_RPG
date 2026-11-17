@@ -421,7 +421,11 @@ class GameStateManager:
                 state_manager=Entity.StateManagerMemento(
                     state_name=state_manager_data.get(
                         "state_name",
-                        "Defending" if entity_type in ("goblin", "skeleton") else None,
+                        (
+                            "Defending"
+                            if entity_type in ("goblin", "skeleton", "ogre")
+                            else None
+                        ),
                     )
                 ),
             )

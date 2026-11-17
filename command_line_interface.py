@@ -1205,7 +1205,7 @@ class CLI:
         state_name = command_pieces[2].capitalize()
 
         # Validate behavioral state
-        valid_states = ("Defending", "Attacking", "Fleeing")
+        valid_states = ("Defending", "Attacking", "Fleeing", "Raging")
 
         if state_name not in valid_states:
             print("error: force_state_failed - Invalid behavioral state!")
@@ -1219,7 +1219,18 @@ class CLI:
             if entity_info is None:
                 print("error: force_state_failed - Invalid entity ID!")
                 return
-                # Create Command
+
+            # Only Ogres can rage
+            elif state_name == "Raging" and entity_info.e_type.lower() != "ogre":
+                print("error: force_state_failed - Only Ogres can enter Raging!")
+                return
+
+            # Ogres cannot flee
+            elif state_name == "Fleeing" and entity_info.e_type.lower() == "ogre":
+                print("error: force_state_failed - Ogres cannot enter Fleeing!")
+                return
+
+            # Create Command
             command = ForceStateCommand(self.game_state, entity_id, state_name)
 
             # Execute Command

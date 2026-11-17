@@ -1,0 +1,48 @@
+init map 10 10
+spawn warrior 2 2
+spawn ogre 3 2
+inspect 2
+state 2
+force 2 raging
+inspect 2
+state 2
+force 2 defending
+inspect 2
+state 2
+force 2 raging
+inspect 2
+save ogre_raging_buff_save
+load ogre_raging_buff_save
+inspect 2
+state 2
+force 2 attacking
+inspect 2
+state 2
+attack 1 2
+attack 1 2
+attack 1 2
+attack 1 2
+attack 1 2
+attack 1 2
+inspect 2
+state 2
+attack 1 2
+inspect 2
+state 2
+tick
+inspect 2
+state 2
+save ogre_low_hp_raging
+load ogre_low_hp_raging
+inspect 2
+state 2
+force 2 fleeing
+state 2
+force 2 defending
+inspect 2
+state 2
+force 2 raging
+inspect 2
+force 2 attacking
+inspect 2
+state 2

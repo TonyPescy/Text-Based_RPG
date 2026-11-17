@@ -80,12 +80,7 @@ def is_valid_entity(entity_type):
         return False
 
     # Check if entity name is valid
-    return entity_type.lower() in (
-        "warrior",
-        "mage",
-        "skeleton",
-        "goblin",
-    )
+    return entity_type.lower() in ("warrior", "mage", "skeleton", "goblin", "ogre")
 
 
 # Is Valid Spell

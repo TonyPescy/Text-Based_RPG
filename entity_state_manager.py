@@ -23,10 +23,14 @@ class EntityStateManager:
     #         game_state - GameState - current game world
     #         initial_state - EntityState - initial behavioral state
     # Returns: None
-    def __init__(self, entity, game_state, initial_state):
+    def __init__(self, entity, game_state, initial_state, restoring=False):
         self.__entity = entity
         self.__game_state = game_state
         self.__current_state = initial_state
+
+        # Only call enter during normal initialization - Prevents errors when loading from save
+        if not restoring:
+            self.__current_state.enter(self)
 
         # Enter initial state
         self.__current_state.enter(self)
@@ -39,6 +43,13 @@ class EntityStateManager:
         # Check if transition is valid
         if not self.is_valid_transition(new_state):
             raise ValueError("Invalid state transition!")
+
+        # Prevent Ogres from entering Fleeing
+        if (
+            self.get_entity_info().e_type.lower() == "ogre"
+            and new_state.get_name().lower() == "fleeing"
+        ):
+            raise ValueError("Ogres cannot enter the Fleeing state!")
 
         # Exit current state
         self.__current_state.exit(self)
@@ -55,9 +66,10 @@ class EntityStateManager:
     # Returns: is_valid - Bool - whether the transition is allowed
     def is_valid_transition(self, new_state):
         valid_transitions = {
-            "Defending": ["Attacking"],
-            "Attacking": ["Defending", "Fleeing"],
-            "Fleeing": ["Defending", "Attacking"],
+            "Defending": ["Attacking", "Raging"],
+            "Attacking": ["Defending", "Fleeing", "Raging"],
+            "Fleeing": ["Defending"],
+            "Raging": ["Attacking", "Defending"],
         }
 
         current_name = self.__current_state.get_name()
@@ -78,6 +90,20 @@ class EntityStateManager:
     # Returns: current_state - EntityState - active behavioral state
     def get_current_state(self):
         return self.__current_state
+
+    # Get Entity
+    # Returns the entity
+    # Params: None
+    # Returns the entity managed by this state manager
+    def get_entity(self):
+        return self.__entity
+
+    # Get Game State
+    # Returns the game state associated with this manager
+    # Params: None
+    # Returns: GameState - current game state
+    def get_game_state(self):
+        return self.__game_state
 
     # Get Current State Name
     # Gets the name of the entity's current behavioral state

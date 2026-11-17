@@ -18,6 +18,7 @@ from entity import Entity
 from copy import deepcopy
 from types import SimpleNamespace
 import equipment
+from entity_state import AttackingState, DefendingState, FleeingState, RagingState
 
 
 # Command
@@ -2256,10 +2257,19 @@ class ForceStateCommand(Command):
         if not self.__executed:
             self.__old_state = entity.create_state_manager_memento()
 
-        # Restore requested state through existing Memento logic
-        entity.restore_state_manager(
-            Entity.StateManagerMemento(state_name=self.__state_name), self.__game_state
-        )
+        match self.__state_name:
+            case "Defending":
+                new_state = DefendingState()
+            case "Attacking":
+                new_state = AttackingState()
+            case "Fleeing":
+                new_state = FleeingState()
+            case "Raging":
+                new_state = RagingState()
+            case _:
+                raise ValueError("Invalid entity state!")
+
+        entity.transition_entity_state(new_state)
 
         # Mark game as modified
         self.__game_state.mark_as_unsaved()
