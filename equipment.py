@@ -19,15 +19,28 @@ from dataclasses import dataclass
 class EquipmentInfo:
     name: str
     slot: str
+    rarity: str
     effects: dict
 
 
 @dataclass
 class ConsumableInfo:
     name: str
+    rarity: str
     instant_effects: tuple
     over_time_effects: tuple
     duration: int
+
+
+# Equipment Memento Data Class
+@dataclass
+class EquipmentMemento:
+    name: str
+    slot: str
+    rarity: str
+    rolled_effects: tuple[
+        tuple[str, int], ...
+    ]  # Tuple of tuples: [ [stat_effected, effect_value] ]
 
 
 # Equipment class with all methods needed for equipment
@@ -38,13 +51,20 @@ class Equipment:
         self.__slot = slot
         self.__effects = effects
 
+        # Default rarity and rolled effects - PLACEHOLDERS UNTIL PROPER RARITY IMPLEMENTATION
+        self.__rarity = "Common"
+        self.__rolled_effects = {}
+
     # Get Info
     # Returns a EquipmentInfo object of the equipment's information
     # Params: None
     # Returns: EquipmentInfo - Equipment information
     def get_info(self):
         return EquipmentInfo(
-            name=self.__name, slot=self.__slot, effects=tuple(self.__effects.items())
+            name=self.__name,
+            slot=self.__slot,
+            effects=tuple(self.__effects.items()),
+            rarity=self.__rarity,
         )
 
     # Name
@@ -70,6 +90,30 @@ class Equipment:
     @property
     def effects(self):
         return self.__effects
+
+    # Create Memento
+    # Creates equipment memento from equipment
+    # Params: None
+    # Returns: equipment_memento - EquipmentMemento
+    def create_memento(self):
+        return EquipmentMemento(
+            name=self.__name,
+            slot=self.__slot,
+            rarity=self.__rarity,
+            rolled_effects=tuple(self.__rolled_effects.items()),
+        )
+
+    # Restore Memento
+    # Restores equipment state from a memento
+    # Params: memento - EquipmentMemento
+    # Returns: None
+    def restore(self, memento):
+        if not isinstance(memento, EquipmentMemento):
+            raise TypeError("Invalid Equipment Memento")
+
+        self.__name = memento.name
+        self.__rarity = memento.rarity
+        self.__rolled_effects = dict(memento.rolled_effects)
 
 
 # None Equipment Classes
@@ -196,6 +240,19 @@ class RingOfHaste(Equipment):
         )
 
 
+# Consumable Memento Data Class
+@dataclass(frozen=True)
+class ConsumableMemento:
+    equipment_memento: EquipmentMemento
+    instant_effects: tuple[
+        tuple[str, tuple[tuple[str, int | float], ...]], ...
+    ]  # Tuples cubed:  [ flat_effects: [stat_effected, effect_value], percent_effects: [stat_effected, effect_value] ]
+    over_time_effects: tuple[
+        tuple[str, tuple[tuple[str, int | float], ...]], ...
+    ]  # Tuples cubed:  [ flat_effects: [stat_effected, effect_value], percent_effects: [stat_effected, effect_value] ]
+    duration: int
+
+
 # Consumable Class - Inherits from Equipment
 # Has different effect types - instant/over_time as well as percent/flat modifiers
 class Consumable(Equipment):
@@ -216,8 +273,11 @@ class Consumable(Equipment):
     # Params: None
     # Returns: ConsumableInfo - Consumable information
     def get_info(self):
+        equipment_info = super().get_info()
+        consumable_rarity = equipment_info.rarity
         return ConsumableInfo(
             name=self.name,
+            rarity=consumable_rarity,
             instant_effects=(
                 (
                     "Flat_modifiers",
@@ -343,6 +403,59 @@ class Consumable(Equipment):
                         "Turns": consumable.__duration,
                     }
                 )"""
+
+    # Create Consumable Memento
+    # Saves the current consumable state
+    # Params: None
+    # Returns: ConsumableMemento
+    def create_memento(self):
+        return ConsumableMemento(
+            equipment_memento=super().create_memento(),
+            instant_effects=(
+                (
+                    "Flat_modifiers",
+                    tuple(self.__instant_effects["Flat_modifiers"].items()),
+                ),
+                (
+                    "Percent_modifiers",
+                    tuple(self.__instant_effects["Percent_modifiers"].items()),
+                ),
+            ),
+            over_time_effects=(
+                (
+                    "Flat_modifiers",
+                    tuple(self.__over_time_effects["Flat_modifiers"].items()),
+                ),
+                (
+                    "Percent_modifiers",
+                    tuple(self.__over_time_effects["Percent_modifiers"].items()),
+                ),
+            ),
+            duration=self.__duration,
+        )
+
+    # Restore Consumable Memento
+    # Restores consumable state from a memento
+    # Params: memento - ConsumableMemento
+    # Returns: None
+    def restore(self, memento):
+        # Restore inherited equipment state
+        super().restore(memento.equipment_memento)
+
+        # Restore instant effects
+        self.__instant_effects = {
+            effect_type: dict(effects)
+            for effect_type, effects in memento.instant_effects
+        }
+
+        # Restore over time effects
+        self.__over_time_effects = {
+            effect_type: dict(effects)
+            for effect_type, effects in memento.over_time_effects
+        }
+
+        # Restore duration
+        self.__duration = memento.duration
 
 
 # Small Health Potion Class - Inherits from Consumable Class

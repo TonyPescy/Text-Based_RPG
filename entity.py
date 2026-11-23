@@ -17,6 +17,7 @@ from equipment import Equipment, create_equipment
 from dataclasses import dataclass
 from entity_state_manager import EntityStateManager
 from entity_state import DefendingState, AttackingState, FleeingState, RagingState
+import equipment
 
 
 # Data class for entity stats
@@ -668,7 +669,55 @@ class Entity:
     # Params: None
     # Returns: InventoryMemento
     def create_inventory_memento(self):
-        return Entity.InventoryMemento(data=deepcopy(self.__inventory))
+        inventory_mementos = []
+
+        for item in self.__inventory:
+            if item is None:
+                inventory_mementos.append(None)
+            else:
+                inventory_mementos.append(item.create_memento())
+
+        return Entity.InventoryMemento(data=tuple(inventory_mementos))
+
+    # Restore Equipment From Memento
+    # Reconstructs an equipment or consumable object from its memento
+    # Params: item_memento - EquipmentMemento or ConsumableMemento
+    # Returns: Equipment, Consumable, or None
+    def restore_equipment_from_memento(self, item_memento):
+        if item_memento is None:
+            return None
+
+        if isinstance(item_memento, equipment.ConsumableMemento):
+            equipment_memento = item_memento.equipment_memento
+
+        elif isinstance(item_memento, equipment.EquipmentMemento):
+            equipment_memento = item_memento
+
+        else:
+            raise TypeError("Invalid equipment memento")
+
+        item_name = equipment_memento.name
+
+        # Handle empty equipment placeholders
+        if item_name == "None":
+            match equipment_memento.slot.lower():
+                case "weapon":
+                    item = equipment.create_equipment("none_wep")
+                case "armor":
+                    item = equipment.create_equipment("none_armor")
+                case "accessory":
+                    item = equipment.create_equipment("none_acc")
+                case _:
+                    raise ValueError("Invalid empty equipment slot")
+        else:
+            item = equipment.create_equipment(item_name)
+
+        if item is None:
+            raise ValueError(f"Could not restore equipment: {item_name}")
+
+        item.restore(item_memento)
+
+        return item
 
     # Restore Inventory
     # Restores the entity's inventory based on its memento
@@ -678,7 +727,9 @@ class Entity:
         if not isinstance(memento, Entity.InventoryMemento):
             raise TypeError("Invalid Inventory memento")
 
-        self.__inventory = deepcopy(memento.data)
+        self.__inventory = [
+            self.restore_equipment_from_memento(item) for item in memento.data
+        ]
 
     # Create Position Memento
     # Creates a memento of the entity's position
@@ -736,7 +787,15 @@ class Entity:
     # Params: None
     # Returns: BackpackMemento
     def create_backpack_memento(self):
-        return Entity.BackpackMemento(items=tuple(deepcopy(self.__backpack)))
+        backpack_mementos = []
+
+        for item in self.__backpack:
+            if item is None:
+                backpack_mementos.append(None)
+            else:
+                backpack_mementos.append(item.create_memento())
+
+        return Entity.BackpackMemento(items=tuple(backpack_mementos))
 
     # Restore Backpack
     # Restores the entity's backpack based on its memento
@@ -746,7 +805,9 @@ class Entity:
         if not isinstance(memento, Entity.BackpackMemento):
             raise TypeError("Invalid Backpack memento")
 
-        self.__backpack = list(deepcopy(memento.items))
+        self.__backpack = [
+            self.restore_equipment_from_memento(item) for item in memento.items
+        ]
 
     # Memento DataClass
     @dataclass(frozen=True)

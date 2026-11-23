@@ -426,13 +426,15 @@ class Grid:
             temp_col = []
 
             for tile_memento in col:
+                # Create tile
                 tile = Tile(
                     tile_memento.t_type,
                     tile_memento.passable,
-                    list(tile_memento.occupants),
-                    deepcopy(tile_memento.modifiers),
-                    list(tile_memento.item_list),
+                    [],
                 )
+
+                # Restore tile using its own memento
+                tile.restore(tile_memento)
 
                 temp_col.append(tile)
 
@@ -595,8 +597,8 @@ class Tile:
             tile_type=self.__t_type,
             passable=self.__passable,
             occupants=tuple(self.__occupants),
-            modifiers=tuple(self.__modifiers.items()),  # Items() for key-value pairs
-            item_list=tuple(item.get_info().name for item in self.__item_list),
+            modifiers=tuple(self.__modifiers.items()),
+            item_list=tuple(item.get_info() for item in self.__item_list),
         )
 
     # Is Valid Tile Start
@@ -726,21 +728,30 @@ class Tile:
     class Memento:
         t_type: str
         passable: bool
-        occupants: object
+        occupants: tuple
         modifiers: object
-        item_list: object
+        item_list: tuple
 
     # Create Momento
     # Create a tiles state memento
     # Params: None
     # Returns: memento - Memento - tile info from save
     def create_memento(self):
+        # Create item mementos
+        item_mementos = []
+
+        for item in self.__item_list:
+            if item is None:
+                item_mementos.append(None)
+            else:
+                item_mementos.append(item.create_memento())
+
         return Tile.Memento(
-            t_type=deepcopy(self.__t_type),
+            t_type=self.__t_type,
             passable=self.__passable,
-            occupants=deepcopy(self.__occupants),
+            occupants=tuple(self.__occupants),
             modifiers=deepcopy(self.__modifiers),
-            item_list=deepcopy(self.__item_list),
+            item_list=tuple(item_mementos),
         )
 
     # Restore
@@ -751,11 +762,40 @@ class Tile:
         if not isinstance(memento, Tile.Memento):
             raise TypeError("Invalid Tile Memento")
 
-        self.__t_type = deepcopy(memento.t_type)
+        # Restore tile properties
+        self.__t_type = memento.t_type
         self.__passable = memento.passable
         self.__occupants = list(memento.occupants)
         self.__modifiers = deepcopy(memento.modifiers)
-        self.__item_list = list(memento.item_list)
+
+        # Restore tile items
+        restored_items = []
+
+        for item_memento in memento.item_list:
+            if item_memento is None:
+                restored_items.append(None)
+                continue
+
+            # Get item name based on memento type
+            if isinstance(item_memento, equipment.ConsumableMemento):
+                item_name = item_memento.equipment_memento.name
+            elif isinstance(item_memento, equipment.EquipmentMemento):
+                item_name = item_memento.name
+            else:
+                raise TypeError("Invalid equipment memento")
+
+            # Create equipment object
+            item = equipment.create_equipment(item_name)
+
+            if item is None:
+                raise ValueError(f"Could not restore tile equipment: {item_name}")
+
+            # Restore item state
+            item.restore(item_memento)
+
+            restored_items.append(item)
+
+        self.__item_list = restored_items
 
 
 # Direction Enum - used within A* pathfinding for manhattan distance calcs

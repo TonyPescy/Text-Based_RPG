@@ -104,11 +104,26 @@ class GameState:
         self.__map_created = True
 
     # Create grid
-    # Creates grid for the game state
+    # Creates grid/dungeon_floor for the game state
     # Params: width/height - ints - grid bounds
     # Returns: None
     def create_grid(self, width, height):
-        # params checked before calling of emthod
+        # params checked before calling of method
+        # Assign/Create grid
+        self.__grid = Grid(width, height)
+        # reset entity id counter
+        # self.__entity_ids_issued = 1
+        # Set map created to True
+        self.mark_map_created()
+        # Unsaved
+        self.mark_as_unsaved()
+
+    # Create New Game
+    # Called when user starts an entire new run - Entities/Floors all cleared
+    # Params: width/height - ints - grid bounds
+    # Returns: None
+    def create_new_game(self, width, height):
+        # Params checked before calling of method
         # Assign/Create grid
         self.__grid = Grid(width, height)
         # reset entity id counter

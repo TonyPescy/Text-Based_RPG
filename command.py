@@ -730,7 +730,9 @@ class PickupCommand(Command):
         tile_item = None
 
         for item in tile_info.item_list:
-            if item.lower() == self.__item_name.lower():
+            item_name = item if isinstance(item, str) else item.name
+
+            if item_name.lower() == self.__item_name.lower():
                 tile_item = item
                 break
 

@@ -61,7 +61,7 @@ class TestGrid(unittest.TestCase):
     # Returns: Item name present at position on grid
     def get_test_tile_item(self, test_grid, x=0, y=0, item_index=0):
         tile_info = test_grid.get_tile_info(x, y)
-        return tile_info.item_list[item_index]
+        return tile_info.item_list[item_index].name
 
     # Assert Tile Defaults
     # Asserts common tile default stats
@@ -406,7 +406,10 @@ class TestGrid(unittest.TestCase):
         temp_grid.add_item_to_tile_item_list(0, 0, "ironsword")
 
         # Check item was added
-        self.assertEqual(temp_grid.get_tile_info(0, 0).item_list, ("IronSword",))
+        self.assertEqual(
+            tuple(item.name for item in temp_grid.get_tile_info(0, 0).item_list),
+            ("IronSword",),
+        )
 
     # Test adding multiple items to a tile item list
     def test_add_multiple_items_to_tile_item_list(self):
@@ -419,7 +422,7 @@ class TestGrid(unittest.TestCase):
 
         # Check items
         self.assertEqual(
-            temp_grid.get_tile_info(0, 0).item_list,
+            tuple(item.name for item in temp_grid.get_tile_info(0, 0).item_list),
             ("IronSword", "CursedDagger"),
         )
 
@@ -435,10 +438,16 @@ class TestGrid(unittest.TestCase):
         temp_grid.add_item_to_tile_item_list(2, 3, "magestaff")
 
         # Check first tile
-        self.assertEqual(temp_grid.get_tile_info(0, 0).item_list, ("IronSword",))
+        self.assertEqual(
+            tuple(item.name for item in temp_grid.get_tile_info(0, 0).item_list),
+            ("IronSword",),
+        )
 
         # Check second tile
-        self.assertEqual(temp_grid.get_tile_info(2, 3).item_list, ("MageStaff",))
+        self.assertEqual(
+            tuple(item.name for item in temp_grid.get_tile_info(2, 3).item_list),
+            ("MageStaff",),
+        )
 
     # Test removing an item from a tile item list
     def test_remove_item_from_tile_item_list(self):
@@ -465,7 +474,10 @@ class TestGrid(unittest.TestCase):
         temp_grid.remove_item_from_tile_item_list(0, 0, "ironsword")
 
         # Check remaining item
-        self.assertEqual(temp_grid.get_tile_info(0, 0).item_list, ("CursedDagger",))
+        self.assertEqual(
+            tuple(item.name for item in temp_grid.get_tile_info(0, 0).item_list),
+            ("CursedDagger",),
+        )
 
     # Test removing an item using different capitalization
     def test_remove_item_case_insensitive(self):
@@ -491,7 +503,10 @@ class TestGrid(unittest.TestCase):
         temp_grid.remove_item_from_tile_item_list(0, 0, "magestaff")
 
         # Original item should remain
-        self.assertEqual(temp_grid.get_tile_info(0, 0).item_list, ("IronSword",))
+        self.assertEqual(
+            tuple(item.name for item in temp_grid.get_tile_info(0, 0).item_list),
+            ("IronSword",),
+        )
 
     # Test setting a tile item list
     def test_set_tile_item_list(self):
@@ -507,7 +522,7 @@ class TestGrid(unittest.TestCase):
 
         # Check item list
         self.assertEqual(
-            temp_grid.get_tile_info(0, 0).item_list,
+            tuple(item.name for item in temp_grid.get_tile_info(0, 0).item_list),
             ("IronSword", "MageStaff"),
         )
 
@@ -867,8 +882,8 @@ class TestGrid(unittest.TestCase):
         memento = grid.create_memento()
 
         self.assertEqual(
-            memento.tiles[0][0].item_list[0].get_info().name,
-            grid.get_tile_info(0, 0).item_list[0],
+            memento.tiles[0][0].item_list[0].name,
+            grid.get_tile_info(0, 0).item_list[0].name,
         )
 
     def test_restore_memento_preserves_tile_items(self):
@@ -886,7 +901,7 @@ class TestGrid(unittest.TestCase):
             self.get_test_tile_item(original_grid),
         )
 
-    def test_create_memento(self):
+    def test_tile_create_memento(self):
         tile = Tile("Floor", True, [])
 
         memento = tile.create_memento()
@@ -894,78 +909,66 @@ class TestGrid(unittest.TestCase):
         self.assertIsInstance(memento, Tile.Memento)
         self.assertEqual(memento.t_type, "Floor")
         self.assertTrue(memento.passable)
-        self.assertEqual(memento.occupants, [])
+        self.assertEqual(memento.occupants, ())
         self.assertEqual(memento.modifiers, {})
-        self.assertEqual(memento.item_list, [])
+        self.assertEqual(memento.item_list, ())
 
-    def test_restore_memento(self):
+    def test_tile_restore_memento(self):
         tile = Tile("Floor", True, [])
-
+        sword = equipment.create_equipment("ironsword")
         memento = Tile.Memento(
             t_type="Wall",
             passable=False,
-            occupants=[1, 2],
+            occupants=(1, 2),
             modifiers={"Attack": 5},
-            item_list=["IronSword"],
+            item_list=(sword.create_memento(),),
         )
-
         tile.restore(memento)
+        restored = tile.create_memento()
+        self.assertEqual(restored, memento)
 
-        restored_memento = tile.create_memento()
-
-        self.assertEqual(restored_memento.t_type, "Wall")
-        self.assertFalse(restored_memento.passable)
-        self.assertEqual(restored_memento.occupants, [1, 2])
-        self.assertEqual(restored_memento.modifiers, {"Attack": 5})
-        self.assertEqual(restored_memento.item_list, ["IronSword"])
-
-    def test_restore_invalid_memento(self):
+    def test_tile_restore_invalid_memento(self):
         tile = Tile("Floor", True, [])
 
         with self.assertRaises(TypeError):
             tile.restore(None)
 
     def test_memento_deep_copy(self):
-        tile = Tile("Floor", True, [1], {"Attack": 5}, ["IronSword"])
-
+        sword = equipment.create_equipment("ironsword")
+        tile = Tile("Floor", True, [1], {"Attack": 5}, [sword])
         memento = tile.create_memento()
 
         tile.restore(
             Tile.Memento(
                 t_type="Floor",
                 passable=True,
-                occupants=[2],
+                occupants=(2,),
                 modifiers={"Attack": 10},
-                item_list=["MageStaff"],
+                item_list=(equipment.create_equipment("magestaff").create_memento(),),
             )
         )
 
-        self.assertEqual(memento.occupants, [1])
+        self.assertEqual(memento.occupants, (1,))
         self.assertEqual(memento.modifiers, {"Attack": 5})
-        self.assertEqual(memento.item_list, ["IronSword"])
+        self.assertEqual(memento.item_list[0].name, "IronSword")
 
     def test_restore_memento_deep_copy(self):
         tile = Tile("Floor", True, [])
-
+        sword = equipment.create_equipment("ironsword")
         memento = Tile.Memento(
             t_type="Floor",
             passable=True,
-            occupants=[1],
+            occupants=(1,),
             modifiers={"Attack": 5},
-            item_list=["IronSword"],
+            item_list=(sword.create_memento(),),
         )
-
         tile.restore(memento)
-
-        memento.occupants.append(2)
         memento.modifiers["Attack"] = 10
-        memento.item_list.append("MageStaff")
+        restored = tile.create_memento()
 
-        restored_memento = tile.create_memento()
-
-        self.assertEqual(restored_memento.occupants, [1])
-        self.assertEqual(restored_memento.modifiers, {"Attack": 5})
-        self.assertEqual(restored_memento.item_list, ["IronSword"])
+        self.assertEqual(restored.occupants, (1,))
+        self.assertEqual(restored.modifiers, {"Attack": 5})
+        self.assertEqual(restored.item_list[0], sword.create_memento())
 
     # Test get_path_distance - same position
     def test_get_path_distance_same_position(self):
@@ -1390,6 +1393,74 @@ class TestGrid(unittest.TestCase):
         self.assertIsNotNone(path)
         self.assertEqual(distance, len(path) - 1)
         self.assertEqual(distance, 6)
+
+    # Test Tile Memento With Randomized Equipment
+    def test_tile_memento_equipment(self):
+        # Create tile
+        tile = Tile("Floor", True, [])
+
+        # Create equipment
+        sword = equipment.create_equipment("ironsword")
+
+        # Set randomized equipment values
+        sword.restore(
+            equipment.EquipmentMemento(
+                name="IronSword",
+                slot=sword.create_memento().slot,
+                rarity="Rare",
+                rolled_effects=(("Attack", 6),),
+            )
+        )
+
+        tile.add_item(sword)
+
+        # Create tile memento
+        memento = tile.create_memento()
+
+        # Restore into new tile
+        restored_tile = Tile("Floor", True, [])
+        restored_tile.restore(memento)
+
+        # Verify item memento survived
+        restored_memento = restored_tile.create_memento()
+
+        self.assertEqual(
+            memento.item_list,
+            restored_memento.item_list,
+        )
+
+    # Check that tile consumables retain their effects and duration.
+    def test_tile_memento_consumable(self):
+        tile = Tile("Floor", True, [])
+        tile.add_item(equipment.create_equipment("smallhealthpotion"))
+        original = tile.create_memento()
+        restored = Tile("Floor", True, [])
+        restored.restore(original)
+        self.assertEqual(restored.create_memento().item_list, original.item_list)
+        self.assertIsInstance(original.item_list[0], equipment.ConsumableMemento)
+
+    # Check that the grid preserves different item types on restoration.
+    def test_grid_memento_mixed_items(self):
+        grid = self.create_test_grid(5, 5)
+        grid.add_item_to_tile_item_list(1, 2, "ironsword")
+        grid.add_item_to_tile_item_list(1, 2, "smallhealthpotion")
+        original = grid.create_memento()
+        restored = self.create_test_grid(5, 5)
+        restored.restore(original)
+        self.assertEqual(
+            restored.create_memento().tiles[1][2].item_list,
+            original.tiles[1][2].item_list,
+        )
+
+    # Check that changing the tile does not mutate a previous snapshot.
+    def test_tile_memento_snapshot_independence(self):
+        tile = Tile("Floor", True, [])
+        tile.add_item(equipment.create_equipment("ironsword"))
+        snapshot = tile.create_memento()
+        tile.clear_item_list()
+        tile.occupy_tile(3)
+        self.assertEqual(len(snapshot.item_list), 1)
+        self.assertEqual(snapshot.occupants, ())
 
 
 if __name__ == "__main__":

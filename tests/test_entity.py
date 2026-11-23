@@ -24,6 +24,7 @@ these functions are handled within the CLI prior to calling this function.
 
 # Imports
 from dataclasses import replace
+from copy import deepcopy
 import unittest
 from dataclasses import FrozenInstanceError
 from unittest.mock import patch
@@ -37,87 +38,87 @@ from game_state import GameState
 # Class for testing entities
 class TestEntity(unittest.TestCase):
 
-    # Create Enemy With State Manager
-    # Initializes an enemy entity with a game state
-    def create_test_enemy(self, entity_class, entity_id=1, position=None):
-        entity = self.create_test_entity(entity_class, entity_id, position)
-        game_state = self.create_test_game_state()
-
-        entity.initialize_state_manager(game_state)
-
-        return entity, game_state
-
-    # Set Up Test
-    # Resets the shared default inventory before each test.
-    # Params: None
-    # Returns: None
     def setUp(self):
-        # Each entity must receive fresh empty equipment slots.
+        # Give each test fresh default equipment and an isolated game state.
         dl.BASE_INVENTORY = [
             equipment.create_equipment("none_wep"),
             equipment.create_equipment("none_armor"),
             equipment.create_equipment("none_acc"),
         ]
+        self.game_state = self.create_test_game_state()
 
-    # Repeated Test Functions
+    def create_test_entity(self, entity_class=Warrior, entity_id=1, position=None):
+        return entity_class(
+            entity_id, list(position) if position is not None else [0, 0]
+        )
 
-    # Create Test Entity
-    # Creates an entity with a clean set of modifiers and inventory.
-    # Params: entity_class - Entity class to create
-    #         entity_id - int - entity ID
-    #         position - list - entity position
-    # Returns: entity - Entity - created entity
-    def create_test_entity(self, entity_class, entity_id=1, position=None):
-        if position is None:
-            position = [0, 0]
-        return entity_class(entity_id, position)
-
-    # Create Test Game State
-    # Creates a game state with a test grid.
-    # Params: None
-    # Returns: GameState - game state with a 5 by 5 grid
     def create_test_game_state(self):
         game_state = GameState()
         game_state.create_grid(5, 5)
         return game_state
 
-    # Create Spawned Entity
-    # Creates and registers an entity in the game state.
-    # Params: game_state - GameState - active game state
-    #         entity_type - str - type of entity
-    #         x/y - int - entity position
-    # Returns: Entity - registered entity
-    def create_spawned_entity(self, game_state, entity_type="warrior", x=0, y=0):
+    def create_test_enemy(self, entity_class, entity_id=1, position=None):
+        enemy = self.create_test_entity(entity_class, entity_id, position)
+        enemy.initialize_state_manager(self.game_state)
+        return enemy, self.game_state
+
+    def create_spawned_entity(self, game_state=None, entity_type="warrior", x=0, y=0):
+        game_state = game_state if game_state is not None else self.game_state
         game_state.spawn_entity(x, y, entity_type)
         return game_state.get_entity_from_list(1)
 
-    # Assert Base Stats
-    # Checks common entity stats.
-    # Params: entity_info - EntityInfo - entity information
-    #         health/attack/defence/speed - expected stat values
-    # Returns: None
-    def assert_base_stats(self, entity_info, health, attack, defence, speed):
-        self.assertEqual(entity_info.health, health)
-        self.assertEqual(entity_info.attack, attack)
-        self.assertEqual(entity_info.defence, defence)
-        self.assertEqual(entity_info.speed, speed)
+    def create_item(self, item_name="ironsword"):
+        item = equipment.create_equipment(item_name)
+        self.assertIsNotNone(
+            item, f"Equipment factory does not recognize {item_name!r}"
+        )
+        return item
 
-    # Get Modifier Dictionary
-    # Converts immutable modifier information to a dictionary for assertions.
-    # Params: entity_info - EntityInfo - entity information
-    # Returns: dict - flat and percent modifiers
+    def create_equipment_memento(self, item_name="ironsword"):
+        return self.create_item(item_name).create_memento()
+
+    def create_inventory_memento(self, *item_mementos):
+        return Entity.InventoryMemento(data=tuple(item_mementos))
+
+    def create_backpack_memento(self, *item_mementos):
+        return Entity.BackpackMemento(items=tuple(item_mementos))
+
+    def create_test_buff(self, name="AttackBuff", turns=2, stat="Attack", amount=5):
+        return {
+            "Name": name,
+            "Effects": {"Flat_modifiers": {stat: amount}, "Percent_modifiers": {}},
+            "Turns": turns,
+        }
+
+    def assert_base_stats(self, entity_info, health, attack, defence, speed):
+        self.assertEqual(
+            (
+                entity_info.health,
+                entity_info.attack,
+                entity_info.defence,
+                entity_info.speed,
+            ),
+            (health, attack, defence, speed),
+        )
+
     def get_modifiers(self, entity_info):
         return {
             modifier_type: dict(modifiers)
             for modifier_type, modifiers in entity_info.active_modifiers
         }
 
-    # Create Item
-    # Creates an equipment item from the domain library.
-    # Params: item_name - str - item key
-    # Returns: Equipment - created item
-    def create_item(self, item_name):
-        return equipment.create_equipment(item_name)
+    def assert_item_mementos_equal(self, expected, actual):
+        self.assertEqual(expected, actual)
+        self.assertEqual(type(expected), type(actual))
+
+    def assert_entity_items_round_trip(self, entity):
+        original = entity.create_memento()
+        restored = self.create_test_entity(type(entity), entity.get_info().id)
+        restored.restore(original)
+        actual = restored.create_memento()
+        self.assertEqual(original.inventory, actual.inventory)
+        self.assertEqual(original.backpack, actual.backpack)
+        return restored
 
     # Init for all entity types
 
@@ -378,7 +379,9 @@ class TestEntity(unittest.TestCase):
         entity = self.create_test_entity(Warrior, 0)
         entity.add_item_to_backpack(self.create_item("ironsword"))
         entity.remove_item_from_backpack("IronSword")
-        self.assertNotIn("IronSword", entity.get_info().backpack)
+        self.assertNotIn(
+            "IronSword", [item.name for item in entity.get_info().backpack]
+        )
 
     # Tests for entity factory
 
@@ -856,24 +859,15 @@ class TestEntity(unittest.TestCase):
 
     def test_entity_restore_inventory(self):
         entity = self.create_test_entity(Warrior, 1, [2, 3])
-
-        memento = entity.create_inventory_memento()
-
-        # Save the original first item's name
-        original_item = memento.data[0].get_info().name
-
-        # Change the inventory
-        entity.equip_item(equipment.create_equipment("iron_sword"), "Weapon")
-
-        # Restore the original inventory
-        entity.restore_inventory(memento)
-
-        # Check the first restored item
-        restored_inventory = entity.create_inventory_memento().data
-
-        self.assertEqual(
-            restored_inventory[0].get_info().name,
-            original_item,
+        original = entity.create_inventory_memento()
+        entity.equip_item(self.create_item("ironsword"), "weapon")
+        entity.restore_inventory(original)
+        self.assertEqual(entity.create_inventory_memento(), original)
+        self.assertTrue(
+            all(
+                item is None or hasattr(item, "create_memento")
+                for item in entity._Entity__inventory
+            )
         )
 
     def test_entity_restore_inventory_invalid_memento(self):
@@ -1404,6 +1398,157 @@ class TestEntity(unittest.TestCase):
         self.assertEqual(entity.get_info().state_manager, "Defending")
         entity.transition_entity_state(AttackingState())
         self.assertEqual(entity.get_info().state_manager, "Attacking")
+
+    # Additional inventory and backpack Memento tests
+
+    def test_inventory_memento_contains_item_mementos(self):
+        entity = self.create_test_entity()
+        saved = entity.create_inventory_memento()
+        self.assertEqual(len(saved.data), 3)
+        for item in saved.data:
+            self.assertIsInstance(item, equipment.EquipmentMemento)
+
+    def test_inventory_memento_preserves_equipped_item(self):
+        entity = self.create_test_entity()
+        entity.equip_item(self.create_item("ironsword"), "weapon")
+        saved = entity.create_inventory_memento()
+        self.assertEqual(saved.data[0], entity.create_inventory_memento().data[0])
+        self.assertEqual(saved.data[0].name, self.create_item("ironsword").name)
+
+    def test_inventory_restore_preserves_full_item_memento(self):
+        entity = self.create_test_entity()
+        entity.equip_item(self.create_item("ironsword"), "weapon")
+        saved = entity.create_inventory_memento()
+        entity.restore_inventory(saved)
+        self.assertEqual(entity.create_inventory_memento(), saved)
+
+    def test_inventory_restore_supports_empty_slots(self):
+        entity = self.create_test_entity()
+        saved = self.create_inventory_memento(None, None, None)
+        entity.restore_inventory(saved)
+        self.assertEqual(entity.create_inventory_memento(), saved)
+
+    def test_inventory_restore_rejects_invalid_item_memento(self):
+        entity = self.create_test_entity()
+        with self.assertRaises(TypeError):
+            entity.restore_inventory(self.create_inventory_memento("not a memento"))
+
+    def test_backpack_memento_empty(self):
+        entity = self.create_test_entity()
+        self.assertEqual(
+            entity.create_backpack_memento(), self.create_backpack_memento()
+        )
+
+    def test_backpack_memento_preserves_equipment(self):
+        entity = self.create_test_entity()
+        entity.add_item_to_backpack(self.create_item("ironsword"))
+        saved = entity.create_backpack_memento()
+        self.assertIsInstance(saved.items[0], equipment.EquipmentMemento)
+        self.assertEqual(saved.items[0].name, self.create_item("ironsword").name)
+
+    def test_backpack_restore_preserves_equipment(self):
+        entity = self.create_test_entity()
+        entity.add_item_to_backpack(self.create_item("ironsword"))
+        saved = entity.create_backpack_memento()
+        entity.remove_item_from_backpack("IronSword")
+        entity.restore_backpack(saved)
+        self.assertEqual(entity.create_backpack_memento(), saved)
+
+    def test_backpack_restore_rejects_invalid_memento(self):
+        with self.assertRaises(TypeError):
+            self.create_test_entity().restore_backpack("invalid")
+
+    def test_backpack_restore_rejects_invalid_item_memento(self):
+        with self.assertRaises(TypeError):
+            self.create_test_entity().restore_backpack(
+                self.create_backpack_memento("invalid item")
+            )
+
+    def test_backpack_restores_duplicate_items_independently(self):
+        entity = self.create_test_entity()
+        entity.add_item_to_backpack(self.create_item("ironsword"))
+        entity.add_item_to_backpack(self.create_item("ironsword"))
+        saved = entity.create_backpack_memento()
+        entity.restore_backpack(saved)
+        self.assertEqual(entity.create_backpack_memento(), saved)
+        items = entity._Entity__backpack
+        self.assertIsNot(items[0], items[1])
+
+    def test_backpack_memento_independent_of_later_changes(self):
+        entity = self.create_test_entity()
+        entity.add_item_to_backpack(self.create_item("ironsword"))
+        saved = entity.create_backpack_memento()
+        entity.remove_item_from_backpack("IronSword")
+        self.assertEqual(len(saved.items), 1)
+        self.assertEqual(entity.create_backpack_memento().items, ())
+
+    def test_backpack_restore_consumable(self):
+        entity = self.create_test_entity()
+        entity.add_item_to_backpack(self.create_item("smallhealthpotion"))
+        saved = entity.create_backpack_memento()
+        self.assertIsInstance(saved.items[0], equipment.ConsumableMemento)
+        entity.restore_backpack(saved)
+        self.assertEqual(entity.create_backpack_memento(), saved)
+
+    def test_backpack_restore_mixed_equipment_and_consumables(self):
+        entity = self.create_test_entity()
+        entity.add_item_to_backpack(self.create_item("ironsword"))
+        entity.add_item_to_backpack(self.create_item("smallhealthpotion"))
+        saved = entity.create_backpack_memento()
+        entity.restore_backpack(saved)
+        self.assertEqual(entity.create_backpack_memento(), saved)
+        self.assertIsInstance(saved.items[0], equipment.EquipmentMemento)
+        self.assertIsInstance(saved.items[1], equipment.ConsumableMemento)
+
+    def test_entity_full_memento_restores_items(self):
+        entity = self.create_test_entity()
+        entity.add_item_to_backpack(self.create_item("ironsword"))
+        entity.add_item_to_backpack(self.create_item("smallhealthpotion"))
+        entity.equip_item(self.create_item("ironsword"), "weapon")
+        self.assert_entity_items_round_trip(entity)
+
+    def test_mage_full_memento_restores_items(self):
+        mage = self.create_test_entity(Mage)
+        mage.add_item_to_backpack(self.create_item("smallhealthpotion"))
+        original = mage.create_memento()
+        restored = self.create_test_entity(Mage)
+        restored.restore(original)
+        self.assertEqual(restored.create_memento(), original)
+
+    def test_restored_equipment_is_new_object(self):
+        entity = self.create_test_entity()
+        entity.add_item_to_backpack(self.create_item("ironsword"))
+        original_item = entity._Entity__backpack[0]
+        saved = entity.create_backpack_memento()
+        entity.restore_backpack(saved)
+        self.assertIsNot(entity._Entity__backpack[0], original_item)
+
+    def test_restore_equipment_from_memento_none(self):
+        self.assertIsNone(
+            self.create_test_entity().restore_equipment_from_memento(None)
+        )
+
+    def test_restore_equipment_from_memento_invalid_type(self):
+        with self.assertRaises(TypeError):
+            self.create_test_entity().restore_equipment_from_memento(
+                {"name": "IronSword"}
+            )
+
+    def test_restore_equipment_from_memento_unknown_name(self):
+        saved = self.create_equipment_memento("ironsword")
+        invalid = replace(saved, name="ThisItemDoesNotExist")
+        with self.assertRaises(ValueError):
+            self.create_test_entity().restore_equipment_from_memento(invalid)
+
+    def test_full_entity_memento_preserves_temp_buff_and_items(self):
+        entity = self.create_test_entity()
+        entity.add_item_to_backpack(self.create_item("smallhealthpotion"))
+        entity.add_temp_buff(self.create_test_buff())
+        saved = entity.create_memento()
+        restored = self.create_test_entity()
+        restored.restore(saved)
+        self.assertEqual(restored.create_memento().backpack, saved.backpack)
+        self.assertEqual(restored.create_memento().temp_buffs, saved.temp_buffs)
 
 
 if __name__ == "__main__":

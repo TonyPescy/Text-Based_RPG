@@ -420,7 +420,7 @@ class TestGameState(unittest.TestCase):
         self.game_state.spawn_loot(1, 1, "ironsword")
 
         tile_info = self.game_state.get_game_tile_info(1, 1)
-        self.assertIn("ironsword", tile_info.item_list[0].lower())
+        self.assertIn("ironsword", tile_info.item_list[0].name.lower())
 
     # Add Item To Tile
     # Checks that an item can be added to a tile.
@@ -432,7 +432,7 @@ class TestGameState(unittest.TestCase):
         self.game_state.add_item_to_tile(1, 1, "smallhealthpotion")
 
         tile_info = self.game_state.get_game_tile_info(1, 1)
-        self.assertIn("smallhealthpotion", tile_info.item_list[0].lower())
+        self.assertIn("smallhealthpotion", tile_info.item_list[0].name.lower())
 
     # Remove Item From Tile
     # Checks that an item can be removed from a tile.
@@ -446,7 +446,11 @@ class TestGameState(unittest.TestCase):
 
         self.assertEqual(removed_item.name.lower(), "ironsword")
         self.assertNotIn(
-            "ironsword", self.game_state.get_game_tile_info(1, 1).item_list
+            "ironsword",
+            [
+                item.name.lower()
+                for item in self.game_state.get_game_tile_info(1, 1).item_list
+            ],
         )
 
     # Backpack Tests
@@ -669,6 +673,9 @@ class TestGameState(unittest.TestCase):
 
         self.game_state.restore(original_memento, command_manager, game_state_manager)
 
+        # Check that restoring marks the game state as unsaved.
+        self.assertFalse(self.game_state.get_game_state_info()[2])
+
         restored_memento = self.game_state.create_memento(command_manager)
 
         self.assertEqual(
@@ -725,19 +732,11 @@ class TestGameState(unittest.TestCase):
         )
         self.assertEqual(restored_memento.turn_number, original_memento.turn_number)
         self.assertIsNot(self.game_state.get_entity_from_list(1), entity)
-        # testing
-        game_state_manager = GameStateManager()
-        self.game_state.restore(original_memento, command_manager, game_state_manager)
-
-        print("Getter result:", self.game_state.get_game_state_info())
-        self.assertFalse(self.game_state.get_game_state_info()[2])
-        # Check that restoring marks the game state as unsaved.
-        self.assertFalse(self.game_state.get_game_state_info()[2])
 
     # Checks that restoring an invalid Memento raises a TypeError.
     def test_restore_invalid_memento(self):
         with self.assertRaises(TypeError):
-            self.game_state.restore(None)
+            self.game_state.restore(None, CommandManager(), GameStateManager())
 
     # Checks that restoring a Memento with no grid clears the current grid.
     def test_restore_memento_without_grid(self):
@@ -2064,6 +2063,114 @@ class TestGameState(unittest.TestCase):
         restored = self.game_state.get_entity_from_list(entity_id)
         self.assertIsNot(restored, original)
         self.assertEqual(restored.get_entity_state_name(), "Defending")
+
+    # Equipment and consumable Memento regression tests
+
+    def test_create_memento_preserves_equipped_item_details(self):
+        self.create_test_grid()
+        self.create_spawned_entity()
+        self.game_state.equip_item_based_on_info(1, "ironsword", "Weapon")
+        manager = CommandManager()
+
+        original = self.game_state.get_entity_from_list(1).create_memento()
+        snapshot = self.game_state.create_memento(manager)
+        equipped = snapshot.entity_mementos[0].inventory.data[0]
+
+        self.assertEqual(equipped.name, original.inventory.data[0].name)
+        self.assertEqual(equipped.slot, original.inventory.data[0].slot)
+        self.assertEqual(equipped.rarity, original.inventory.data[0].rarity)
+        self.assertEqual(
+            equipped.rolled_effects, original.inventory.data[0].rolled_effects
+        )
+
+    def test_create_memento_preserves_backpack_equipment(self):
+        self.create_test_grid()
+        self.create_spawned_entity()
+        self.game_state.add_item_to_backpack_based_on_info(1, "ironsword")
+
+        snapshot = self.game_state.create_memento(CommandManager())
+        item = snapshot.entity_mementos[0].backpack.items[0]
+
+        self.assertIsInstance(item, equipment.EquipmentMemento)
+        self.assertEqual(item.name.lower(), "ironsword")
+        self.assertIsNotNone(item.slot)
+
+    def test_create_memento_preserves_backpack_consumable(self):
+        self.create_test_grid()
+        self.create_spawned_entity()
+        self.game_state.add_item_to_backpack_based_on_info(1, "smallhealthpotion")
+
+        snapshot = self.game_state.create_memento(CommandManager())
+        item = snapshot.entity_mementos[0].backpack.items[0]
+
+        self.assertIsInstance(item, equipment.ConsumableMemento)
+        self.assertEqual(item.equipment_memento.name.lower(), "smallhealthpotion")
+        self.assertIsNotNone(item.instant_effects)
+        self.assertIsNotNone(item.over_time_effects)
+
+    def test_restore_preserves_equipped_item_memento(self):
+        self.create_test_grid()
+        self.create_spawned_entity()
+        self.game_state.equip_item_based_on_info(1, "ironsword", "Weapon")
+        manager = CommandManager()
+        saved = self.game_state.create_memento(manager)
+        original_item = saved.entity_mementos[0].inventory.data[0]
+
+        self.game_state.restore(saved, manager, GameStateManager())
+        restored = self.game_state.create_memento(manager)
+        restored_item = restored.entity_mementos[0].inventory.data[0]
+
+        self.assertEqual(restored_item, original_item)
+
+    def test_restore_preserves_backpack_equipment_memento(self):
+        self.create_test_grid()
+        self.create_spawned_entity()
+        self.game_state.add_item_to_backpack_based_on_info(1, "ironsword")
+        manager = CommandManager()
+        saved = self.game_state.create_memento(manager)
+        original_item = saved.entity_mementos[0].backpack.items[0]
+
+        self.game_state.restore(saved, manager, GameStateManager())
+        restored = self.game_state.create_memento(manager)
+
+        self.assertEqual(restored.entity_mementos[0].backpack.items[0], original_item)
+
+    def test_restore_preserves_backpack_consumable_memento(self):
+        self.create_test_grid()
+        self.create_spawned_entity()
+        self.game_state.add_item_to_backpack_based_on_info(1, "smallhealthpotion")
+        manager = CommandManager()
+        saved = self.game_state.create_memento(manager)
+        original_item = saved.entity_mementos[0].backpack.items[0]
+
+        self.game_state.restore(saved, manager, GameStateManager())
+        restored = self.game_state.create_memento(manager)
+
+        self.assertEqual(restored.entity_mementos[0].backpack.items[0], original_item)
+
+    def test_restore_preserves_tile_item_memento(self):
+        self.create_test_grid()
+        self.game_state.spawn_loot(2, 2, "ironsword")
+        manager = CommandManager()
+        saved = self.game_state.create_memento(manager)
+        original_item = saved.grid_memento.tiles[2][2].item_list[0]
+
+        self.game_state.restore(saved, manager, GameStateManager())
+        restored = self.game_state.create_memento(manager)
+
+        self.assertEqual(restored.grid_memento.tiles[2][2].item_list[0], original_item)
+
+    def test_restore_preserves_tile_consumable_memento(self):
+        self.create_test_grid()
+        self.game_state.spawn_loot(2, 2, "smallhealthpotion")
+        manager = CommandManager()
+        saved = self.game_state.create_memento(manager)
+        original_item = saved.grid_memento.tiles[2][2].item_list[0]
+
+        self.game_state.restore(saved, manager, GameStateManager())
+        restored = self.game_state.create_memento(manager)
+
+        self.assertEqual(restored.grid_memento.tiles[2][2].item_list[0], original_item)
 
 
 # Run the tests

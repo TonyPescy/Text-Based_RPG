@@ -39,6 +39,7 @@ Exit the game by using the keyboard interrupt or by entering "quit" as a command
 
 ### Player Entities
 - **Warrior**
+
 | Stat         | Base Value |
 | ------------- |:-------------:|
 | Health         | 120 |
@@ -46,7 +47,9 @@ Exit the game by using the keyboard interrupt or by entering "quit" as a command
 | Defence      | 10 |
 | Speed        | 5 |
 | Attack Type | Melee |
+
 - **Mage**
+
 | Stat         | Base Value |
 | ------------- |:-------------:|
 | Health         | 70 |
@@ -60,6 +63,7 @@ Exit the game by using the keyboard interrupt or by entering "quit" as a command
 
 ### Non-player Entities
 - **Goblin**
+
 | Stat         | Base Value |
 | ------------- |:-------------:|
 | Health         | 45 |
@@ -67,7 +71,9 @@ Exit the game by using the keyboard interrupt or by entering "quit" as a command
 | Defence      | 3 |
 | Speed        | 6 |
 | Attack Type | Melee |
+
 - **Skeleton**
+
 | Stat         | Base Value |
 | ------------- |:-------------:|
 | Health         | 60 |
@@ -75,7 +81,9 @@ Exit the game by using the keyboard interrupt or by entering "quit" as a command
 | Defence      | 8 |
 | Speed        | 4 |
 | Attack Type | Ranged |
+
 - **Ogre**
+
 | Stat         | Base Value |
 | ------------- |:-------------:|
 | Health         | 150 |
@@ -353,7 +361,7 @@ Exit the game by using the keyboard interrupt or by entering "quit" as a command
 ## Design Decisions
 [Table of Contents](#table-of-contents)
 
-**Description:** The following design decisions will provide an overview of each section of the project as well as a breif explanation of why and how some mechanics are implemented the way that they are. Each section was split  using bullet points to avoid a large convulated block of text forming when new features or designs are added to the project.
+**Description:** The following design decisions will provide an overview of each section of the project as well as a breif explanation of why and how some mechanics are implemented the way that they are. Each section was split using bullet points to avoid a large convulated block of text forming when new features or designs are added to the project.
 
 ### Grid 
 - The grid is used as the worlds coordinate system that will track entity positions, tile states, and occupancy across the multiple tile types within the game. The grid is represented by a 2D matrix of Tiles. 
@@ -364,7 +372,7 @@ Exit the game by using the keyboard interrupt or by entering "quit" as a command
 - When using A* pathing, entities will not block their tiles. So you will be able to move through entities but will not be able to end on the same tile as an entity.
 - Creates and resotres its own memento to follow Single Responsibility Principle.
 
-### Tiles - ToDo: Reduce future cyclomatic complexity
+### Tiles
 - Tiles are what make up the grid. Each Tile has its typing, a boolean determining whether they are passable or not for collision/movement restrictions, and a list of occupants. 
 - Each tile can have more than 1 occupant, which will be represented by a list of entity IDs, or if there are no occupants it will be instead be filled with the empty tile constant value. 
 - Each tile also has an item_list for loot that can be picked up, dropped, or spawned at the tile location.

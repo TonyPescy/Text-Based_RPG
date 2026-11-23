@@ -618,6 +618,247 @@ class TestEquipment(unittest.TestCase):
             5,
         )
 
+    # Memento Test Helpers
+    def create_item(self, name="ironsword"):
+        item = equipment.create_equipment(name)
+        self.assertIsNotNone(item)
+        return item
+
+    def create_equipment_memento(
+        self, name="ironsword", rarity="Rare", rolled_effects=None
+    ):
+        item = self.create_item(name)
+        original = item.create_memento()
+        return equipment.EquipmentMemento(
+            name=original.name,
+            slot=original.slot,
+            rarity=rarity,
+            rolled_effects=tuple((rolled_effects or {}).items()),
+        )
+
+    def create_consumable_memento(
+        self,
+        name="smallhealthpotion",
+        rarity="Rare",
+        instant_effects=None,
+        over_time_effects=None,
+        duration=None,
+    ):
+        original = self.create_item(name).create_memento()
+        base = original.equipment_memento
+        return equipment.ConsumableMemento(
+            equipment_memento=equipment.EquipmentMemento(
+                base.name, base.slot, rarity, base.rolled_effects
+            ),
+            instant_effects=(
+                original.instant_effects
+                if instant_effects is None
+                else tuple(
+                    (kind, tuple(values.items()))
+                    for kind, values in instant_effects.items()
+                )
+            ),
+            over_time_effects=(
+                original.over_time_effects
+                if over_time_effects is None
+                else tuple(
+                    (kind, tuple(values.items()))
+                    for kind, values in over_time_effects.items()
+                )
+            ),
+            duration=original.duration if duration is None else duration,
+        )
+
+    def assert_memento_round_trip(self, item, memento):
+        item.restore(memento)
+        self.assertEqual(item.create_memento(), memento)
+        self.assertEqual(
+            item.get_info().rarity,
+            (
+                memento.equipment_memento.rarity
+                if isinstance(memento, equipment.ConsumableMemento)
+                else memento.rarity
+            ),
+        )
+
+    # Equipment Memento Tests
+    def test_equipment_memento_default_fields(self):
+        item = self.create_item()
+        memento = item.create_memento()
+        self.assertIsInstance(memento, equipment.EquipmentMemento)
+        self.assertEqual(memento.name, "IronSword")
+        self.assertEqual(memento.slot, "Weapon")
+        self.assertEqual(memento.rarity, "Common")
+        self.assertEqual(memento.rolled_effects, ())
+
+    def test_equipment_memento_all_factory_items(self):
+        for name in equipment.get_equipment_names():
+            with self.subTest(item=name):
+                item = self.create_item(name)
+                memento = item.create_memento()
+                if isinstance(item, equipment.Consumable):
+                    self.assertIsInstance(memento, equipment.ConsumableMemento)
+                else:
+                    self.assertIsInstance(memento, equipment.EquipmentMemento)
+                self.assertEqual(item.get_info().rarity, "Common")
+
+    def test_equipment_memento_restore_custom_rarity_and_rolls(self):
+        item = self.create_item()
+        memento = self.create_equipment_memento(
+            rolled_effects={"Attack": 7, "Speed": 2}
+        )
+        self.assert_memento_round_trip(item, memento)
+
+    def test_equipment_memento_restore_replaces_previous_rolls(self):
+        item = self.create_item()
+        item.restore(self.create_equipment_memento(rolled_effects={"Attack": 9}))
+        item.restore(self.create_equipment_memento(rarity="Common"))
+        self.assertEqual(item.create_memento().rolled_effects, ())
+        self.assertEqual(item.get_info().rarity, "Common")
+
+    def test_equipment_memento_restore_preserves_base_effects(self):
+        item = self.create_item("curseddagger")
+        before = dict(item.get_info().effects)
+        item.restore(
+            self.create_equipment_memento("curseddagger", rolled_effects={"Attack": 4})
+        )
+        self.assertEqual(dict(item.get_info().effects), before)
+
+    def test_equipment_memento_invalid_type(self):
+        item = self.create_item()
+        with self.assertRaises(TypeError):
+            item.restore(None)
+        with self.assertRaises(TypeError):
+            item.restore({"name": "IronSword"})
+
+    def test_equipment_memento_is_snapshot(self):
+        item = self.create_item()
+        old = item.create_memento()
+        item.restore(
+            self.create_equipment_memento(
+                rarity="Legendary", rolled_effects={"Attack": 10}
+            )
+        )
+        self.assertEqual(old.rarity, "Common")
+        self.assertEqual(old.rolled_effects, ())
+
+    def test_equipment_memento_factory_round_trip(self):
+        for name in equipment.get_equipment_names():
+            item = self.create_item(name)
+            if isinstance(item, equipment.Consumable):
+                continue
+            with self.subTest(item=name):
+                memento = item.create_memento()
+                restored = self.create_item(
+                    memento.name if memento.name != "None" else name
+                )
+                restored.restore(memento)
+                self.assertEqual(restored.create_memento(), memento)
+
+    # Consumable Memento Tests
+    def test_consumable_memento_default_fields(self):
+        item = self.create_item("smallhealthpotion")
+        memento = item.create_memento()
+        self.assertIsInstance(memento, equipment.ConsumableMemento)
+        self.assertEqual(memento.equipment_memento.name, "SmallHealthPotion")
+        self.assertEqual(memento.equipment_memento.slot, "Consumable")
+        self.assertEqual(memento.equipment_memento.rarity, "Common")
+        self.assertEqual(
+            memento.instant_effects,
+            (("Flat_modifiers", (("Health", "20"),)), ("Percent_modifiers", ())),
+        )
+        self.assertEqual(memento.duration, 0)
+
+    def test_consumable_memento_restore_custom_effects(self):
+        item = self.create_item("smallhealthpotion")
+        memento = self.create_consumable_memento(
+            instant_effects={
+                "Flat_modifiers": {"Health": "35"},
+                "Percent_modifiers": {"Mana": "10"},
+            },
+            over_time_effects={
+                "Flat_modifiers": {"Defence": "5"},
+                "Percent_modifiers": {},
+            },
+            duration=3,
+        )
+        self.assert_memento_round_trip(item, memento)
+        info = item.get_info()
+        self.assertEqual(
+            dict(dict(info.instant_effects)["Flat_modifiers"]), {"Health": "35"}
+        )
+        self.assertEqual(
+            dict(dict(info.over_time_effects)["Flat_modifiers"]), {"Defence": "5"}
+        )
+        self.assertEqual(info.duration, 3)
+
+    def test_consumable_memento_restore_rarity(self):
+        item = self.create_item("manapotion")
+        self.assert_memento_round_trip(
+            item, self.create_consumable_memento("manapotion", "Epic")
+        )
+
+    def test_consumable_memento_restore_replaces_effects(self):
+        item = self.create_item("turtlemasterpotion")
+        empty = {"Flat_modifiers": {}, "Percent_modifiers": {}}
+        memento = self.create_consumable_memento(
+            "turtlemasterpotion",
+            instant_effects=empty,
+            over_time_effects=empty,
+            duration=0,
+        )
+        self.assert_memento_round_trip(item, memento)
+        self.assertEqual(dict(item.get_info().instant_effects)["Flat_modifiers"], ())
+        self.assertEqual(
+            dict(item.get_info().over_time_effects)["Percent_modifiers"], ()
+        )
+
+    def test_consumable_memento_snapshot_independence(self):
+        item = self.create_item("turtlemasterpotion")
+        old = item.create_memento()
+        item.restore(
+            self.create_consumable_memento(
+                "turtlemasterpotion", "Legendary", duration=10
+            )
+        )
+        self.assertEqual(old.equipment_memento.rarity, "Common")
+        self.assertEqual(old.duration, 5)
+
+    def test_consumable_memento_all_factory_potions_round_trip(self):
+        for name in equipment.get_equipment_names():
+            item = self.create_item(name)
+            if not isinstance(item, equipment.Consumable):
+                continue
+            with self.subTest(item=name):
+                memento = item.create_memento()
+                restored = self.create_item(name)
+                self.assert_memento_round_trip(restored, memento)
+                self.assertEqual(restored.get_info(), item.get_info())
+
+    def test_consumable_memento_restore_custom_rolls(self):
+        item = self.create_item("manapotion")
+        original = self.create_consumable_memento("manapotion")
+        base = original.equipment_memento
+        modified = equipment.ConsumableMemento(
+            equipment_memento=equipment.EquipmentMemento(
+                base.name, base.slot, "Rare", (("Mana", 4),)
+            ),
+            instant_effects=original.instant_effects,
+            over_time_effects=original.over_time_effects,
+            duration=original.duration,
+        )
+        self.assert_memento_round_trip(item, modified)
+
+    def test_consumable_memento_factory_round_trip_custom_state(self):
+        item = self.create_item("turtlemasterpotion")
+        custom = self.create_consumable_memento(
+            "turtlemasterpotion", "Epic", duration=8
+        )
+        item.restore(custom)
+        restored = self.create_item("turtlemasterpotion")
+        restored.restore(item.create_memento())
+        self.assertEqual(restored.create_memento(), custom)
+
 
 # Run Unit Tests
 if __name__ == "__main__":

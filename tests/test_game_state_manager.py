@@ -34,6 +34,7 @@ from entity import Entity
 from unittest.mock import patch
 from command_manager import CommandManager
 from command import Command
+import equipment
 
 
 # Game state manager tests
@@ -49,6 +50,18 @@ class TestGameStateManager(unittest.TestCase):
         self.temp_directory = tempfile.TemporaryDirectory()
         self.file_path = os.path.join(self.temp_directory.name, "test_save.json")
         self.command_manager = CommandManager()
+
+    # Create Command Memento
+    # Creates a basic command Memento for testing
+    def create_command_memento(self):
+        return Command.Memento(
+            command_type="TestCommand",
+            data={
+                "entity_id": 1,
+                "x": 5,
+                "y": 10,
+            },
+        )
 
     # Tear Down Test
     # Removes the temporary directory after each test.
@@ -699,6 +712,467 @@ class TestGameStateManager(unittest.TestCase):
         restored_ogre = restored_game.get_entity_from_list(entity_id)
         self.assertEqual(restored_ogre.get_entity_state_name(), "Raging")
 
+    # Convert Empty Command Manager Memento To Data
+    # Checks that an empty CommandManager Memento converts correctly.
+    # Params: None
+    # Returns: None
+    def test_command_manager_memento_to_data_empty(self):
+        memento = CommandManager.Memento(
+            undo_history=(),
+            redo_history=(),
+        )
 
-if __name__ == "main":
+        data = self.manager.command_manager_memento_to_data(memento)
+
+        self.assertEqual(data["undo_history"], [])
+        self.assertEqual(data["redo_history"], [])
+
+    # Convert None Command Manager Memento To Data
+    # Checks that None returns None.
+    # Params: None
+    # Returns: None
+    def test_command_manager_memento_to_data_none(self):
+        data = self.manager.command_manager_memento_to_data(None)
+
+        self.assertIsNone(data)
+
+    # Convert Command Manager Memento To Data
+    # Checks that command histories are converted into lists of dictionaries.
+    # Params: None
+    # Returns: None
+    def test_command_manager_memento_to_data(self):
+        command_memento = self.create_command_memento()
+
+        memento = CommandManager.Memento(
+            undo_history=(command_memento,),
+            redo_history=(command_memento,),
+        )
+
+        data = self.manager.command_manager_memento_to_data(memento)
+
+        self.assertEqual(len(data["undo_history"]), 1)
+        self.assertEqual(len(data["redo_history"]), 1)
+
+        self.assertEqual(
+            data["undo_history"][0]["command_type"],
+            "TestCommand",
+        )
+
+        self.assertEqual(
+            data["undo_history"][0]["data"]["entity_id"],
+            1,
+        )
+
+    # Convert Command Memento To Data
+    # Checks that a Command Memento converts into a dictionary.
+    # Params: None
+    # Returns: None
+    def test_command_memento_to_data(self):
+        memento = self.create_command_memento()
+
+        data = self.manager.command_memento_to_data(memento)
+
+        self.assertEqual(data["command_type"], "TestCommand")
+        self.assertEqual(data["data"]["entity_id"], 1)
+        self.assertEqual(data["data"]["x"], 5)
+        self.assertEqual(data["data"]["y"], 10)
+
+    # Convert Nested Command Data To Data
+    # Checks that nested dictionaries, lists, and tuples are converted recursively.
+    # Params: None
+    # Returns: None
+    def test_command_data_to_data_nested_collections(self):
+        data = {
+            "entity_id": 1,
+            "position": (5, 10),
+            "items": ["sword", "shield"],
+            "nested": {
+                "health": 100,
+                "modifiers": ("attack", "defence"),
+            },
+        }
+
+        converted_data = self.manager.command_data_to_data(data)
+
+        self.assertEqual(converted_data["entity_id"], 1)
+        self.assertEqual(converted_data["position"], [5, 10])
+        self.assertEqual(converted_data["items"], ["sword", "shield"])
+        self.assertEqual(
+            converted_data["nested"]["modifiers"],
+            ["attack", "defence"],
+        )
+
+    # Convert Nested Command Memento To Data
+    # Checks that nested Command Mementos are converted recursively.
+    # Params: None
+    # Returns: None
+    def test_command_data_to_data_nested_command_memento(self):
+        command_memento = self.create_command_memento()
+
+        data = {
+            "old_command": command_memento,
+        }
+
+        converted_data = self.manager.command_data_to_data(data)
+
+        self.assertEqual(
+            converted_data["old_command"]["command_type"],
+            "TestCommand",
+        )
+
+        self.assertEqual(
+            converted_data["old_command"]["data"]["entity_id"],
+            1,
+        )
+
+    # Convert Nested Command Manager Memento To Data
+    # Checks that nested CommandManager Mementos are converted recursively.
+    # Params: None
+    # Returns: None
+    def test_command_data_to_data_nested_command_manager_memento(self):
+        command_memento = self.create_command_memento()
+
+        command_manager_memento = CommandManager.Memento(
+            undo_history=(command_memento,),
+            redo_history=(),
+        )
+
+        converted_data = self.manager.command_data_to_data(
+            {"manager": command_manager_memento}
+        )
+
+        self.assertEqual(
+            converted_data["manager"]["undo_history"][0]["command_type"],
+            "TestCommand",
+        )
+
+        self.assertEqual(
+            converted_data["manager"]["redo_history"],
+            [],
+        )
+
+    # Convert Unsupported Command Data
+    # Checks that unsupported objects raise a TypeError.
+    # Params: None
+    # Returns: None
+    def test_command_data_to_data_unsupported_type(self):
+        with self.assertRaises(TypeError):
+            self.manager.command_data_to_data(object())
+
+    # Convert Command Manager Memento To JSON
+    # Checks that a CommandManager Memento can be serialized as JSON.
+    # Params: None
+    # Returns: None
+    def test_command_manager_memento_to_data_json_serializable(self):
+        command_memento = self.create_command_memento()
+
+        memento = CommandManager.Memento(
+            undo_history=(command_memento,),
+            redo_history=(),
+        )
+
+        data = self.manager.command_manager_memento_to_data(memento)
+
+        serialized_data = json.dumps(data)
+
+        self.assertIsInstance(serialized_data, str)
+
+    # Convert Data To Command Manager Memento
+    # Checks that dictionary data converts back into a CommandManager Memento.
+    # Params: None
+    # Returns: None
+    def test_data_to_command_manager_memento(self):
+        command_data = {
+            "command_type": "TestCommand",
+            "data": {
+                "entity_id": 1,
+                "x": 5,
+                "y": 10,
+            },
+        }
+
+        manager_data = {
+            "undo_history": [command_data],
+            "redo_history": [],
+        }
+
+        memento = self.manager.data_to_command_manager_memento(manager_data)
+
+        self.assertIsInstance(memento, CommandManager.Memento)
+        self.assertEqual(len(memento.undo_history), 1)
+        self.assertEqual(len(memento.redo_history), 0)
+        self.assertEqual(memento.undo_history[0].command_type, "TestCommand")
+        self.assertEqual(memento.undo_history[0].data["entity_id"], 1)
+
+    # Convert None Data To Command Manager Memento
+    # Checks that None returns None.
+    # Params: None
+    # Returns: None
+    def test_data_to_command_manager_memento_none(self):
+        memento = self.manager.data_to_command_manager_memento(None)
+
+        self.assertIsNone(memento)
+
+    # Convert Data To Command Memento
+    # Checks that dictionary data converts back into a Command Memento.
+    # Params: None
+    # Returns: None
+    def test_data_to_command_memento(self):
+        command_data = {
+            "command_type": "TestCommand",
+            "data": {
+                "entity_id": 1,
+                "x": 5,
+                "y": 10,
+            },
+        }
+
+        memento = self.manager.data_to_command_memento(command_data)
+
+        self.assertIsInstance(memento, Command.Memento)
+        self.assertEqual(memento.command_type, "TestCommand")
+        self.assertEqual(memento.data["entity_id"], 1)
+        self.assertEqual(memento.data["x"], 5)
+        self.assertEqual(memento.data["y"], 10)
+
+    # Round Trip Command Manager Memento
+    # Checks that a CommandManager Memento converts to data and back correctly.
+    # Params: None
+    # Returns: None
+    def test_command_manager_memento_conversion_round_trip(self):
+        original_command = self.create_command_memento()
+
+        original_memento = CommandManager.Memento(
+            undo_history=(original_command,),
+            redo_history=(original_command,),
+        )
+
+        data = self.manager.command_manager_memento_to_data(original_memento)
+
+        restored_memento = self.manager.data_to_command_manager_memento(data)
+
+        self.assertEqual(
+            restored_memento.undo_history[0].command_type,
+            original_memento.undo_history[0].command_type,
+        )
+
+        self.assertEqual(
+            restored_memento.undo_history[0].data,
+            original_memento.undo_history[0].data,
+        )
+
+        self.assertEqual(
+            restored_memento.redo_history[0].command_type,
+            original_memento.redo_history[0].command_type,
+        )
+
+    # Test Equipment Memento Round Trip
+    def test_equipment_memento_round_trip(self):
+        original = equipment.EquipmentMemento(
+            name="IronSword",
+            slot="Weapon",
+            rarity="Rare",
+            rolled_effects=(("Attack", 6), ("Speed", 2)),
+        )
+
+        data = self.manager.equipment_memento_to_data(original)
+
+        restored = self.manager.data_to_equipment_memento(data)
+
+        self.assertEqual(original, restored)
+
+    # Test Consumable Memento Round Trip
+    def test_consumable_memento_round_trip(self):
+        base = equipment.EquipmentMemento(
+            name="TurtleMasterPotion",
+            slot="Consumable",
+            rarity="Common",
+            rolled_effects=(),
+        )
+
+        original = equipment.ConsumableMemento(
+            equipment_memento=base,
+            instant_effects=(
+                ("Flat_modifiers", (("Health", 10),)),
+                ("Percent_modifiers", ()),
+            ),
+            over_time_effects=(
+                ("Flat_modifiers", (("Attack", 3),)),
+                ("Percent_modifiers", ()),
+            ),
+            duration=5,
+        )
+
+        data = self.manager.equipment_memento_to_data(original)
+
+        restored = self.manager.data_to_equipment_memento(data)
+
+        self.assertEqual(original, restored)
+
+    # Test Equipment Memento JSON Serialization
+    def test_equipment_memento_json_serializable(self):
+        memento = equipment.EquipmentMemento(
+            name="IronSword",
+            slot="Weapon",
+            rarity="Rare",
+            rolled_effects=(("Attack", 6),),
+        )
+
+        data = self.manager.equipment_memento_to_data(memento)
+
+        serialized = json.dumps(data)
+
+        self.assertIsInstance(serialized, str)
+
+    # Equipment and Consumable Serialization Helpers
+    def create_item_memento(self, name="IronSword", rarity="Rare", rolled_effects=None):
+        item = equipment.create_equipment(name)
+        self.assertIsNotNone(item)
+        original = item.create_memento()
+        if rolled_effects is None:
+            rolled_effects = (("Attack", 6), ("Speed", 2))
+        base = equipment.EquipmentMemento(
+            name=(
+                original.name
+                if isinstance(original, equipment.EquipmentMemento)
+                else original.equipment_memento.name
+            ),
+            slot=item.slot,
+            rarity=rarity,
+            rolled_effects=tuple(rolled_effects),
+        )
+        if isinstance(original, equipment.ConsumableMemento):
+            return equipment.ConsumableMemento(
+                equipment_memento=base,
+                instant_effects=original.instant_effects,
+                over_time_effects=original.over_time_effects,
+                duration=original.duration,
+            )
+        return base
+
+    def assert_item_json_round_trip(self, original):
+        data = self.manager.equipment_memento_to_data(original)
+        restored = self.manager.data_to_equipment_memento(json.loads(json.dumps(data)))
+        self.assertEqual(restored, original)
+        return data
+
+    # Equipment Memento Tests
+    def test_equipment_memento_to_data_preserves_rarity_and_rolls(self):
+        original = self.create_item_memento()
+        data = self.manager.equipment_memento_to_data(original)
+        self.assertEqual(data["name"], "IronSword")
+        self.assertEqual(data["rarity"], "Rare")
+        self.assertEqual(data["rolled_effects"], {"Attack": 6, "Speed": 2})
+        self.assertEqual(data["item_type"], "Equipment")
+        self.assertEqual(data["slot"], "Weapon")
+
+    def test_equipment_memento_json_round_trip_with_multiple_rolls(self):
+        self.assert_item_json_round_trip(self.create_item_memento())
+
+    def test_equipment_memento_json_round_trip_empty_rolls(self):
+        self.assert_item_json_round_trip(
+            self.create_item_memento("LeatherTunic", "Common", ())
+        )
+
+    def test_equipment_memento_json_round_trip_negative_roll(self):
+        self.assert_item_json_round_trip(
+            self.create_item_memento("CursedDagger", "Epic", (("Defence", -5),))
+        )
+
+    def test_equipment_memento_to_data_none(self):
+        self.assertIsNone(self.manager.equipment_memento_to_data(None))
+
+    def test_data_to_equipment_memento_none(self):
+        self.assertIsNone(self.manager.data_to_equipment_memento(None))
+
+    def test_equipment_memento_to_data_rejects_invalid_type(self):
+        with self.assertRaises(TypeError):
+            self.manager.equipment_memento_to_data(object())
+
+    def test_data_to_equipment_memento_rejects_unknown_item_type(self):
+        data = self.manager.equipment_memento_to_data(self.create_item_memento())
+        data["item_type"] = "Unknown"
+        with self.assertRaises(ValueError):
+            self.manager.data_to_equipment_memento(data)
+
+    # Consumable Memento Tests
+    def test_consumable_memento_to_data_preserves_effects(self):
+        original = self.create_item_memento("TurtleMasterPotion", "Rare", ())
+        data = self.manager.equipment_memento_to_data(original)
+        self.assertEqual(data["item_type"], "Consumable")
+        self.assertEqual(data["name"], "TurtleMasterPotion")
+        self.assertEqual(data["rarity"], "Rare")
+        self.assertEqual(data["slot"], "Consumable")
+        self.assertEqual(data["duration"], 5)
+        self.assertEqual(data["instant_effects"]["Percent_modifiers"]["Health"], "10")
+        self.assertEqual(data["over_time_effects"]["Flat_modifiers"]["Speed"], "-3")
+        self.assertEqual(
+            data["over_time_effects"]["Percent_modifiers"]["Defence"], "20"
+        )
+
+    def test_consumable_memento_json_round_trip_with_timed_effects(self):
+        self.assert_item_json_round_trip(
+            self.create_item_memento("TurtleMasterPotion", "Rare", ())
+        )
+
+    def test_consumable_memento_json_round_trip_instant_only(self):
+        self.assert_item_json_round_trip(
+            self.create_item_memento("SmallHealthPotion", "Common", ())
+        )
+
+    def test_consumable_memento_json_round_trip_mana_potion(self):
+        self.assert_item_json_round_trip(
+            self.create_item_memento("ManaPotion", "Common", ())
+        )
+
+    def test_equipment_serialization_does_not_modify_original_memento(self):
+        original = self.create_item_memento()
+        before = original.rolled_effects
+        data = self.manager.equipment_memento_to_data(original)
+        data["rolled_effects"]["Attack"] = 999
+        self.assertEqual(original.rolled_effects, before)
+
+    def test_consumable_serialization_does_not_modify_original_memento(self):
+        original = self.create_item_memento("TurtleMasterPotion", "Rare", ())
+        data = self.manager.equipment_memento_to_data(original)
+        data["instant_effects"]["Percent_modifiers"]["Health"] = "999"
+        self.assertEqual(
+            dict(dict(original.instant_effects)["Percent_modifiers"])["Health"],
+            "10",
+        )
+
+    # Game State Item Integration Tests
+    def test_memento_to_data_preserves_backpack_item_mementos(self):
+        game_state = GameState()
+        game_state.create_grid(5, 5)
+        entity_id = game_state.spawn_entity(1, 1, "warrior")
+        entity = game_state.get_entity_from_list(entity_id)
+        entity.add_item_to_backpack(equipment.create_equipment("TurtleMasterPotion"))
+        entity.add_item_to_backpack(equipment.create_equipment("IronSword"))
+        save_data = self.manager.memento_to_data(
+            game_state.create_memento(self.command_manager)
+        )
+        backpack = save_data["entities"][0]["backpack"]
+        self.assertEqual(
+            [item["name"] for item in backpack], ["TurtleMasterPotion", "IronSword"]
+        )
+        self.assertEqual(backpack[0]["duration"], 5)
+        self.assertEqual(backpack[1]["slot"], "Weapon")
+
+    def test_game_state_item_mementos_survive_json_round_trip(self):
+        game_state = GameState()
+        game_state.create_grid(5, 5)
+        entity_id = game_state.spawn_entity(1, 1, "warrior")
+        entity = game_state.get_entity_from_list(entity_id)
+        entity.add_item_to_backpack(equipment.create_equipment("TurtleMasterPotion"))
+        original = game_state.create_memento(self.command_manager)
+        data = json.loads(json.dumps(self.manager.memento_to_data(original)))
+        restored = self.manager.data_to_memento(data)
+        self.assertEqual(
+            restored.entity_mementos[0].backpack.items,
+            original.entity_mementos[0].backpack.items,
+        )
+
+
+if __name__ == "__main__":
     unittest.main()
