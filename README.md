@@ -20,8 +20,6 @@ Tony Pescatore
 
 [Design Decisions](#design-decisions)
 
-[Game Commands](#game-commands)
-
 ## Running The Game
 [Table of Contents](#table-of-contents)
 
@@ -473,6 +471,10 @@ Exit the game by using the keyboard interrupt or by entering "quit" as a command
 - Listens to the state to determine when to transition.
 - Tick will evaluate environment and trigger the transistions based on findings.
 
+### Dungeon Floor and Dungeon Generation
+- Floors will be generated one at a time, with the previous floor beiong forgotten and unable to be traveled back to by the player.
+- Dungeon gnereation will be done using Cellular Automata for a more natural cavernous look. It will need mutliple pass throughs as well as a flood-fill pruning for connectivity.
+- 
 
 ### Other
 - Values for entities, tiles, spells, equipment, grids, and game state are marked as private (__varname). To access this information x.getinfo() will return a immutable copy to prevent any of that private data from being public and able to be modified. When these do need to be changed, such as an entity losing health, it is handled within its own class.

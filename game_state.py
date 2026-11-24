@@ -12,14 +12,16 @@ Purpose: Record game state stats.
 
 # Imports
 from dataclasses import dataclass
-
-# from copy import deepcopy
 from grid import Grid
 from equipment import Consumable
 from spell import get_spell
 import entity as ent
 import domain_library as dl
 import equipment
+from dungeon_floor import DungeonFloor
+
+# CONSTANTS
+PLAYER_ID = 1  # Always 1 as it is created first before anything else is created
 
 
 # GamesState Class to handle game state stats
@@ -28,11 +30,13 @@ class GameState:
     # Init with necessary variables
     def __init__(self):
         self.__grid = None
+        self.__current_floor = None
         self.__entity_list = []  # List of real entity objects, not copies
         self.__entity_ids_issued = 1
         self.__map_created = False
         self.__turn_number = 1
         self.__is_saved = True
+        self.__player_id = PLAYER_ID
 
     # Memento class stores a snapshot of the GameState
     @dataclass(frozen=True)
@@ -44,6 +48,7 @@ class GameState:
         turn_number: int
         is_saved: bool
         command_manager_memento: object
+        floor_memento: object = None
 
     # Is Map Created
     # True/False if map is created
@@ -111,8 +116,6 @@ class GameState:
         # params checked before calling of method
         # Assign/Create grid
         self.__grid = Grid(width, height)
-        # reset entity id counter
-        # self.__entity_ids_issued = 1
         # Set map created to True
         self.mark_map_created()
         # Unsaved
@@ -124,9 +127,12 @@ class GameState:
     # Returns: None
     def create_new_game(self, width, height):
         # Params checked before calling of method
-        # Assign/Create grid
-        self.__grid = Grid(width, height)
-        # reset entity id counter
+        # Create a new floor
+        self.__current_floor = DungeonFloor(1, width, height)
+        self.__grid = self.__current_floor.get_grid()
+        # Start a completely new run
+        self.__entity_list = []
+        self.__turn_number = 1
         self.__entity_ids_issued = 1
         # Set map created to True
         self.mark_map_created()
@@ -138,6 +144,8 @@ class GameState:
     # Params: None
     # Returns: None
     def reset_map(self):
+        # Reset the active floor
+        self.__current_floor = None
         # Reset Grid
         self.__grid = None
         # reset entity id counter
@@ -146,6 +154,78 @@ class GameState:
         self.__map_created = False
         # Reset entity list
         self.__entity_list = []
+
+    # Get Current Floor
+    # Returns the active DungeonFloor, or None if no game exists
+    # Params:   None
+    # Returns: current_floor - DungeonFloor or None
+    def get_current_floor(self):
+        return self.__current_floor
+
+    # Get Current Floor Info
+    # Returns immutable floor metadata or None
+    # Params: None
+    # Returns: current_floor.get_info - DungeonFloorInfo or None
+    def get_current_floor_info(self):
+        if self.__current_floor is None:
+            return None
+        return self.__current_floor.get_info()
+
+    # Advance Floor
+    # Moves to the next floor by discarding the old floor and its enemies, but preserves player entities
+    # Params:   width/height - ints - dimensions;
+    #           entrance - Spawn position for player
+    # Returns: next_floor - DungeonFloor - new active floor
+    def advance_floor(self, width=None, height=None, entrance=(0, 0)):
+        # Player can only advance from an existing floor
+        if self.__current_floor is None:
+            raise ValueError("Cannot advance without an active dungeon floor")
+
+        # Get currnet floors info
+        current_info = self.__current_floor.get_info()
+
+        # Get width/height for next floor
+        width = current_info.width if width is None else width
+        height = current_info.height if height is None else height
+
+        # Setup next floor
+        next_floor = DungeonFloor(current_info.floor_number + 1, width, height)
+        next_floor.set_entrance(*entrance)
+
+        # Get the player entity
+        player = self.get_entity_from_list(self.__player_id)
+
+        # Check if the player exists
+        if player is None:
+            raise ValueError("No player entity exists!")
+
+        # Get the new floor's grid and entrance
+        grid = next_floor.get_grid()
+        entrance_x, entrance_y = next_floor.get_info().entrance
+
+        # Move the player to the new floor
+        player.move_to(entrance_x, entrance_y)
+
+        # Mark the entrance tile as occupied
+        grid.occupy(entrance_x, entrance_y, player.get_info().id)
+
+        # Update the active floor and grid
+        self.__current_floor = next_floor
+        self.__grid = grid
+
+        # Keep only the player entity
+        self.__entity_list = [player]
+
+        # Reconnect the player's state manager
+        player.reconnect_state_manager(self)
+
+        # Update player stats
+        player.update_stats(self)
+
+        # Mark the game as unsaved
+        self.mark_as_unsaved()
+
+        return next_floor
 
     # Set Game Grid Tile
     # Sets tile in active game grid
@@ -290,11 +370,6 @@ class GameState:
         grid_info = self.__grid.get_info()
         return Grid.is_valid_grid_position(grid_info, int(x), int(y))
 
-    # Spawn Entity
-    # Spawns entity for game grid
-    # Params:   x/y - ints - positions on grid
-    #           entity_type - String - type of entity to spawn
-    # Returns: id - int - entity id
     # Spawn Entity
     # Spawns entity for game grid
     # Params: x/y - ints - positions on grid
@@ -547,6 +622,11 @@ class GameState:
             turn_number=self.__turn_number,
             is_saved=self.__is_saved,
             command_manager_memento=command_manager_memento,
+            floor_memento=(
+                self.__current_floor.create_memento()
+                if self.__current_floor is not None
+                else None
+            ),
         )
 
     # Restore Memento
@@ -588,8 +668,6 @@ class GameState:
                 raise ValueError(f"Unable to restore Entity {base_memento.entity_id}")
 
             # Restore the Entity's saved state
-            # Entity.restore() must convert Memento collections into mutable
-            # collections for live gameplay.
             entity.restore(entity_memento)
 
             # Add the restored Entity to the new list
@@ -607,18 +685,35 @@ class GameState:
             # Grid.restore() rebuilds mutable Grid and Tile collections
             restored_grid.restore(memento.grid_memento)
 
-        # Replace the current GameState only after restoration succeeds
-        self.__grid = restored_grid
+        # Rebuild the floor, supporting older Mementos containing only a grid
+        restored_floor = None
+
+        floor_memento = getattr(memento, "floor_memento", None)
+        # Restore floor if it exists
+        if floor_memento is not None:
+            restored_floor = DungeonFloor(
+                floor_memento.floor_number,
+                grid=restored_grid,
+            )
+
+            restored_floor.restore(floor_memento)
+        # Create grid if it does not exist
+        elif restored_grid is not None:
+            restored_floor = DungeonFloor(1, grid=restored_grid)
+
+        # Replace the current GameState after restoration succeeds
+        self.__current_floor = restored_floor
+        self.__grid = restored_floor.get_grid() if restored_floor else None
         self.__entity_list = list(restored_entities)
         self.__entity_ids_issued = memento.entity_ids_issued
         self.__map_created = memento.map_created
         self.__turn_number = memento.turn_number
+        self.__player_id = PLAYER_ID
 
         # Reconnect state managers after restoring entities
         for entity in self.__entity_list:
             entity.reconnect_state_manager(self)
 
-        # Restore the Command Manager's history
         # Restore the Command Manager's history if one exists.
         if memento.command_manager_memento is not None:
             command_manager.restore(

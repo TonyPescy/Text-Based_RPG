@@ -23,7 +23,6 @@ TLDR: This will primarily test only success cases as any and all error handling 
 these functions are handled within the CLI prior to calling this function.
 """
 
-
 # Imports
 import contextlib
 import io
@@ -2171,6 +2170,154 @@ class TestGameState(unittest.TestCase):
         restored = self.game_state.create_memento(manager)
 
         self.assertEqual(restored.grid_memento.tiles[2][2].item_list[0], original_item)
+
+    # Floor progression tests
+
+    def test_new_game_creates_first_floor(self):
+        self.game_state.create_new_game(6, 7)
+        floor = self.game_state.get_current_floor()
+        self.assertIsNotNone(floor)
+        self.assertEqual(floor.get_info().floor_number, 1)
+        self.assertEqual((floor.get_info().width, floor.get_info().height), (6, 7))
+        self.assertIs(self.game_state._GameState__grid, floor.get_grid())
+        self.assertTrue(self.game_state.game_state_is_active())
+
+    def test_new_game_resets_previous_run(self):
+        self.game_state.create_new_game(5, 5)
+        self.game_state.spawn_entity(0, 0, "warrior")
+        self.game_state.spawn_entity(1, 1, "goblin")
+        self.game_state.advance_turn()
+        self.game_state.create_new_game(7, 6)
+        self.assertFalse(self.game_state.entities_exists())
+        self.assertEqual(self.game_state.get_game_state_info()[:2], (1, 0))
+        self.assertEqual(self.game_state.get_current_floor_info().floor_number, 1)
+        self.assertEqual(self.game_state.spawn_entity(0, 0, "mage"), 1)
+
+    def test_get_current_floor_without_run(self):
+        self.assertIsNone(self.game_state.get_current_floor())
+        self.assertIsNone(self.game_state.get_current_floor_info())
+
+    def test_reset_map_clears_active_floor(self):
+        self.game_state.create_new_game(5, 5)
+        self.game_state.reset_map()
+        self.assertIsNone(self.game_state.get_current_floor())
+        self.assertIsNone(self.game_state.get_current_floor_info())
+        self.assertFalse(self.game_state.game_state_is_active())
+
+    def test_advance_floor_preserves_single_warrior(self):
+        self.game_state.create_new_game(5, 5)
+        self.game_state.spawn_entity(0, 0, "warrior")
+        player = self.game_state.get_entity_from_list(1)
+        self.game_state.spawn_entity(1, 1, "goblin")
+        old_floor = self.game_state.get_current_floor()
+        next_floor = self.game_state.advance_floor(6, 7, entrance=(2, 3))
+        self.assertIs(next_floor, self.game_state.get_current_floor())
+        self.assertIsNot(next_floor, old_floor)
+        self.assertEqual(next_floor.get_info().floor_number, 2)
+        self.assertEqual(next_floor.get_info().entrance, (2, 3))
+        self.assertIs(self.game_state.get_entity_from_list(1), player)
+        self.assertIsNone(self.game_state.get_entity_from_list(2))
+        self.assertEqual(self.game_state.get_entity_info_from_list(1).position, [2, 3])
+        self.assertEqual(self.game_state.get_entity_id_from_tile(2, 3), 1)
+        self.assertEqual(self.game_state.get_game_state_info()[1], 1)
+        self.assertFalse(self.game_state.get_game_state_info()[2])
+
+    def test_advance_floor_preserves_mage_and_inventory(self):
+        self.game_state.create_new_game(5, 5)
+        self.game_state.spawn_entity(0, 0, "mage")
+        player = self.game_state.get_entity_from_list(1)
+        self.game_state.add_item_to_backpack_based_on_info(1, "ironsword")
+        self.game_state.advance_floor(entrance=(1, 2))
+        self.assertIs(self.game_state.get_entity_from_list(1), player)
+        self.assertEqual(
+            self.game_state.get_entity_info_from_list(1).e_type.lower(), "mage"
+        )
+        self.assertIn("IronSword", self.get_backpack_names(1))
+        self.assertEqual(self.game_state.get_entity_info_from_list(1).position, [1, 2])
+
+    def test_advance_floor_discards_old_loot(self):
+        self.game_state.create_new_game(5, 5)
+        self.game_state.spawn_entity(0, 0, "warrior")
+        self.game_state.spawn_loot(2, 2, "ironsword")
+        self.game_state.advance_floor()
+        self.assertEqual(self.game_state.get_game_tile_info(2, 2).item_list, ())
+
+    def test_advance_floor_reuses_dimensions(self):
+        self.game_state.create_new_game(6, 7)
+        self.game_state.spawn_entity(0, 0, "warrior")
+        floor = self.game_state.advance_floor()
+        self.assertEqual((floor.get_info().width, floor.get_info().height), (6, 7))
+
+    def test_advance_floor_multiple_times(self):
+        self.game_state.create_new_game(5, 5)
+        self.game_state.spawn_entity(0, 0, "warrior")
+        self.game_state.advance_floor()
+        self.game_state.advance_floor()
+        self.assertEqual(self.game_state.get_current_floor_info().floor_number, 3)
+        self.assertEqual(self.game_state.get_game_state_info()[1], 1)
+
+    def test_advance_floor_without_active_floor(self):
+        with self.assertRaises(ValueError):
+            self.game_state.advance_floor()
+
+    def test_advance_floor_without_player(self):
+        self.game_state.create_new_game(5, 5)
+        original_floor = self.game_state.get_current_floor()
+        with self.assertRaises(ValueError):
+            self.game_state.advance_floor()
+        self.assertIs(self.game_state.get_current_floor(), original_floor)
+
+    def test_advance_floor_invalid_entrance(self):
+        self.game_state.create_new_game(5, 5)
+        self.game_state.spawn_entity(0, 0, "warrior")
+        original_floor = self.game_state.get_current_floor()
+        with self.assertRaises(ValueError):
+            self.game_state.advance_floor(entrance=(9, 9))
+        self.assertIs(self.game_state.get_current_floor(), original_floor)
+
+    def test_floor_memento_preserves_metadata_and_grid(self):
+        self.game_state.create_new_game(5, 5)
+        self.game_state.spawn_entity(0, 0, "warrior")
+        self.game_state.advance_floor(entrance=(2, 2))
+        self.game_state.set_game_grid_tile(4, 4, "wall")
+        manager = CommandManager()
+        snapshot = self.game_state.create_memento(manager)
+        self.assertIsNotNone(snapshot.floor_memento)
+        self.assertEqual(snapshot.floor_memento.floor_number, 2)
+        self.assertEqual(snapshot.floor_memento.entrance, (2, 2))
+        self.assertEqual(snapshot.floor_memento.grid_memento, snapshot.grid_memento)
+
+    def test_restore_floor_memento(self):
+        self.game_state.create_new_game(5, 5)
+        self.game_state.spawn_entity(0, 0, "warrior")
+        self.game_state.advance_floor(entrance=(2, 2))
+        self.game_state.set_game_grid_tile(4, 4, "wall")
+        manager = CommandManager()
+        snapshot = self.game_state.create_memento(manager)
+        self.game_state.advance_floor(entrance=(1, 1))
+        self.game_state.restore(snapshot, manager, GameStateManager())
+        self.assertEqual(self.game_state.get_current_floor_info().floor_number, 2)
+        self.assertEqual(self.game_state.get_current_floor_info().entrance, (2, 2))
+        self.assertFalse(self.game_state.is_tile_passable(4, 4))
+        self.assertEqual(self.game_state.get_entity_info_from_list(1).position, [2, 2])
+        self.assertIs(
+            self.game_state._GameState__grid,
+            self.game_state.get_current_floor().get_grid(),
+        )
+        self.assertFalse(self.game_state.get_game_state_info()[2])
+
+    def test_legacy_grid_restore_creates_first_floor(self):
+        self.create_test_grid(5, 5)
+        self.game_state.spawn_entity(0, 0, "warrior")
+        manager = CommandManager()
+        snapshot = self.game_state.create_memento(manager)
+        self.assertIsNone(snapshot.floor_memento)
+        self.game_state.restore(snapshot, manager, GameStateManager())
+        self.assertEqual(self.game_state.get_current_floor_info().floor_number, 1)
+        self.assertIs(
+            self.game_state._GameState__grid,
+            self.game_state.get_current_floor().get_grid(),
+        )
 
 
 # Run the tests
